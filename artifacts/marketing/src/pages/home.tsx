@@ -3,6 +3,12 @@ import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, FileText, Settings, CreditCard, Users, Zap, Shield, Loader2, BarChart, Clock, PenTool } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export default function Home() {
   return (
@@ -29,9 +35,21 @@ export default function Home() {
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </a>
-            <Button variant="outline" size="lg" className="w-full sm:w-auto h-14 px-8 text-base rounded-full bg-background/50 backdrop-blur-sm">
-              View demo
-            </Button>
+            <a
+              href="#pricing"
+              className="w-full sm:w-auto"
+              data-testid="hero-see-pricing"
+              onClick={(e) => {
+                if (typeof window !== "undefined") {
+                  e.preventDefault();
+                  document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+            >
+              <Button variant="outline" size="lg" className="w-full sm:w-auto h-14 px-8 text-base rounded-full bg-background/50 backdrop-blur-sm">
+                See pricing
+              </Button>
+            </a>
           </div>
         </div>
       </section>
@@ -41,7 +59,6 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 md:px-6 text-center">
           <p className="text-sm font-medium text-muted-foreground mb-6">TRUSTED BY LEADING MANAGED SERVICE PROVIDERS</p>
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-50 grayscale">
-            {/* Placeholder for logos, using text since no SVG assets provided */}
             <div className="text-xl font-bold font-serif tracking-tighter">AcmeTech</div>
             <div className="text-xl font-bold tracking-widest">NEXUS<span className="font-light">IT</span></div>
             <div className="text-xl font-bold italic">SysGuard</div>
@@ -62,7 +79,7 @@ export default function Home() {
 
         <div className="grid md:grid-cols-3 gap-12 relative">
           <div className="hidden md:block absolute top-12 left-1/6 right-1/6 h-0.5 bg-border/50 -z-10" />
-          
+
           {[
             {
               step: "01",
@@ -110,7 +127,7 @@ export default function Home() {
               We've stripped away the bloat of traditional CRMs and focused entirely on the quoting experience.
             </p>
           </div>
-          
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               {
@@ -170,7 +187,6 @@ export default function Home() {
         </div>
         <div className="flex items-center justify-center gap-4">
           <div className="w-12 h-12 bg-muted rounded-full overflow-hidden border border-border/50">
-            {/* Avatar placeholder */}
             <div className="w-full h-full bg-primary/20 flex items-center justify-center text-primary font-bold">JD</div>
           </div>
           <div className="text-left">
@@ -182,7 +198,55 @@ export default function Home() {
 
       {/* Pricing Section */}
       <PricingSection />
-      
+
+      {/* FAQ Section */}
+      <section id="faq" className="py-24 px-4 md:px-6 max-w-3xl mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">Frequently asked questions</h2>
+          <p className="text-lg text-muted-foreground">
+            Everything you need to know before getting started.
+          </p>
+        </div>
+
+        <Accordion type="single" collapsible className="space-y-2" data-testid="faq-accordion">
+          {[
+            {
+              q: "How does QuoteFlow compare to Word or Excel for quoting?",
+              a: "Word and Excel are generic tools — they require manual formatting, offer no tracking, and are easy to lose. QuoteFlow is purpose-built: every quote is structured, branded, PDF-ready, and tracked from the moment you send it. You spend minutes, not hours."
+            },
+            {
+              q: "Can I white-label the PDF quotes with my own branding?",
+              a: "Yes. All QuoteFlow Pro plans let you add your company logo, brand colours, and custom footer text to every PDF. You can remove the QuoteFlow watermark and present fully branded documents to your clients."
+            },
+            {
+              q: "What billing options are available?",
+              a: "QuoteFlow offers flexible billing: Daily ($2.99), Weekly ($9.99), Monthly ($29.99), or Yearly ($199.99). The yearly plan saves you around 44% compared to monthly billing. You can upgrade, downgrade, or cancel at any time from your account settings."
+            },
+            {
+              q: "Is there a free trial?",
+              a: "QuoteFlow offers a generous free-tier to get you started. You can create your first quotes and explore the platform at no cost. When you're ready to unlock unlimited quotes, PDF generation, and client management, simply upgrade to a paid plan."
+            },
+            {
+              q: "How do I get started?",
+              a: "Click 'Start for free', create your account, and you'll be guided through setting up your company profile. You can create your first professional quote in under 5 minutes — no credit card required to begin."
+            },
+            {
+              q: "Can I cancel my subscription at any time?",
+              a: "Absolutely. There are no long-term contracts. You can cancel your subscription at any time from your billing settings and you won't be charged for the next billing period. Your data remains accessible until the end of your current billing cycle."
+            }
+          ].map((item, i) => (
+            <AccordionItem key={i} value={`faq-${i}`} className="border border-border/50 rounded-xl px-6 bg-background" data-testid={`faq-item-${i}`}>
+              <AccordionTrigger className="text-left font-semibold hover:no-underline py-5">
+                {item.q}
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed pb-5">
+                {item.a}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </section>
+
       {/* Bottom CTA */}
       <section className="py-32 px-4 md:px-6 bg-primary text-primary-foreground text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/10 to-transparent opacity-50" />
@@ -217,18 +281,26 @@ function PricingSection() {
     fetch("/api/stripe/prices")
       .then(res => res.json())
       .then(data => {
-        // If API provides prices, we would map them here. 
-        // Assuming data structure matches our needs or requires parsing.
-        // For now, if the fetch succeeds but doesn't have the exact format, 
-        // we'll just log it. In a real scenario, map real amounts to state.
-        console.log("Fetched prices:", data);
+        if (data?.data?.length) {
+          const updated = { ...pricing };
+          for (const price of data.data) {
+            const interval = price.recurring?.interval as string;
+            const amount = price.unit_amount / 100;
+            if (interval === "day") updated.daily = { ...updated.daily, amount };
+            else if (interval === "week") updated.weekly = { ...updated.weekly, amount };
+            else if (interval === "month") updated.monthly = { ...updated.monthly, amount };
+            else if (interval === "year") updated.yearly = { ...updated.yearly, amount };
+          }
+          setPricing(updated);
+        }
       })
-      .catch(err => {
-        console.log("Using fallback pricing. Fetch failed:", err);
+      .catch(() => {
+        // Fall back to hardcoded pricing
       });
   }, []);
 
   const handleSubscribe = async (plan: "daily" | "weekly" | "monthly" | "yearly") => {
+    if (typeof window === "undefined") return;
     setLoadingPlan(plan);
     try {
       const response = await fetch("/api/stripe/create-checkout-session", {
@@ -262,8 +334,8 @@ function PricingSection() {
               data-testid={`billing-toggle-${p}`}
               onClick={() => setPeriod(p)}
               className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all ${
-                period === p 
-                  ? "bg-background shadow-sm border border-border/50 text-foreground" 
+                period === p
+                  ? "bg-background shadow-sm border border-border/50 text-foreground"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -280,7 +352,7 @@ function PricingSection() {
             <p className="text-muted-foreground">{pricing[period].desc}</p>
           </div>
           <div className="mb-8">
-            <span className="text-5xl font-bold tracking-tight">${pricing[period].amount}</span>
+            <span className="text-5xl font-bold tracking-tight">${pricing[period].amount.toFixed(2)}</span>
             <span className="text-muted-foreground font-medium">{pricing[period].label}</span>
           </div>
           <ul className="space-y-4 mb-10 flex-1">
@@ -298,8 +370,8 @@ function PricingSection() {
               </li>
             ))}
           </ul>
-          <Button 
-            className="w-full h-12 rounded-xl text-base font-semibold" 
+          <Button
+            className="w-full h-12 rounded-xl text-base font-semibold"
             data-testid={`subscribe-${period}`}
             disabled={loadingPlan !== null}
             onClick={() => handleSubscribe(period)}

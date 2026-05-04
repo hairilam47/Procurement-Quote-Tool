@@ -68,7 +68,7 @@ router.post("/stripe/create-checkout-session", async (req, res) => {
     payment_method_types: ["card"],
     line_items: [{ price: priceId, quantity: 1 }],
     mode: "subscription",
-    success_url: `${baseUrl}/?checkout=success`,
+    success_url: `${baseUrl}/sign-in?checkout=success`,
     cancel_url: `${baseUrl}/marketing/#pricing`,
     allow_promotion_codes: true,
   });

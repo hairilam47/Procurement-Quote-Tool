@@ -59,25 +59,25 @@ export function MarketingLayout({ children }: MarketingLayoutProps) {
             <div>
               <h3 className="font-semibold mb-4 text-sm">Product</h3>
               <ul className="space-y-3 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground">Features</a></li>
-                <li><a href="#" className="hover:text-foreground">Pricing</a></li>
-                <li><a href="#" className="hover:text-foreground">Integrations</a></li>
+                <li><a href="#features" className="hover:text-foreground">Features</a></li>
+                <li><a href="#pricing" className="hover:text-foreground">Pricing</a></li>
+                <li><a href="#faq" className="hover:text-foreground">FAQ</a></li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4 text-sm">Resources</h3>
+              <h3 className="font-semibold mb-4 text-sm">Account</h3>
               <ul className="space-y-3 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground">Documentation</a></li>
-                <li><a href="#" className="hover:text-foreground">Blog</a></li>
-                <li><a href="#" className="hover:text-foreground">Support</a></li>
+                <li><a href="/sign-up" className="hover:text-foreground">Sign up free</a></li>
+                <li><a href="/sign-in" className="hover:text-foreground">Log in</a></li>
+                <li><a href="/" className="hover:text-foreground">Dashboard</a></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4 text-sm">Company</h3>
               <ul className="space-y-3 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground">About</a></li>
-                <li><a href="#" className="hover:text-foreground">Privacy</a></li>
-                <li><a href="#" className="hover:text-foreground">Terms</a></li>
+                <li><a href="#how-it-works" className="hover:text-foreground">How it works</a></li>
+                <li><a href="#faq" className="hover:text-foreground">Privacy</a></li>
+                <li><a href="#faq" className="hover:text-foreground">Terms</a></li>
               </ul>
             </div>
           </div>

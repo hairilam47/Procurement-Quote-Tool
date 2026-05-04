@@ -74,4 +74,34 @@ app.use(
 
 app.use("/api", router);
 
+// SEO static files served at root level
+app.get("/sitemap.xml", (_req, res) => {
+  const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "quoteflow.app";
+  res.setHeader("Content-Type", "application/xml");
+  res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://${domain}/marketing/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://${domain}/marketing/#pricing</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://${domain}/marketing/#features</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>`);
+});
+
+app.get("/robots.txt", (_req, res) => {
+  const domain = process.env.REPLIT_DOMAINS?.split(",")[0] ?? "quoteflow.app";
+  res.setHeader("Content-Type", "text/plain");
+  res.send(`User-agent: *\nAllow: /\nSitemap: https://${domain}/sitemap.xml\n`);
+});
+
 export default app;

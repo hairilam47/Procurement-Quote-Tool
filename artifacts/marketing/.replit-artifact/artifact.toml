@@ -15,7 +15,7 @@ paths = [ "/marketing/" ]
 localPort = 22813
 
 [services.development]
-run = "pnpm --filter @workspace/marketing run dev"
+run = "pnpm --filter @workspace/marketing run start"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/marketing", "run", "build" ]
