@@ -141,6 +141,7 @@ router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
           data.lineItems.map((li, i) => ({
             id: generateId(),
             quotationId: id,
+            sku: li.sku ?? null,
             description: li.description,
             quantity: String(li.quantity),
             unit: li.unit,
@@ -213,6 +214,7 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
           data.lineItems.map((li, i) => ({
             id: generateId(),
             quotationId: String(req.params.id),
+            sku: li.sku ?? null,
             description: li.description,
             quantity: String(li.quantity),
             unit: li.unit,
@@ -344,6 +346,7 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
           srcLines.map((li) => ({
             id: generateId(),
             quotationId: newId,
+            sku: li.sku ?? null,
             description: li.description,
             quantity: li.quantity,
             unit: li.unit,

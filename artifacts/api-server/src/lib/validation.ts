@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const lineItemSchema = z.object({
   id: z.string().optional(),
+  sku: z.string().max(100).optional().nullable(),
   description: z.string().min(1, "Description required").max(2000),
   quantity: z.coerce.number().positive("Quantity must be > 0"),
   unit: z.enum(["hours", "days", "fixed"]).default("hours"),

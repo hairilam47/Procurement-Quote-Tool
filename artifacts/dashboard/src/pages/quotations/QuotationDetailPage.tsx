@@ -249,7 +249,12 @@ export default function QuotationDetailPage() {
             key={item.id}
             className="grid grid-cols-[3fr_1fr_1fr_1fr_1fr] px-5 py-3 border-b border-slate-800/30 last:border-0"
           >
-            <span className="text-white text-sm">{item.description}</span>
+            <div>
+              <span className="text-white text-sm">{item.description}</span>
+              {item.sku && (
+                <p className="text-slate-500 text-xs mt-0.5">SKU: {item.sku}</p>
+              )}
+            </div>
             <span className="text-slate-300 text-sm">{item.quantity}</span>
             <span className="text-slate-400 text-sm">{item.unit}</span>
             <span className="text-slate-300 text-sm">

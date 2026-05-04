@@ -9,6 +9,7 @@ import { ObjectStorageService } from "../objectStorage";
 
 type LineItem = {
   id: string;
+  sku?: string | null;
   description: string;
   quantity: string;
   unit: string;

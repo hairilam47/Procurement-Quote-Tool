@@ -67,6 +67,7 @@ export const lineItemsTable = pgTable(
     quotationId: text("quotation_id")
       .notNull()
       .references(() => quotationsTable.id, { onDelete: "cascade" }),
+    sku: text("sku"),
     description: text("description").notNull(),
     quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull(),
     unit: text("unit").notNull().default("hours"),

@@ -68,6 +68,7 @@ const thirtyDays = () => {
 };
 
 const emptyLineItem = (): LineItemInput => ({
+  sku: null,
   description: "",
   quantity: 1,
   unit: "hours",
@@ -134,6 +135,7 @@ export default function QuotationFormPage() {
     if (existing.lineItems && existing.lineItems.length > 0) {
       setLineItems(
         existing.lineItems.map((li, idx) => ({
+          sku: li.sku ?? null,
           description: li.description,
           quantity: parseFloat(li.quantity),
           unit: li.unit as LineItemInput["unit"],
@@ -321,13 +323,22 @@ export default function QuotationFormPage() {
             const rowTotal = (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0);
             return (
               <div key={idx} className="grid grid-cols-[2.5fr_0.7fr_0.7fr_1fr_1fr_auto] gap-2 px-5 py-2.5 border-b border-slate-800/30 last:border-0 items-center">
-                <Input
-                  value={li.description}
-                  onChange={(e) => updateLineItem(idx, "description", e.target.value)}
-                  placeholder="Description..."
-                  className={`${inputCls} h-8 text-sm`}
-                  data-testid={`line-item-description-${idx}`}
-                />
+                <div className="flex flex-col gap-1">
+                  <Input
+                    value={li.description}
+                    onChange={(e) => updateLineItem(idx, "description", e.target.value)}
+                    placeholder="Description..."
+                    className={`${inputCls} h-8 text-sm`}
+                    data-testid={`line-item-description-${idx}`}
+                  />
+                  <Input
+                    value={li.sku ?? ""}
+                    onChange={(e) => updateLineItem(idx, "sku", e.target.value || null)}
+                    placeholder="SKU / Product code (optional)"
+                    className={`${inputCls} h-6 text-xs`}
+                    data-testid={`line-item-sku-${idx}`}
+                  />
+                </div>
                 <Input
                   type="number"
                   min={0}

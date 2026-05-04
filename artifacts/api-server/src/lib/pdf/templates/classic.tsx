@@ -289,7 +289,14 @@ export function ClassicTemplate({
           </View>
           {quote.lineItems.map((li) => (
             <View key={li.id} style={s.tr} wrap={false}>
-              <Text style={s.cDesc}>{li.description}</Text>
+              <View style={s.cDesc}>
+                <Text>{li.description}</Text>
+                {li.sku ? (
+                  <Text style={{ fontSize: 8, color: C.muted, marginTop: 2 }}>
+                    SKU: {li.sku}
+                  </Text>
+                ) : null}
+              </View>
               <Text style={s.cQty}>{Number(li.quantity).toFixed(2)}</Text>
               <Text style={s.cUnit}>{li.unit}</Text>
               <Text style={s.cPrice}>{fmtMoney(li.unitPrice, cur)}</Text>

@@ -1,5 +1,6 @@
 export type TemplateLineItem = {
   id: string;
+  sku?: string | null;
   description: string;
   quantity: string;
   unit: string;

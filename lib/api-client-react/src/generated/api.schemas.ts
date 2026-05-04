@@ -52,6 +52,7 @@ export interface ClientInput {
 export interface LineItem {
   id: string;
   quotationId: string;
+  sku?: string | null;
   description: string;
   quantity: string;
   unit: string;
@@ -70,6 +71,7 @@ export const LineItemInputUnit = {
 } as const;
 
 export interface LineItemInput {
+  sku?: string | null;
   description: string;
   quantity: number;
   unit?: LineItemInputUnit;
