@@ -15,6 +15,26 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary First-run seed — upsert user and ensure company_settings row exists
+ */
+export const SeedUserBody = zod.object({
+  email: zod.string().optional(),
+  name: zod.string().optional(),
+});
+
+export const SeedUserResponse = zod.object({
+  user: zod.object({
+    id: zod.string(),
+    email: zod.string(),
+    name: zod.string().nullish(),
+    role: zod.string(),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+  }),
+  seeded: zod.boolean(),
+});
+
+/**
  * @summary Sync Clerk user into DB
  */
 export const SyncUserBody = zod.object({

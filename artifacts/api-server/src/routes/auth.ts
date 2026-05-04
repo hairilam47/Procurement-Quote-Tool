@@ -1,19 +1,79 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, companySettingsTable } from "@workspace/db";
 import { getAuth } from "@clerk/express";
 
 const router = Router();
 
-function requireAuth(req: any, res: any, next: any) {
+export function requireAuth(req: any, res: any, next: any): void {
   const auth = getAuth(req);
-  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
+  if (!auth?.userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
   (req as any).clerkUserId = auth.userId;
   next();
 }
 
+// First-run seed: upsert user record + ensure company_settings row exists
+router.post("/auth/seed", requireAuth, async (req: any, res): Promise<void> => {
+  try {
+    const clerkUserId = req.clerkUserId;
+    const { email, name } = req.body;
+
+    const [existing] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, clerkUserId));
+
+    let user;
+    if (existing) {
+      const [updated] = await db
+        .update(usersTable)
+        .set({
+          email: email ?? existing.email,
+          name: name ?? existing.name,
+          updatedAt: new Date(),
+        })
+        .where(eq(usersTable.id, clerkUserId))
+        .returning();
+      user = updated;
+    } else {
+      const [created] = await db
+        .insert(usersTable)
+        .values({
+          id: clerkUserId,
+          email: email ?? `${clerkUserId}@unknown.com`,
+          name: name ?? null,
+        })
+        .returning();
+      user = created;
+    }
+
+    // Ensure at least one company_settings row exists (first-run seed)
+    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    if (!settings) {
+      await db.insert(companySettingsTable).values({
+        name: "My Company",
+        email: user!.email,
+        addressLine1: "",
+        city: "",
+        postalCode: "",
+        country: "",
+        currency: "USD",
+        defaultTaxRate: "0",
+        defaultTemplate: "MODERN",
+      });
+    }
+
+    res.json({ user, seeded: !settings });
+  } catch {
+    res.status(500).json({ error: "Failed to seed" });
+  }
+});
+
 // Sync Clerk user into our DB
-router.post("/auth/sync", requireAuth, async (req: any, res) => {
+router.post("/auth/sync", requireAuth, async (req: any, res): Promise<void> => {
   try {
     const clerkUserId = req.clerkUserId;
     const { email, name } = req.body;
@@ -29,7 +89,8 @@ router.post("/auth/sync", requireAuth, async (req: any, res) => {
         .set({ email: email ?? existing.email, name: name ?? existing.name, updatedAt: new Date() })
         .where(eq(usersTable.id, clerkUserId))
         .returning();
-      return res.json(updated);
+      res.json(updated);
+      return;
     }
 
     const [user] = await db
@@ -47,13 +108,16 @@ router.post("/auth/sync", requireAuth, async (req: any, res) => {
 });
 
 // Get current user info
-router.get("/auth/me", requireAuth, async (req: any, res) => {
+router.get("/auth/me", requireAuth, async (req: any, res): Promise<void> => {
   try {
     const [user] = await db
       .select()
       .from(usersTable)
       .where(eq(usersTable.id, req.clerkUserId));
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
     res.json(user);
   } catch {
     res.status(500).json({ error: "Failed to get user" });

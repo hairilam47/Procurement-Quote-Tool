@@ -221,6 +221,16 @@ export interface RequestUploadUrlResponse {
   metadata: RequestUploadUrlResponseMetadata;
 }
 
+export type SeedUserBody = {
+  email?: string;
+  name?: string;
+};
+
+export type SeedUser200 = {
+  user: User;
+  seeded: boolean;
+};
+
 export type SyncUserBody = {
   email?: string;
   name?: string;

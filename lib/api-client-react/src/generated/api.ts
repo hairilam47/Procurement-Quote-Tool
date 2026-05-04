@@ -30,6 +30,8 @@ import type {
   QuotationSummary,
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
+  SeedUser200,
+  SeedUserBody,
   SettingsInput,
   SyncUserBody,
   UploadLogo200,
@@ -120,6 +122,92 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary First-run seed — upsert user and ensure company_settings row exists
+ */
+export const getSeedUserUrl = () => {
+  return `/api/auth/seed`;
+};
+
+export const seedUser = async (
+  seedUserBody: SeedUserBody,
+  options?: RequestInit,
+): Promise<SeedUser200> => {
+  return customFetch<SeedUser200>(getSeedUserUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(seedUserBody),
+  });
+};
+
+export const getSeedUserMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof seedUser>>,
+    TError,
+    { data: BodyType<SeedUserBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof seedUser>>,
+  TError,
+  { data: BodyType<SeedUserBody> },
+  TContext
+> => {
+  const mutationKey = ["seedUser"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof seedUser>>,
+    { data: BodyType<SeedUserBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return seedUser(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SeedUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof seedUser>>
+>;
+export type SeedUserMutationBody = BodyType<SeedUserBody>;
+export type SeedUserMutationError = ErrorType<unknown>;
+
+/**
+ * @summary First-run seed — upsert user and ensure company_settings row exists
+ */
+export const useSeedUser = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof seedUser>>,
+    TError,
+    { data: BodyType<SeedUserBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof seedUser>>,
+  TError,
+  { data: BodyType<SeedUserBody> },
+  TContext
+> => {
+  return useMutation(getSeedUserMutationOptions(options));
+};
 
 /**
  * @summary Sync Clerk user into DB

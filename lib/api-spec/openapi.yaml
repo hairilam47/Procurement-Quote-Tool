@@ -29,6 +29,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /auth/seed:
+    post:
+      operationId: seedUser
+      tags: [auth]
+      summary: First-run seed — upsert user and ensure company_settings row exists
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                name: { type: string }
+      responses:
+        "200":
+          description: Seed result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+                  seeded: { type: boolean }
+                required: [user, seeded]
+
   /auth/sync:
     post:
       operationId: syncUser

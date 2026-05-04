@@ -116,6 +116,6 @@ export async function renderQuotationPdf(args: {
     quote.template === "CLASSIC" ? ClassicTemplate : ModernTemplate;
 
   return (await renderToBuffer(
-    React.createElement(Component, props),
+    React.createElement(Component, props) as any,
   )) as Buffer;
 }

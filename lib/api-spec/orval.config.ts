@@ -48,10 +48,10 @@ export default defineConfig({
       },
     },
     output: {
-      workspace: apiZodSrc,
+      // No `workspace` here — prevents orval from auto-generating index.ts.
+      // lib/api-zod/src/index.ts is maintained manually.
       client: "zod",
-      target: "generated",
-      schemas: { path: "generated/types", type: "typescript" },
+      target: path.resolve(apiZodSrc, "generated"),
       mode: "split",
       clean: true,
       prettier: true,

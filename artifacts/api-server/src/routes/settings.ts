@@ -4,7 +4,7 @@ import multer from "multer";
 import { db, companySettingsTable } from "@workspace/db";
 import { settingsSchema } from "../lib/validation";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { getAuth } from "@clerk/express";
+import { requireAuth } from "./auth";
 
 const router = Router();
 const storage = multer.memoryStorage();
@@ -20,17 +20,14 @@ const upload = multer({
   },
 });
 
-function requireAuth(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
-  next();
-}
-
 // Get settings
-router.get("/settings", requireAuth, async (_req, res) => {
+router.get("/settings", requireAuth, async (_req, res): Promise<void> => {
   try {
     const [settings] = await db.select().from(companySettingsTable).limit(1);
-    if (!settings) return res.status(404).json({ error: "Settings not configured" });
+    if (!settings) {
+      res.status(404).json({ error: "Settings not configured" });
+      return;
+    }
     res.json(settings);
   } catch {
     res.status(500).json({ error: "Failed to get settings" });
@@ -38,7 +35,7 @@ router.get("/settings", requireAuth, async (_req, res) => {
 });
 
 // Upsert settings
-router.put("/settings", requireAuth, async (req, res) => {
+router.put("/settings", requireAuth, async (req, res): Promise<void> => {
   try {
     const data = settingsSchema.parse(req.body);
     const [existing] = await db.select().from(companySettingsTable).limit(1);
@@ -48,7 +45,8 @@ router.put("/settings", requireAuth, async (req, res) => {
         .set({ ...data, defaultTaxRate: String(data.defaultTaxRate), updatedAt: new Date() })
         .where(eq(companySettingsTable.id, existing.id))
         .returning();
-      return res.json(updated);
+      res.json(updated);
+      return;
     }
     const [created] = await db
       .insert(companySettingsTable)
@@ -60,8 +58,10 @@ router.put("/settings", requireAuth, async (req, res) => {
       .returning();
     res.status(201).json(created);
   } catch (err: any) {
-    if (err?.name === "ZodError")
-      return res.status(400).json({ error: err.errors });
+    if (err?.name === "ZodError") {
+      res.status(400).json({ error: err.errors });
+      return;
+    }
     res.status(500).json({ error: "Failed to update settings" });
   }
 });
@@ -71,15 +71,15 @@ router.post(
   "/settings/logo",
   requireAuth,
   upload.single("logo"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded" });
+        res.status(400).json({ error: "No file uploaded" });
+        return;
       }
       const objStorage = new ObjectStorageService();
       const uploadUrl = await objStorage.getObjectEntityUploadURL();
 
-      // Upload file to GCS via presigned URL
       const uploadResponse = await fetch(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": req.file.mimetype },
@@ -87,12 +87,11 @@ router.post(
       });
 
       if (!uploadResponse.ok) {
-        return res.status(500).json({ error: "Failed to upload logo" });
+        res.status(500).json({ error: "Failed to upload logo" });
+        return;
       }
 
-      // Derive the serving URL from the upload URL
       const uploadedUrl = uploadUrl.split("?")[0];
-      // Normalize to our serving path
       const normalized = objStorage.normalizeObjectEntityPath(uploadedUrl);
       const baseUrl = process.env.REPLIT_DEV_DOMAIN
         ? `https://${process.env.REPLIT_DEV_DOMAIN}`
