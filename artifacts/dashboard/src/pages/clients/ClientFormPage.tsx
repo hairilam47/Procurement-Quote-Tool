@@ -239,6 +239,7 @@ export default function ClientFormPage() {
             type="submit"
             disabled={isPending}
             className="bg-blue-600 hover:bg-blue-500 text-white"
+            data-testid="submit-client-btn"
           >
             {isPending ? (
               <><Loader2 size={14} className="animate-spin mr-1.5" />Saving...</>

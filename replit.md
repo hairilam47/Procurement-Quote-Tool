@@ -67,6 +67,7 @@ lib/
 
 All under `/api/`:
 - `GET /healthz` — Health check
+- `POST /auth/seed` — First-run seed: upsert user + ensure company_settings row exists
 - `POST /auth/sync` — Sync Clerk user to DB
 - `GET /auth/me` — Current user
 - `GET|POST /clients` — List / create clients
@@ -86,6 +87,15 @@ All under `/api/`:
 - `proxyUrl` is only set in production via `VITE_CLERK_PROXY_URL` (empty in dev)
 - Frontend routing uses Wouter with base path from `import.meta.env.BASE_URL`
 - Protected routes guarded by `<Show when="signed-in">` / `<Show when="signed-out">`
+- On first sign-in, `SyncUser` calls `POST /api/auth/seed` (with `credentials: "include"`) to create the company_settings row
+
+## Frontend Notes
+
+- Sidebar collapses on mobile behind a hamburger button (`data-testid="mobile-menu-btn"`)
+- `data-testid` attributes are on all key interactive elements for testing
+- Quotation form shows live per-row totals (qty × unitPrice) and grand total
+- Status filter uses `"ALL"` as the value for "All statuses" (Radix Select rejects empty strings)
+- Logo upload uses `credentials: "include"` to pass the Clerk session cookie
 
 ## Important Notes
 

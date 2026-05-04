@@ -39,13 +39,11 @@ function stripBase(path: string): string {
 }
 
 function SyncUser() {
-  const { getToken, isSignedIn, userId } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   useEffect(() => {
     if (!isSignedIn) return;
-    getToken().then(() => {
-      fetch("/api/auth/sync", { method: "POST", credentials: "include" });
-    });
-  }, [isSignedIn, userId, getToken]);
+    fetch("/api/auth/seed", { method: "POST", credentials: "include" });
+  }, [isSignedIn, userId]);
   return null;
 }
 

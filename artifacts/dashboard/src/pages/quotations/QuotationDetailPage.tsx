@@ -143,6 +143,7 @@ export default function QuotationDetailPage() {
             size="sm"
             onClick={handleDownloadPdf}
             className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+            data-testid="view-pdf-btn"
           >
             <Download size={13} className="mr-1.5" /> PDF
           </Button>
@@ -152,6 +153,7 @@ export default function QuotationDetailPage() {
             onClick={handleDuplicate}
             disabled={duplicate.isPending}
             className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+            data-testid="duplicate-btn"
           >
             <Copy size={13} className="mr-1.5" /> Duplicate
           </Button>

@@ -79,7 +79,11 @@ export default function SettingsPage() {
     try {
       const fd = new FormData();
       fd.append("logo", file);
-      const res = await fetch("/api/settings/logo", { method: "POST", body: fd });
+      const res = await fetch("/api/settings/logo", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
       if (!res.ok) throw new Error("Upload failed");
       const json = await res.json();
       const url = json.url ?? json.objectPath;
@@ -329,6 +333,7 @@ export default function SettingsPage() {
             type="submit"
             disabled={updateSettings.isPending}
             className="bg-blue-600 hover:bg-blue-500 text-white"
+            data-testid="save-settings-btn"
           >
             {updateSettings.isPending ? (
               <><Loader2 size={14} className="animate-spin mr-1.5" />Saving...</>

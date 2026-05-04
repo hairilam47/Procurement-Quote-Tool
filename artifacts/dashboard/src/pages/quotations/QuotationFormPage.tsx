@@ -309,64 +309,74 @@ export default function QuotationFormPage() {
           </div>
 
           {/* Column headers */}
-          <div className="grid grid-cols-[2.5fr_0.7fr_0.7fr_1fr_auto] gap-2 px-5 py-2 border-b border-slate-800/60">
-            {["Description", "Qty", "Unit", "Unit Price", ""].map((h) => (
+          <div className="grid grid-cols-[2.5fr_0.7fr_0.7fr_1fr_1fr_auto] gap-2 px-5 py-2 border-b border-slate-800/60">
+            {["Description", "Qty", "Unit", "Unit Price", "Total", ""].map((h) => (
               <span key={h} className="text-xs text-slate-500 uppercase tracking-wider font-medium">
                 {h}
               </span>
             ))}
           </div>
 
-          {lineItems.map((li, idx) => (
-            <div key={idx} className="grid grid-cols-[2.5fr_0.7fr_0.7fr_1fr_auto] gap-2 px-5 py-2.5 border-b border-slate-800/30 last:border-0 items-center">
-              <Input
-                value={li.description}
-                onChange={(e) => updateLineItem(idx, "description", e.target.value)}
-                placeholder="Description..."
-                className={`${inputCls} h-8 text-sm`}
-              />
-              <Input
-                type="number"
-                min={0}
-                step={0.01}
-                value={li.quantity}
-                onChange={(e) => updateLineItem(idx, "quantity", parseFloat(e.target.value) || 0)}
-                className={`${inputCls} h-8 text-sm`}
-              />
-              <Select
-                value={li.unit ?? "hours"}
-                onValueChange={(v) => updateLineItem(idx, "unit", v)}
-              >
-                <SelectTrigger className={`${inputCls} h-8 text-sm`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
-                  <SelectItem value="hours" className="text-white text-sm">hrs</SelectItem>
-                  <SelectItem value="days" className="text-white text-sm">days</SelectItem>
-                  <SelectItem value="fixed" className="text-white text-sm">fixed</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
+          {lineItems.map((li, idx) => {
+            const rowTotal = (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0);
+            return (
+              <div key={idx} className="grid grid-cols-[2.5fr_0.7fr_0.7fr_1fr_1fr_auto] gap-2 px-5 py-2.5 border-b border-slate-800/30 last:border-0 items-center">
+                <Input
+                  value={li.description}
+                  onChange={(e) => updateLineItem(idx, "description", e.target.value)}
+                  placeholder="Description..."
+                  className={`${inputCls} h-8 text-sm`}
+                  data-testid={`line-item-description-${idx}`}
+                />
                 <Input
                   type="number"
                   min={0}
                   step={0.01}
-                  value={li.unitPrice}
-                  onChange={(e) => updateLineItem(idx, "unitPrice", parseFloat(e.target.value) || 0)}
-                  className={`${inputCls} h-8 text-sm pl-6`}
+                  value={li.quantity}
+                  onChange={(e) => updateLineItem(idx, "quantity", parseFloat(e.target.value) || 0)}
+                  className={`${inputCls} h-8 text-sm`}
+                  data-testid={`line-item-qty-${idx}`}
                 />
+                <Select
+                  value={li.unit ?? "hours"}
+                  onValueChange={(v) => updateLineItem(idx, "unit", v)}
+                >
+                  <SelectTrigger className={`${inputCls} h-8 text-sm`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-slate-700">
+                    <SelectItem value="hours" className="text-white text-sm">hrs</SelectItem>
+                    <SelectItem value="days" className="text-white text-sm">days</SelectItem>
+                    <SelectItem value="fixed" className="text-white text-sm">fixed</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={li.unitPrice}
+                    onChange={(e) => updateLineItem(idx, "unitPrice", parseFloat(e.target.value) || 0)}
+                    className={`${inputCls} h-8 text-sm pl-6`}
+                    data-testid={`line-item-price-${idx}`}
+                  />
+                </div>
+                <span className="text-slate-200 text-sm font-medium tabular-nums">
+                  {formatCurrency(rowTotal, currency)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeLineItem(idx)}
+                  className="text-slate-600 hover:text-red-400 transition-colors p-1"
+                  disabled={lineItems.length === 1}
+                  data-testid={`remove-line-item-${idx}`}
+                >
+                  <Trash2 size={13} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => removeLineItem(idx)}
-                className="text-slate-600 hover:text-red-400 transition-colors p-1"
-                disabled={lineItems.length === 1}
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Totals */}
           <div className="px-5 py-4 border-t border-slate-800 bg-slate-800/30">
@@ -497,6 +507,7 @@ export default function QuotationFormPage() {
             type="submit"
             disabled={isPending}
             className="bg-blue-600 hover:bg-blue-500 text-white"
+            data-testid="submit-quotation-btn"
           >
             {isPending ? (
               <><Loader2 size={14} className="animate-spin mr-1.5" />Saving...</>

@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const STATUSES = ["", "DRAFT", "SENT", "ACCEPTED", "REJECTED", "PAID", "EXPIRED"];
+const STATUSES = ["ALL", "DRAFT", "SENT", "ACCEPTED", "REJECTED", "PAID", "EXPIRED"];
 
 const container = {
   hidden: { opacity: 0 },
@@ -22,11 +22,12 @@ const container = {
 const row = { hidden: { opacity: 0, x: -8 }, show: { opacity: 1, x: 0 } };
 
 export default function QuotationsPage() {
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("ALL");
   const [search, setSearch] = useState("");
 
+  const apiStatus = status === "ALL" ? undefined : status;
   const { data: quotations = [], isLoading } = useListQuotations(
-    status ? { status } : undefined
+    apiStatus ? { status: apiStatus } : undefined
   );
 
   const filtered = quotations.filter((q) => {
@@ -48,7 +49,7 @@ export default function QuotationsPage() {
           <p className="text-slate-400 text-sm mt-0.5">{quotations.length} total</p>
         </div>
         <Link href="/quotations/new">
-          <span className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
+          <span data-testid="new-quotation-btn" className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
             <Plus size={15} />
             New Quotation
           </span>
@@ -64,6 +65,7 @@ export default function QuotationsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500 h-9"
+            data-testid="quotations-search"
           />
         </div>
         <Select value={status} onValueChange={setStatus}>
@@ -74,7 +76,7 @@ export default function QuotationsPage() {
           <SelectContent className="bg-slate-900 border-slate-700">
             {STATUSES.map((s) => (
               <SelectItem key={s} value={s} className="text-white">
-                {s === "" ? "All statuses" : STATUS_LABELS[s]}
+                {s === "ALL" ? "All statuses" : STATUS_LABELS[s]}
               </SelectItem>
             ))}
           </SelectContent>

@@ -37,7 +37,7 @@ export default function ClientsPage() {
           <p className="text-slate-400 text-sm mt-0.5">{clients.length} total</p>
         </div>
         <Link href="/clients/new">
-          <span className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
+          <span data-testid="new-client-btn" className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
             <Plus size={15} />
             New Client
           </span>
@@ -51,6 +51,7 @@ export default function ClientsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500 h-9 max-w-sm"
+          data-testid="clients-search"
         />
       </div>
 
@@ -109,6 +110,7 @@ export default function ClientsPage() {
                   <button
                     onClick={() => handleDelete(client.id, client.name)}
                     className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-red-400 cursor-pointer transition-colors ml-auto"
+                    data-testid={`delete-client-${client.id}`}
                   >
                     <Trash2 size={12} /> Delete
                   </button>
