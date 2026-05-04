@@ -5,6 +5,7 @@ import { generateQrDataUrl } from "./qrcode";
 import { ModernTemplate } from "./templates/modern";
 import { ClassicTemplate } from "./templates/classic";
 import type { TemplateProps, TemplateLineItem } from "./templates/types";
+import { ObjectStorageService } from "../objectStorage";
 
 type LineItem = {
   id: string;
@@ -67,11 +68,48 @@ type CompanyData = {
   logoUrl?: string | null;
 };
 
+/**
+ * Convert a logo URL/path to a base64 data URL for embedding in PDFs.
+ *
+ * The logo may be stored as an internal `/objects/...` path or as a full
+ * serving URL like `https://<host>/api/storage/objects/...`. In both cases
+ * we read directly from GCS via the ObjectStorageService so we never make
+ * an outbound HTTP request to an auth-gated endpoint from inside the server.
+ *
+ * For genuinely external URLs (e.g. a user-provided http(s) URL that does not
+ * point to our own storage) we fall back to a plain fetch.
+ */
+const objectStorageService = new ObjectStorageService();
+
+function extractObjectPath(url: string): string | null {
+  // Already a normalized internal path
+  if (url.startsWith("/objects/")) return url;
+  // Full serving URL: https://<host>/api/storage/objects/<id>
+  try {
+    const parsed = new URL(url);
+    const match = parsed.pathname.match(/(\/objects\/.+)/);
+    if (match) return match[1];
+  } catch {
+    // not a valid URL — fall through
+  }
+  return null;
+}
+
 async function fetchLogoDataUrl(
   url: string | null | undefined,
 ): Promise<string | undefined> {
   if (!url) return undefined;
   try {
+    const objectPath = extractObjectPath(url);
+    if (objectPath) {
+      // Read directly from GCS — no HTTP round-trip, no auth issues
+      const file = await objectStorageService.getObjectEntityFile(objectPath);
+      const [content] = await file.download();
+      const [metadata] = await file.getMetadata();
+      const ct = (metadata.contentType as string | undefined) ?? "image/png";
+      return `data:${ct};base64,${content.toString("base64")}`;
+    }
+    // Fall back to plain fetch for external URLs
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return undefined;
     const buf = Buffer.from(await res.arrayBuffer());

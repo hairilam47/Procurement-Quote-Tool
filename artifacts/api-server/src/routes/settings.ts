@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { getZodErrors } from "../lib/zodError";
 import { eq } from "drizzle-orm";
 import multer from "multer";
 import { db, companySettingsTable } from "@workspace/db";
@@ -57,11 +58,9 @@ router.put("/settings", requireAuth, async (req, res): Promise<void> => {
       })
       .returning();
     res.status(201).json(created);
-  } catch (err: any) {
-    if (err?.name === "ZodError") {
-      res.status(400).json({ error: err.errors });
-      return;
-    }
+  } catch (err: unknown) {
+    const zodErrors = getZodErrors(err);
+    if (zodErrors) { res.status(400).json({ error: zodErrors }); return; }
     res.status(500).json({ error: "Failed to update settings" });
   }
 });
@@ -99,8 +98,9 @@ router.post(
       const servingUrl = `${baseUrl}/api/storage${normalized}`;
 
       res.json({ url: servingUrl, objectPath: normalized });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message || "Failed to upload logo" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to upload logo";
+      res.status(500).json({ error: message });
     }
   },
 );

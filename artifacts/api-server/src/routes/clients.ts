@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { getZodErrors } from "../lib/zodError";
 import { eq, ilike, or } from "drizzle-orm";
 import { db, clientsTable, quotationsTable } from "@workspace/db";
 import { clientSchema } from "../lib/validation";
@@ -43,7 +44,7 @@ router.get("/clients/:id", requireAuth, async (req, res): Promise<void> => {
     const [client] = await db
       .select()
       .from(clientsTable)
-      .where(eq(clientsTable.id, req.params.id));
+      .where(eq(clientsTable.id, String(req.params.id)));
     if (!client) {
       res.status(404).json({ error: "Client not found" });
       return;
@@ -63,11 +64,9 @@ router.post("/clients", requireAuth, async (req, res): Promise<void> => {
       .values({ ...data, id: generateId() })
       .returning();
     res.status(201).json(client);
-  } catch (err: any) {
-    if (err?.name === "ZodError") {
-      res.status(400).json({ error: err.errors });
-      return;
-    }
+  } catch (err: unknown) {
+    const zodErrors = getZodErrors(err);
+    if (zodErrors) { res.status(400).json({ error: zodErrors }); return; }
     res.status(500).json({ error: "Failed to create client" });
   }
 });
@@ -79,18 +78,16 @@ router.put("/clients/:id", requireAuth, async (req, res): Promise<void> => {
     const [client] = await db
       .update(clientsTable)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(clientsTable.id, req.params.id))
+      .where(eq(clientsTable.id, String(req.params.id)))
       .returning();
     if (!client) {
       res.status(404).json({ error: "Client not found" });
       return;
     }
     res.json(client);
-  } catch (err: any) {
-    if (err?.name === "ZodError") {
-      res.status(400).json({ error: err.errors });
-      return;
-    }
+  } catch (err: unknown) {
+    const zodErrors = getZodErrors(err);
+    if (zodErrors) { res.status(400).json({ error: zodErrors }); return; }
     res.status(500).json({ error: "Failed to update client" });
   }
 });
@@ -101,13 +98,13 @@ router.delete("/clients/:id", requireAuth, async (req, res): Promise<void> => {
     const [existing] = await db
       .select({ id: quotationsTable.id })
       .from(quotationsTable)
-      .where(eq(quotationsTable.clientId, req.params.id))
+      .where(eq(quotationsTable.clientId, String(req.params.id)))
       .limit(1);
     if (existing) {
       res.status(409).json({ error: "Cannot delete client with existing quotations" });
       return;
     }
-    await db.delete(clientsTable).where(eq(clientsTable.id, req.params.id));
+    await db.delete(clientsTable).where(eq(clientsTable.id, String(req.params.id)));
     res.status(204).send();
   } catch {
     res.status(500).json({ error: "Failed to delete client" });

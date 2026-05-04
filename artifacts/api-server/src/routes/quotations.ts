@@ -6,6 +6,7 @@ import { computeTotals } from "../lib/calculations";
 import { generateId } from "../lib/id";
 import { renderQuotationPdf } from "../lib/pdf/render";
 import { requireAuth } from "./auth";
+import { getZodErrors } from "../lib/zodError";
 
 const router = Router();
 
@@ -78,7 +79,7 @@ router.get("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
     const [quote] = await db
       .select()
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, req.params.id));
+      .where(eq(quotationsTable.id, String(req.params.id)));
     if (!quote) {
       res.status(404).json({ error: "Quotation not found" });
       return;
@@ -162,11 +163,9 @@ router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
       .orderBy(lineItemsTable.position);
 
     res.status(201).json({ ...created, lineItems });
-  } catch (err: any) {
-    if (err?.name === "ZodError") {
-      res.status(400).json({ error: err.errors });
-      return;
-    }
+  } catch (err: unknown) {
+    const zodErrors = getZodErrors(err);
+    if (zodErrors) { res.status(400).json({ error: zodErrors }); return; }
     res.status(500).json({ error: "Failed to create quotation" });
   }
 });
@@ -184,7 +183,7 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
     await db.transaction(async (tx) => {
       await tx
         .delete(lineItemsTable)
-        .where(eq(lineItemsTable.quotationId, req.params.id));
+        .where(eq(lineItemsTable.quotationId, String(req.params.id)));
 
       await tx
         .update(quotationsTable)
@@ -207,13 +206,13 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
           template: data.template,
           updatedAt: new Date(),
         })
-        .where(eq(quotationsTable.id, req.params.id));
+        .where(eq(quotationsTable.id, String(req.params.id)));
 
       if (data.lineItems.length > 0) {
         await tx.insert(lineItemsTable).values(
           data.lineItems.map((li, i) => ({
             id: generateId(),
-            quotationId: req.params.id,
+            quotationId: String(req.params.id),
             description: li.description,
             quantity: String(li.quantity),
             unit: li.unit,
@@ -228,7 +227,7 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
     const [updated] = await db
       .select()
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, req.params.id));
+      .where(eq(quotationsTable.id, String(req.params.id)));
     if (!updated) {
       res.status(404).json({ error: "Quotation not found" });
       return;
@@ -237,15 +236,13 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
     const lineItems = await db
       .select()
       .from(lineItemsTable)
-      .where(eq(lineItemsTable.quotationId, req.params.id))
+      .where(eq(lineItemsTable.quotationId, String(req.params.id)))
       .orderBy(lineItemsTable.position);
 
     res.json({ ...updated, lineItems });
-  } catch (err: any) {
-    if (err?.name === "ZodError") {
-      res.status(400).json({ error: err.errors });
-      return;
-    }
+  } catch (err: unknown) {
+    const zodErrors = getZodErrors(err);
+    if (zodErrors) { res.status(400).json({ error: zodErrors }); return; }
     res.status(500).json({ error: "Failed to update quotation" });
   }
 });
@@ -257,7 +254,7 @@ router.patch("/quotations/:id/status", requireAuth, async (req, res): Promise<vo
     const [quote] = await db
       .select()
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, req.params.id));
+      .where(eq(quotationsTable.id, String(req.params.id)));
     if (!quote) {
       res.status(404).json({ error: "Quotation not found" });
       return;
@@ -286,15 +283,13 @@ router.patch("/quotations/:id/status", requireAuth, async (req, res): Promise<vo
     const [updated] = await db
       .update(quotationsTable)
       .set(updates)
-      .where(eq(quotationsTable.id, req.params.id))
+      .where(eq(quotationsTable.id, String(req.params.id)))
       .returning();
 
     res.json(updated);
-  } catch (err: any) {
-    if (err?.name === "ZodError") {
-      res.status(400).json({ error: err.errors });
-      return;
-    }
+  } catch (err: unknown) {
+    const zodErrors = getZodErrors(err);
+    if (zodErrors) { res.status(400).json({ error: zodErrors }); return; }
     res.status(500).json({ error: "Failed to change status" });
   }
 });
@@ -305,7 +300,7 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
     const [src] = await db
       .select()
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, req.params.id));
+      .where(eq(quotationsTable.id, String(req.params.id)));
     if (!src) {
       res.status(404).json({ error: "Quotation not found" });
       return;
@@ -381,7 +376,7 @@ router.delete("/quotations/:id", requireAuth, async (req, res): Promise<void> =>
   try {
     await db
       .delete(quotationsTable)
-      .where(eq(quotationsTable.id, req.params.id));
+      .where(eq(quotationsTable.id, String(req.params.id)));
     res.status(204).send();
   } catch {
     res.status(500).json({ error: "Failed to delete quotation" });
@@ -394,7 +389,7 @@ router.get("/quotations/:id/pdf", requireAuth, async (req, res): Promise<void> =
     const [quote] = await db
       .select()
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, req.params.id));
+      .where(eq(quotationsTable.id, String(req.params.id)));
     if (!quote) {
       res.status(404).json({ error: "Quotation not found" });
       return;

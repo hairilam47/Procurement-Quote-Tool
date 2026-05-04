@@ -1,17 +1,11 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { eq, inArray, sql, desc } from "drizzle-orm";
 import { db, quotationsTable, clientsTable } from "@workspace/db";
-import { getAuth } from "@clerk/express";
+import { requireAuth } from "./auth";
 
 const router = Router();
 
-function requireAuth(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
-  next();
-}
-
-router.get("/dashboard", requireAuth, async (_req, res) => {
+router.get("/dashboard", requireAuth, async (_req: Request, res: Response): Promise<void> => {
   try {
     // Status counts
     const statusCounts = await db
@@ -30,7 +24,7 @@ router.get("/dashboard", requireAuth, async (_req, res) => {
       .from(quotationsTable)
       .where(inArray(quotationsTable.status, ["SENT", "ACCEPTED"]));
 
-    // Recent 10 quotations with client name
+    // Recent 10 quotations — full QuotationSummary shape to match OpenAPI contract
     const recent = await db
       .select({
         id: quotationsTable.id,
@@ -40,8 +34,17 @@ router.get("/dashboard", requireAuth, async (_req, res) => {
         currency: quotationsTable.currency,
         issueDate: quotationsTable.issueDate,
         validUntil: quotationsTable.validUntil,
-        clientName: clientsTable.name,
+        createdAt: quotationsTable.createdAt,
         clientId: quotationsTable.clientId,
+        clientName: clientsTable.name,
+        clientCompany: clientsTable.company,
+        template: quotationsTable.template,
+        discountType: quotationsTable.discountType,
+        discountValue: quotationsTable.discountValue,
+        taxRate: quotationsTable.taxRate,
+        subtotal: quotationsTable.subtotal,
+        discountAmount: quotationsTable.discountAmount,
+        taxAmount: quotationsTable.taxAmount,
       })
       .from(quotationsTable)
       .leftJoin(clientsTable, eq(quotationsTable.clientId, clientsTable.id))
@@ -58,7 +61,7 @@ router.get("/dashboard", requireAuth, async (_req, res) => {
       outstandingTotal: outstanding[0]?.total ?? "0",
       recentQuotations: recent,
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to load dashboard" });
   }
 });
