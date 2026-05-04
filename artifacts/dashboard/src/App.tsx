@@ -42,7 +42,20 @@ function SyncUser() {
   const { isSignedIn, userId } = useAuth();
   useEffect(() => {
     if (!isSignedIn) return;
-    fetch("/api/auth/seed", { method: "POST", credentials: "include" });
+    let cancelled = false;
+    async function seed(retries = 3) {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const res = await fetch("/api/auth/seed", { method: "POST", credentials: "include" });
+          if (res.ok || cancelled) return;
+        } catch {
+          // network error — wait briefly before retrying
+        }
+        if (i < retries - 1) await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+      }
+    }
+    seed();
+    return () => { cancelled = true; };
   }, [isSignedIn, userId]);
   return null;
 }
