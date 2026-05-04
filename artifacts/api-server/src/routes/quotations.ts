@@ -1,0 +1,424 @@
+import { Router } from "express";
+import { eq, and, inArray, desc, sql } from "drizzle-orm";
+import { db, quotationsTable, lineItemsTable, clientsTable, companySettingsTable } from "@workspace/db";
+import { quotationSchema, changeStatusSchema } from "../lib/validation";
+import { computeTotals } from "../lib/calculations";
+import { generateId } from "../lib/id";
+import { renderQuotationPdf } from "../lib/pdf/render";
+import { getAuth } from "@clerk/express";
+
+const router = Router();
+
+function requireAuth(req: any, res: any, next: any) {
+  const auth = getAuth(req);
+  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
+  next();
+}
+
+async function nextQuoteNumber(): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `Q-${year}-`;
+  const [last] = await db
+    .select({ number: quotationsTable.number })
+    .from(quotationsTable)
+    .where(sql`${quotationsTable.number} like ${prefix + "%"}`)
+    .orderBy(desc(quotationsTable.number))
+    .limit(1);
+  const n = last ? parseInt(last.number.slice(prefix.length), 10) + 1 : 1;
+  return `${prefix}${String(n).padStart(4, "0")}`;
+}
+
+// List quotations
+router.get("/quotations", requireAuth, async (req, res) => {
+  try {
+    const { status, clientId } = req.query as {
+      status?: string;
+      clientId?: string;
+    };
+
+    let query = db
+      .select({
+        id: quotationsTable.id,
+        number: quotationsTable.number,
+        status: quotationsTable.status,
+        total: quotationsTable.total,
+        currency: quotationsTable.currency,
+        issueDate: quotationsTable.issueDate,
+        validUntil: quotationsTable.validUntil,
+        createdAt: quotationsTable.createdAt,
+        clientId: quotationsTable.clientId,
+        clientName: clientsTable.name,
+        clientCompany: clientsTable.company,
+        template: quotationsTable.template,
+        paymentUrl: quotationsTable.paymentUrl,
+        discountType: quotationsTable.discountType,
+        discountValue: quotationsTable.discountValue,
+        taxRate: quotationsTable.taxRate,
+        subtotal: quotationsTable.subtotal,
+        discountAmount: quotationsTable.discountAmount,
+        taxAmount: quotationsTable.taxAmount,
+      })
+      .from(quotationsTable)
+      .leftJoin(clientsTable, eq(quotationsTable.clientId, clientsTable.id))
+      .$dynamic();
+
+    const conditions = [];
+    if (status) conditions.push(eq(quotationsTable.status, status));
+    if (clientId) conditions.push(eq(quotationsTable.clientId, clientId));
+    if (conditions.length) query = query.where(and(...conditions));
+
+    const quotations = await query.orderBy(desc(quotationsTable.createdAt));
+    res.json(quotations);
+  } catch {
+    res.status(500).json({ error: "Failed to list quotations" });
+  }
+});
+
+// Get quotation by ID (with line items)
+router.get("/quotations/:id", requireAuth, async (req, res) => {
+  try {
+    const [quote] = await db
+      .select()
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, req.params.id));
+    if (!quote) return res.status(404).json({ error: "Quotation not found" });
+
+    const [client] = await db
+      .select()
+      .from(clientsTable)
+      .where(eq(clientsTable.id, quote.clientId));
+
+    const lineItems = await db
+      .select()
+      .from(lineItemsTable)
+      .where(eq(lineItemsTable.quotationId, quote.id))
+      .orderBy(lineItemsTable.position);
+
+    res.json({ ...quote, client, lineItems });
+  } catch {
+    res.status(500).json({ error: "Failed to get quotation" });
+  }
+});
+
+// Create quotation
+router.post("/quotations", requireAuth, async (req, res) => {
+  try {
+    const data = quotationSchema.parse(req.body);
+    const totals = computeTotals(
+      data.lineItems,
+      { type: data.discountType ?? null, value: data.discountValue },
+      data.taxRate,
+    );
+    const number = await nextQuoteNumber();
+    const id = generateId();
+
+    await db.transaction(async (tx) => {
+      await tx.insert(quotationsTable).values({
+        id,
+        number,
+        clientId: data.clientId,
+        issueDate: data.issueDate,
+        validUntil: data.validUntil,
+        currency: data.currency,
+        discountType: data.discountType ?? null,
+        discountValue: totals.discountAmount.toFixed(2) === "0.00"
+          ? String(data.discountValue)
+          : String(data.discountValue),
+        taxRate: String(data.taxRate),
+        subtotal: totals.subtotal.toFixed(2),
+        discountAmount: totals.discountAmount.toFixed(2),
+        taxAmount: totals.taxAmount.toFixed(2),
+        total: totals.total.toFixed(2),
+        notes: data.notes ?? null,
+        terms: data.terms ?? null,
+        paymentUrl: data.paymentUrl ?? null,
+        showQrCode: data.showQrCode,
+        template: data.template,
+      });
+
+      if (data.lineItems.length > 0) {
+        await tx.insert(lineItemsTable).values(
+          data.lineItems.map((li, i) => ({
+            id: generateId(),
+            quotationId: id,
+            description: li.description,
+            quantity: String(li.quantity),
+            unit: li.unit,
+            unitPrice: String(li.unitPrice),
+            lineTotal: totals.lineTotals[i].toFixed(2),
+            position: i,
+          })),
+        );
+      }
+    });
+
+    const [created] = await db
+      .select()
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, id));
+    const lineItems = await db
+      .select()
+      .from(lineItemsTable)
+      .where(eq(lineItemsTable.quotationId, id))
+      .orderBy(lineItemsTable.position);
+
+    res.status(201).json({ ...created, lineItems });
+  } catch (err: any) {
+    if (err?.name === "ZodError")
+      return res.status(400).json({ error: err.errors });
+    res.status(500).json({ error: "Failed to create quotation" });
+  }
+});
+
+// Update quotation
+router.put("/quotations/:id", requireAuth, async (req, res) => {
+  try {
+    const data = quotationSchema.parse(req.body);
+    const totals = computeTotals(
+      data.lineItems,
+      { type: data.discountType ?? null, value: data.discountValue },
+      data.taxRate,
+    );
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(lineItemsTable)
+        .where(eq(lineItemsTable.quotationId, req.params.id));
+
+      await tx
+        .update(quotationsTable)
+        .set({
+          clientId: data.clientId,
+          issueDate: data.issueDate,
+          validUntil: data.validUntil,
+          currency: data.currency,
+          discountType: data.discountType ?? null,
+          discountValue: String(data.discountValue),
+          taxRate: String(data.taxRate),
+          subtotal: totals.subtotal.toFixed(2),
+          discountAmount: totals.discountAmount.toFixed(2),
+          taxAmount: totals.taxAmount.toFixed(2),
+          total: totals.total.toFixed(2),
+          notes: data.notes ?? null,
+          terms: data.terms ?? null,
+          paymentUrl: data.paymentUrl ?? null,
+          showQrCode: data.showQrCode,
+          template: data.template,
+          updatedAt: new Date(),
+        })
+        .where(eq(quotationsTable.id, req.params.id));
+
+      if (data.lineItems.length > 0) {
+        await tx.insert(lineItemsTable).values(
+          data.lineItems.map((li, i) => ({
+            id: generateId(),
+            quotationId: req.params.id,
+            description: li.description,
+            quantity: String(li.quantity),
+            unit: li.unit,
+            unitPrice: String(li.unitPrice),
+            lineTotal: totals.lineTotals[i].toFixed(2),
+            position: i,
+          })),
+        );
+      }
+    });
+
+    const [updated] = await db
+      .select()
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, req.params.id));
+    if (!updated) return res.status(404).json({ error: "Quotation not found" });
+
+    const lineItems = await db
+      .select()
+      .from(lineItemsTable)
+      .where(eq(lineItemsTable.quotationId, req.params.id))
+      .orderBy(lineItemsTable.position);
+
+    res.json({ ...updated, lineItems });
+  } catch (err: any) {
+    if (err?.name === "ZodError")
+      return res.status(400).json({ error: err.errors });
+    res.status(500).json({ error: "Failed to update quotation" });
+  }
+});
+
+// Change status
+router.patch("/quotations/:id/status", requireAuth, async (req, res) => {
+  try {
+    const { status } = changeStatusSchema.parse(req.body);
+    const [quote] = await db
+      .select()
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, req.params.id));
+    if (!quote) return res.status(404).json({ error: "Quotation not found" });
+
+    const updates: Record<string, unknown> = { status, updatedAt: new Date() };
+    const now = new Date();
+    if (status === "SENT") updates.sentAt = now;
+    if (status === "ACCEPTED") updates.acceptedAt = now;
+    if (status === "PAID") updates.paidAt = now;
+
+    // Snapshot client + company on first SENT transition
+    if (status === "SENT" && !quote.clientSnapshot) {
+      const [client] = await db
+        .select()
+        .from(clientsTable)
+        .where(eq(clientsTable.id, quote.clientId));
+      const [settings] = await db
+        .select()
+        .from(companySettingsTable)
+        .limit(1);
+      updates.clientSnapshot = client ?? null;
+      updates.companySnapshot = settings ?? null;
+    }
+
+    const [updated] = await db
+      .update(quotationsTable)
+      .set(updates)
+      .where(eq(quotationsTable.id, req.params.id))
+      .returning();
+
+    res.json(updated);
+  } catch (err: any) {
+    if (err?.name === "ZodError")
+      return res.status(400).json({ error: err.errors });
+    res.status(500).json({ error: "Failed to change status" });
+  }
+});
+
+// Duplicate quotation
+router.post("/quotations/:id/duplicate", requireAuth, async (req, res) => {
+  try {
+    const [src] = await db
+      .select()
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, req.params.id));
+    if (!src) return res.status(404).json({ error: "Quotation not found" });
+
+    const srcLines = await db
+      .select()
+      .from(lineItemsTable)
+      .where(eq(lineItemsTable.quotationId, src.id))
+      .orderBy(lineItemsTable.position);
+
+    const number = await nextQuoteNumber();
+    const newId = generateId();
+    const now = new Date();
+    const validUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    await db.transaction(async (tx) => {
+      await tx.insert(quotationsTable).values({
+        id: newId,
+        number,
+        status: "DRAFT",
+        clientId: src.clientId,
+        issueDate: now,
+        validUntil,
+        currency: src.currency,
+        discountType: src.discountType,
+        discountValue: src.discountValue,
+        taxRate: src.taxRate,
+        subtotal: src.subtotal,
+        discountAmount: src.discountAmount,
+        taxAmount: src.taxAmount,
+        total: src.total,
+        notes: src.notes,
+        terms: src.terms,
+        paymentUrl: src.paymentUrl,
+        showQrCode: src.showQrCode,
+        template: src.template,
+      });
+
+      if (srcLines.length > 0) {
+        await tx.insert(lineItemsTable).values(
+          srcLines.map((li) => ({
+            id: generateId(),
+            quotationId: newId,
+            description: li.description,
+            quantity: li.quantity,
+            unit: li.unit,
+            unitPrice: li.unitPrice,
+            lineTotal: li.lineTotal,
+            position: li.position,
+          })),
+        );
+      }
+    });
+
+    const [dup] = await db
+      .select()
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, newId));
+    const lineItems = await db
+      .select()
+      .from(lineItemsTable)
+      .where(eq(lineItemsTable.quotationId, newId))
+      .orderBy(lineItemsTable.position);
+
+    res.status(201).json({ ...dup, lineItems });
+  } catch {
+    res.status(500).json({ error: "Failed to duplicate quotation" });
+  }
+});
+
+// Delete quotation
+router.delete("/quotations/:id", requireAuth, async (req, res) => {
+  try {
+    await db
+      .delete(quotationsTable)
+      .where(eq(quotationsTable.id, req.params.id));
+    res.status(204).send();
+  } catch {
+    res.status(500).json({ error: "Failed to delete quotation" });
+  }
+});
+
+// PDF endpoint
+router.get("/quotations/:id/pdf", requireAuth, async (req, res) => {
+  try {
+    const [quote] = await db
+      .select()
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, req.params.id));
+    if (!quote) return res.status(404).json({ error: "Quotation not found" });
+
+    const [client] = await db
+      .select()
+      .from(clientsTable)
+      .where(eq(clientsTable.id, quote.clientId));
+
+    const lineItems = await db
+      .select()
+      .from(lineItemsTable)
+      .where(eq(lineItemsTable.quotationId, quote.id))
+      .orderBy(lineItemsTable.position);
+
+    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    if (!settings) {
+      return res
+        .status(400)
+        .json({ error: "Configure company settings first" });
+    }
+
+    const buffer = await renderQuotationPdf({
+      quote: { ...quote, lineItems },
+      client,
+      company: settings,
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${quote.number}.pdf"`,
+    );
+    res.setHeader("Cache-Control", "private, no-store");
+    res.send(buffer);
+  } catch (err) {
+    console.error("[pdf]", err);
+    res.status(500).json({ error: "PDF render failed" });
+  }
+});
+
+export default router;

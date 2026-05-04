@@ -1,22 +1,26 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Quotation Management System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: clients
+  - name: quotations
+  - name: settings
+  - name: dashboard
+  - name: storage
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +28,565 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/sync:
+    post:
+      operationId: syncUser
+      tags: [auth]
+      summary: Sync Clerk user into DB
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                name: { type: string }
+      responses:
+        "200":
+          description: User synced
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /clients:
+    get:
+      operationId: listClients
+      tags: [clients]
+      summary: List all clients
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Client"
+    post:
+      operationId: createClient
+      tags: [clients]
+      summary: Create a client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientInput"
+      responses:
+        "201":
+          description: Created client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+
+  /clients/{id}:
+    get:
+      operationId: getClient
+      tags: [clients]
+      summary: Get client by ID
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+    put:
+      operationId: updateClient
+      tags: [clients]
+      summary: Update client
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientInput"
+      responses:
+        "200":
+          description: Updated client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+    delete:
+      operationId: deleteClient
+      tags: [clients]
+      summary: Delete client
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "204":
+          description: Deleted
+
+  /quotations:
+    get:
+      operationId: listQuotations
+      tags: [quotations]
+      summary: List quotations
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: clientId, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: List of quotations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuotationSummary"
+    post:
+      operationId: createQuotation
+      tags: [quotations]
+      summary: Create a quotation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotationInput"
+      responses:
+        "201":
+          description: Created quotation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotationDetail"
+
+  /quotations/{id}:
+    get:
+      operationId: getQuotation
+      tags: [quotations]
+      summary: Get quotation by ID (with line items)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Quotation detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotationDetail"
+    put:
+      operationId: updateQuotation
+      tags: [quotations]
+      summary: Update quotation
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotationInput"
+      responses:
+        "200":
+          description: Updated quotation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotationDetail"
+    delete:
+      operationId: deleteQuotation
+      tags: [quotations]
+      summary: Delete quotation
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "204":
+          description: Deleted
+
+  /quotations/{id}/status:
+    patch:
+      operationId: changeQuotationStatus
+      tags: [quotations]
+      summary: Change quotation status
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [DRAFT, SENT, ACCEPTED, REJECTED, PAID, EXPIRED]
+              required: [status]
+      responses:
+        "200":
+          description: Updated quotation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotationDetail"
+
+  /quotations/{id}/duplicate:
+    post:
+      operationId: duplicateQuotation
+      tags: [quotations]
+      summary: Duplicate a quotation
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "201":
+          description: New draft quotation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotationDetail"
+
+  /quotations/{id}/pdf:
+    get:
+      operationId: getQuotationPdf
+      tags: [quotations]
+      summary: Download quotation PDF
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: PDF binary
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get company settings
+      responses:
+        "200":
+          description: Company settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanySettings"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Upsert company settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsInput"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanySettings"
+
+  /settings/logo:
+    post:
+      operationId: uploadLogo
+      tags: [settings]
+      summary: Upload company logo
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                logo:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Uploaded logo URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string }
+                  objectPath: { type: string }
+
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get dashboard stats
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardData"
+
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestUploadUrlBody"
+      responses:
+        "200":
+          description: Presigned URL response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestUploadUrlResponse"
+
 components:
   schemas:
     HealthStatus:
       type: object
       properties:
-        status:
-          type: string
-      required:
-        - status
+        status: { type: string }
+      required: [status]
 
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        name: { type: string, nullable: true }
+        role: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, email, role, createdAt, updatedAt]
+
+    Client:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        company: { type: string, nullable: true }
+        email: { type: string }
+        phone: { type: string, nullable: true }
+        addressLine1: { type: string, nullable: true }
+        addressLine2: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        region: { type: string, nullable: true }
+        postalCode: { type: string, nullable: true }
+        country: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, name, email, createdAt, updatedAt]
+
+    ClientInput:
+      type: object
+      properties:
+        name: { type: string }
+        company: { type: string, nullable: true }
+        email: { type: string }
+        phone: { type: string, nullable: true }
+        addressLine1: { type: string, nullable: true }
+        addressLine2: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        region: { type: string, nullable: true }
+        postalCode: { type: string, nullable: true }
+        country: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+      required: [name, email]
+
+    LineItem:
+      type: object
+      properties:
+        id: { type: string }
+        quotationId: { type: string }
+        description: { type: string }
+        quantity: { type: string }
+        unit: { type: string }
+        unitPrice: { type: string }
+        lineTotal: { type: string }
+        position: { type: integer }
+      required: [id, quotationId, description, quantity, unit, unitPrice, lineTotal, position]
+
+    LineItemInput:
+      type: object
+      properties:
+        description: { type: string }
+        quantity: { type: number }
+        unit: { type: string, enum: [hours, days, fixed] }
+        unitPrice: { type: number }
+        position: { type: integer }
+      required: [description, quantity, unitPrice]
+
+    QuotationInput:
+      type: object
+      properties:
+        clientId: { type: string }
+        issueDate: { type: string, format: date-time }
+        validUntil: { type: string, format: date-time }
+        currency: { type: string }
+        discountType:
+          type: string
+          enum: [PERCENTAGE, FIXED]
+          nullable: true
+        discountValue: { type: number }
+        taxRate: { type: number }
+        notes: { type: string, nullable: true }
+        terms: { type: string, nullable: true }
+        paymentUrl: { type: string, nullable: true }
+        showQrCode: { type: boolean }
+        template: { type: string, enum: [MODERN, CLASSIC] }
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/LineItemInput"
+      required: [clientId, issueDate, validUntil, lineItems]
+
+    QuotationSummary:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        status: { type: string }
+        total: { type: string }
+        currency: { type: string }
+        issueDate: { type: string, format: date-time }
+        validUntil: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        clientId: { type: string }
+        clientName: { type: string, nullable: true }
+        clientCompany: { type: string, nullable: true }
+        template: { type: string }
+        discountType: { type: string, nullable: true }
+        discountValue: { type: string }
+        taxRate: { type: string }
+        subtotal: { type: string }
+        discountAmount: { type: string }
+        taxAmount: { type: string }
+      required: [id, number, status, total, currency, issueDate, validUntil, clientId]
+
+    QuotationDetail:
+      allOf:
+        - $ref: "#/components/schemas/QuotationSummary"
+        - type: object
+          properties:
+            notes: { type: string, nullable: true }
+            terms: { type: string, nullable: true }
+            paymentUrl: { type: string, nullable: true }
+            showQrCode: { type: boolean }
+            sentAt: { type: string, format: date-time, nullable: true }
+            acceptedAt: { type: string, format: date-time, nullable: true }
+            paidAt: { type: string, format: date-time, nullable: true }
+            client:
+              $ref: "#/components/schemas/Client"
+            lineItems:
+              type: array
+              items:
+                $ref: "#/components/schemas/LineItem"
+
+    CompanySettings:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        addressLine1: { type: string }
+        addressLine2: { type: string, nullable: true }
+        city: { type: string }
+        region: { type: string, nullable: true }
+        postalCode: { type: string }
+        country: { type: string }
+        phone: { type: string, nullable: true }
+        email: { type: string }
+        website: { type: string, nullable: true }
+        taxNumber: { type: string, nullable: true }
+        logoUrl: { type: string, nullable: true }
+        currency: { type: string }
+        defaultTaxRate: { type: string }
+        defaultTerms: { type: string, nullable: true }
+        defaultNotes: { type: string, nullable: true }
+        defaultTemplate: { type: string }
+        defaultPaymentUrl: { type: string, nullable: true }
+        updatedAt: { type: string, format: date-time }
+      required: [id, name, addressLine1, city, postalCode, country, email, currency, defaultTaxRate, defaultTemplate, updatedAt]
+
+    SettingsInput:
+      type: object
+      properties:
+        name: { type: string }
+        addressLine1: { type: string }
+        addressLine2: { type: string, nullable: true }
+        city: { type: string }
+        region: { type: string, nullable: true }
+        postalCode: { type: string }
+        country: { type: string }
+        phone: { type: string, nullable: true }
+        email: { type: string }
+        website: { type: string, nullable: true }
+        taxNumber: { type: string, nullable: true }
+        logoUrl: { type: string, nullable: true }
+        currency: { type: string }
+        defaultTaxRate: { type: number }
+        defaultTerms: { type: string, nullable: true }
+        defaultNotes: { type: string, nullable: true }
+        defaultTemplate: { type: string, enum: [MODERN, CLASSIC] }
+        defaultPaymentUrl: { type: string, nullable: true }
+      required: [name, addressLine1, city, postalCode, country, email, currency, defaultTaxRate, defaultTemplate]
+
+    DashboardData:
+      type: object
+      properties:
+        statusCounts:
+          type: object
+          additionalProperties: { type: integer }
+        outstandingTotal: { type: string }
+        recentQuotations:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuotationSummary"
+      required: [statusCounts, outstandingTotal, recentQuotations]
+
+    RequestUploadUrlBody:
+      type: object
+      properties:
+        name: { type: string }
+        size: { type: integer }
+        contentType: { type: string }
+      required: [name, size, contentType]
+
+    RequestUploadUrlResponse:
+      type: object
+      properties:
+        uploadURL: { type: string }
+        objectPath: { type: string }
+        metadata:
+          type: object
+          properties:
+            name: { type: string }
+            size: { type: integer }
+            contentType: { type: string }
+      required: [uploadURL, objectPath, metadata]
