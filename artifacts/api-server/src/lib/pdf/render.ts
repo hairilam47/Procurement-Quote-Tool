@@ -1,5 +1,6 @@
 import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
+import type { DocumentProps } from "@react-pdf/renderer";
 import { generateQrDataUrl } from "./qrcode";
 import { ModernTemplate } from "./templates/modern";
 import { ClassicTemplate } from "./templates/classic";
@@ -116,6 +117,6 @@ export async function renderQuotationPdf(args: {
     quote.template === "CLASSIC" ? ClassicTemplate : ModernTemplate;
 
   return (await renderToBuffer(
-    React.createElement(Component, props) as any,
+    React.createElement(Component, props) as React.ReactElement<DocumentProps>,
   )) as Buffer;
 }

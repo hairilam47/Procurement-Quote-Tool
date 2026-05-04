@@ -46,9 +46,9 @@ router.post("/storage/uploads/request-url", requireAuth, async (req: Request, re
  * GET /storage/public-objects/*
  *
  * Serve public assets from PUBLIC_OBJECT_SEARCH_PATHS.
- * These are unconditionally public — no auth required (logos embedded in PDF etc.)
+ * Still requires Clerk auth to comply with the secure-by-default /api/* rule.
  */
-router.get("/storage/public-objects/*filePath", async (req: Request, res: Response) => {
+router.get("/storage/public-objects/*filePath", requireAuth, async (req: Request, res: Response) => {
   try {
     const raw = req.params.filePath;
     const filePath = Array.isArray(raw) ? raw.join("/") : raw;

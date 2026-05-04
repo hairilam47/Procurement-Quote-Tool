@@ -318,8 +318,7 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
       .orderBy(lineItemsTable.position);
 
     const newId = generateId();
-    const now = new Date();
-    const validUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const today = new Date();
 
     await db.transaction(async (tx) => {
       const number = await nextQuoteNumberInTx(tx);
@@ -328,8 +327,8 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
         number,
         status: "DRAFT",
         clientId: src.clientId,
-        issueDate: now,
-        validUntil,
+        issueDate: today,
+        validUntil: today,
         currency: src.currency,
         discountType: src.discountType,
         discountValue: src.discountValue,
