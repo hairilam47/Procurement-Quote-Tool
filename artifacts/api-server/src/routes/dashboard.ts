@@ -5,16 +5,25 @@ import { requireAuth } from "./auth";
 
 const router = Router();
 
+const ALL_STATUSES = ["DRAFT", "SENT", "ACCEPTED", "REJECTED", "PAID", "EXPIRED"] as const;
+
 router.get("/dashboard", requireAuth, async (_req: Request, res: Response): Promise<void> => {
   try {
-    // Status counts
-    const statusCounts = await db
+    // Status counts — query then fill zeros for every enum value
+    const statusRows = await db
       .select({
         status: quotationsTable.status,
         count: sql<number>`count(*)::int`,
       })
       .from(quotationsTable)
       .groupBy(quotationsTable.status);
+
+    const countsMap: Record<string, number> = Object.fromEntries(
+      ALL_STATUSES.map((s) => [s, 0]),
+    );
+    for (const { status, count } of statusRows) {
+      countsMap[status] = count;
+    }
 
     // Outstanding total (SENT + ACCEPTED)
     const outstanding = await db
@@ -50,11 +59,6 @@ router.get("/dashboard", requireAuth, async (_req: Request, res: Response): Prom
       .leftJoin(clientsTable, eq(quotationsTable.clientId, clientsTable.id))
       .orderBy(desc(quotationsTable.createdAt))
       .limit(10);
-
-    const countsMap: Record<string, number> = {};
-    for (const { status, count } of statusCounts) {
-      countsMap[status] = count;
-    }
 
     res.json({
       statusCounts: countsMap,

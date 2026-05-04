@@ -73,7 +73,7 @@ export const settingsSchema = z.object({
   taxNumber: z.string().optional().nullable(),
   logoUrl: z
     .string()
-    .url()
+    .max(1000)
     .optional()
     .nullable()
     .or(z.literal("").transform(() => null)),
