@@ -88,7 +88,7 @@ router.post("/stripe/create-checkout-session", async (req, res) => {
     allow_promotion_codes: true,
   });
 
-  res.json({ url: session.url });
+  return res.json({ url: session.url });
 });
 
 export default router;

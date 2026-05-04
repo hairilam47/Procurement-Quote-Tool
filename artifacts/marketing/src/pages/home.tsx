@@ -376,7 +376,7 @@ function PricingSection() {
             disabled={loadingPlan !== null}
             onClick={() => handleSubscribe(period)}
           >
-            {loadingPlan === period ? <Loader2 className="w-5 h-5 animate-spin" /> : "Start now"}
+            {loadingPlan === period ? <Loader2 className="w-5 h-5 animate-spin" /> : "Subscribe"}
           </Button>
         </div>
 
