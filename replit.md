@@ -10,10 +10,12 @@ Production-ready quotation management system for IT service companies. Allows IT
 - **Node.js version**: 24
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
-- **Frontend**: React + Vite (dashboard artifact, port 23183, preview path `/`)
+- **Frontend (dashboard)**: React + Vite (artifact, port 23183, preview path `/`)
+- **Frontend (marketing)**: React + Vite (artifact, port 22813, preview path `/marketing/`)
 - **API**: Express 5 (api-server artifact, port 8080)
 - **Database**: PostgreSQL + Drizzle ORM
 - **Auth**: Clerk (`@clerk/react` v6, `@clerk/express`)
+- **Payments**: Stripe (via Replit integration) + `stripe-replit-sync` for DB sync
 - **Validation**: Zod
 - **API codegen**: Orval (from OpenAPI spec in `lib/api-spec/openapi.yaml`)
 - **PDF generation**: `@react-pdf/renderer` (MODERN and CLASSIC templates)
@@ -24,7 +26,8 @@ Production-ready quotation management system for IT service companies. Allows IT
 ```
 artifacts/
   dashboard/          # React+Vite frontend (Clerk auth, all pages)
-  api-server/         # Express 5 backend (all routes, PDF generation)
+  marketing/          # React+Vite marketing landing page (public, /marketing/)
+  api-server/         # Express 5 backend (all routes, PDF generation, Stripe)
 lib/
   db/                 # Drizzle ORM schema + DB connection
   api-spec/           # OpenAPI spec (source of truth)
@@ -43,11 +46,12 @@ lib/
 
 ## Database Schema
 
-- `users` — Clerk-synced user accounts
+- `users` — Clerk-synced user accounts (includes `stripe_customer_id`, `stripe_subscription_id`)
 - `company_settings` — singleton company profile + invoice defaults
 - `clients` — client contacts and addresses
 - `quotations` — quotations with status flow (DRAFT→SENT→ACCEPTED/REJECTED/PAID/EXPIRED)
 - `line_items` — quotation line items (description, qty, unit, price)
+- `stripe.*` — managed by `stripe-replit-sync` (products, prices, customers, subscriptions, etc.)
 
 ## Pages (Frontend)
 
@@ -80,6 +84,28 @@ All under `/api/`:
 - `GET|PUT /settings` — Get / update company settings
 - `POST /settings/logo` — Upload company logo
 - `GET /dashboard` — Dashboard stats
+- `GET /stripe/prices` — List active Stripe prices (public)
+- `POST /stripe/create-checkout-session` — Create Stripe Checkout session (accepts `{ plan: "daily"|"weekly"|"monthly"|"yearly" }`)
+- `POST /api/stripe/webhook` — Stripe webhook (registered before express.json())
+
+## Stripe Notes
+
+- Stripe integration connected via Replit native connector
+- `stripe-replit-sync` syncs Stripe data to `stripe.*` schema in PostgreSQL
+- `stripe` and `stripe-replit-sync` are **externalized** in `build.mjs` (required so `runMigrations` can resolve its SQL migration files at runtime)
+- Webhook is auto-managed via `findOrCreateManagedWebhook()`
+- `initStripe()` runs on startup: migrations → StripeSync → webhook → syncBackfill
+- 4 pricing tiers: Daily $2.99/day, Weekly $9.99/week, Monthly $29.99/mo, Yearly $199.99/yr
+- Seed script: `artifacts/api-server/src/seed-products.ts`
+
+## Marketing Page Notes
+
+- Public page at `/marketing/` — no auth required
+- Nav "Log in" → `/sign-in`, "Sign up" → `/sign-up` (plain `<a>` tags, not wouter)
+- Pricing toggle: daily/weekly/monthly/yearly, fetches live prices from `/api/stripe/prices`
+- Subscribe buttons call `POST /api/stripe/create-checkout-session` and redirect to Stripe Checkout
+- SEO: full meta tags, OG, Twitter Card, JSON-LD (WebSite + Organization + SoftwareApplication + FAQPage)
+- `sitemap.xml` and `robots.txt` served from `artifacts/marketing/public/`
 
 ## Auth Notes
 

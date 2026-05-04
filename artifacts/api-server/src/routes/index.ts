@@ -6,6 +6,7 @@ import clientsRouter from "./clients";
 import quotationsRouter from "./quotations";
 import settingsRouter from "./settings";
 import dashboardRouter from "./dashboard";
+import stripeRouter from "./stripe";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(clientsRouter);
 router.use(quotationsRouter);
 router.use(settingsRouter);
 router.use(dashboardRouter);
+router.use(stripeRouter);
 
 export default router;
