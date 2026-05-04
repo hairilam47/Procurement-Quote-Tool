@@ -5,6 +5,17 @@ import { getUncachableStripeClient } from "../stripeClient";
 
 const router: IRouter = Router();
 
+// Primary plan→price mapping via explicit env vars set at startup.
+// These are populated by seed-products.ts which writes the Stripe price IDs
+// after seeding, or can be set manually via STRIPE_PRICE_* env vars.
+const PLAN_PRICE_IDS: Record<string, string | undefined> = {
+  daily: process.env.STRIPE_PRICE_DAILY,
+  weekly: process.env.STRIPE_PRICE_WEEKLY,
+  monthly: process.env.STRIPE_PRICE_MONTHLY,
+  yearly: process.env.STRIPE_PRICE_YEARLY,
+};
+
+// DB interval fallback for plans not covered by env vars
 const PLAN_INTERVALS: Record<string, string> = {
   daily: "day",
   weekly: "week",
@@ -34,24 +45,29 @@ router.get("/stripe/prices", async (_req, res) => {
 router.post("/stripe/create-checkout-session", async (req, res) => {
   const { plan } = req.body as { plan?: string };
 
-  const interval = plan ? PLAN_INTERVALS[plan] : undefined;
-  if (!interval) {
+  const validPlans = ["daily", "weekly", "monthly", "yearly"] as const;
+  if (!plan || !validPlans.includes(plan as (typeof validPlans)[number])) {
     return res.status(400).json({ error: "Invalid plan. Must be daily, weekly, monthly, or yearly." });
   }
 
-  let priceId: string | undefined;
+  // 1. Try explicit env var (fastest, no DB round-trip)
+  let priceId: string | undefined = PLAN_PRICE_IDS[plan];
 
-  try {
-    const result = await db.execute(sql`
-      SELECT id FROM stripe.prices
-      WHERE active = true
-        AND (recurring->>'interval') = ${interval}
-      ORDER BY unit_amount ASC
-      LIMIT 1
-    `);
-    priceId = (result.rows[0] as { id: string } | undefined)?.id;
-  } catch {
-    // stripe schema may not exist yet
+  // 2. Fall back to DB (stripe-replit-sync may have synced the price)
+  if (!priceId) {
+    const interval = PLAN_INTERVALS[plan];
+    try {
+      const result = await db.execute(sql`
+        SELECT id FROM stripe.prices
+        WHERE active = true
+          AND (recurring->>'interval') = ${interval}
+        ORDER BY unit_amount ASC
+        LIMIT 1
+      `);
+      priceId = (result.rows[0] as { id: string } | undefined)?.id;
+    } catch {
+      // stripe schema may not be ready yet
+    }
   }
 
   if (!priceId) {
@@ -61,7 +77,6 @@ router.post("/stripe/create-checkout-session", async (req, res) => {
   }
 
   const stripe = await getUncachableStripeClient();
-
   const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
 
   const session = await stripe.checkout.sessions.create({
