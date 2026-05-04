@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useGetSettings, useUpdateSettings } from "@workspace/api-client-react";
 import type { SettingsInput, SettingsInputDefaultTemplate } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
@@ -14,7 +15,22 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Settings, Upload, Loader2 } from "lucide-react";
+import { Settings, Upload, Loader2, CreditCard, ExternalLink } from "lucide-react";
+
+interface SubscriptionInfo {
+  id: string;
+  status: string;
+  planName: string;
+  interval: string | null;
+  currentPeriodEnd: number;
+  cancelAtPeriodEnd: boolean;
+}
+
+async function fetchSubscription(): Promise<{ subscription: SubscriptionInfo | null }> {
+  const res = await fetch("/api/stripe/subscription", { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch subscription");
+  return res.json();
+}
 
 export default function SettingsPage() {
   const { data: settings, isLoading, refetch } = useGetSettings();
@@ -23,6 +39,13 @@ export default function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  const { data: subscriptionData, isLoading: subscriptionLoading } = useQuery({
+    queryKey: ["stripe-subscription"],
+    queryFn: fetchSubscription,
+    retry: false,
+  });
 
   const [form, setForm] = useState<SettingsInput>({
     name: "",
@@ -94,6 +117,28 @@ export default function SettingsPage() {
       toast({ title: "Logo upload failed", variant: "destructive" });
     } finally {
       setLogoUploading(false);
+    }
+  }
+
+  async function handleManageBilling() {
+    setPortalLoading(true);
+    try {
+      const res = await fetch("/api/stripe/customer-portal", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error ?? "Failed to open billing portal");
+      }
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch (err) {
+      toast({
+        title: err instanceof Error ? err.message : "Failed to open billing portal",
+        variant: "destructive",
+      });
+      setPortalLoading(false);
     }
   }
 
@@ -343,7 +388,104 @@ export default function SettingsPage() {
           </Button>
         </div>
       </form>
+
+      {/* Billing */}
+      <Section title="Billing">
+        {subscriptionLoading ? (
+          <div className="h-10 bg-slate-800 rounded-lg animate-pulse" />
+        ) : subscriptionData?.subscription ? (
+          <BillingInfo
+            subscription={subscriptionData.subscription}
+            onManage={handleManageBilling}
+            loading={portalLoading}
+          />
+        ) : (
+          <div className="flex items-center justify-between">
+            <p className="text-slate-400 text-sm">No active subscription found.</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+              onClick={handleManageBilling}
+              disabled={portalLoading}
+              data-testid="manage-billing-btn"
+            >
+              {portalLoading ? (
+                <><Loader2 size={13} className="animate-spin mr-1.5" />Opening...</>
+              ) : (
+                <><CreditCard size={13} className="mr-1.5" />Manage Subscription</>
+              )}
+            </Button>
+          </div>
+        )}
+      </Section>
     </motion.div>
+  );
+}
+
+function BillingInfo({
+  subscription,
+  onManage,
+  loading,
+}: {
+  subscription: SubscriptionInfo;
+  onManage: () => void;
+  loading: boolean;
+}) {
+  const renewalDate = new Date(subscription.currentPeriodEnd * 1000).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const statusColor: Record<string, string> = {
+    active: "text-green-400",
+    trialing: "text-blue-400",
+    past_due: "text-yellow-400",
+    canceled: "text-red-400",
+    unpaid: "text-red-400",
+  };
+
+  const statusLabel: Record<string, string> = {
+    active: "Active",
+    trialing: "Trial",
+    past_due: "Past Due",
+    canceled: "Canceled",
+    unpaid: "Unpaid",
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <span className="text-white font-medium">{subscription.planName}</span>
+          <span className={`text-xs font-semibold uppercase ${statusColor[subscription.status] ?? "text-slate-400"}`}>
+            {statusLabel[subscription.status] ?? subscription.status}
+          </span>
+        </div>
+        <p className="text-slate-400 text-sm">
+          {subscription.cancelAtPeriodEnd
+            ? `Cancels on ${renewalDate}`
+            : `Renews on ${renewalDate}`}
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+        onClick={onManage}
+        disabled={loading}
+        data-testid="manage-billing-btn"
+      >
+        {loading ? (
+          <><Loader2 size={13} className="animate-spin mr-1.5" />Opening...</>
+        ) : (
+          <><ExternalLink size={13} className="mr-1.5" />Manage Subscription</>
+        )}
+      </Button>
+    </div>
   );
 }
 

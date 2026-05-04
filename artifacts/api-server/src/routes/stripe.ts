@@ -1,7 +1,9 @@
 import { Router, type IRouter } from "express";
-import { db } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { db, usersTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
+import { requireAuth } from "./auth";
 
 const router: IRouter = Router();
 
@@ -89,6 +91,68 @@ router.post("/stripe/create-checkout-session", async (req, res) => {
   });
 
   return res.json({ url: session.url });
+});
+
+router.get("/stripe/subscription", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, req.clerkUserId));
+
+    if (!user?.stripeSubscriptionId) {
+      res.json({ subscription: null });
+      return;
+    }
+
+    const stripe = await getUncachableStripeClient();
+    const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId, {
+      expand: ["items.data.price.product"],
+    });
+
+    const item = subscription.items.data[0];
+    const price = item?.price;
+    const product = price?.product as { name?: string } | undefined;
+
+    res.json({
+      subscription: {
+        id: subscription.id,
+        status: subscription.status,
+        planName: product?.name ?? price?.nickname ?? "Subscription",
+        interval: price?.recurring?.interval ?? null,
+        currentPeriodEnd: subscription.current_period_end,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      },
+    });
+  } catch {
+    res.status(500).json({ error: "Failed to fetch subscription" });
+  }
+});
+
+router.post("/stripe/customer-portal", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, req.clerkUserId));
+
+    if (!user?.stripeCustomerId) {
+      res.status(400).json({ error: "No billing account found. Please subscribe first." });
+      return;
+    }
+
+    const stripe = await getUncachableStripeClient();
+    const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: user.stripeCustomerId,
+      return_url: `${baseUrl}/settings`,
+    });
+
+    res.json({ url: session.url });
+  } catch {
+    res.status(500).json({ error: "Failed to create billing portal session" });
+  }
 });
 
 export default router;
