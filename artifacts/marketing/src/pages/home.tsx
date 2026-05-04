@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, FileText, Settings, CreditCard, Users, Zap, Shield, Loader2, BarChart, Clock, PenTool } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
   AccordionContent,
@@ -17,10 +16,6 @@ export default function Home() {
       <section className="relative overflow-hidden pt-24 md:pt-32 pb-20 md:pb-32 px-4 md:px-6 max-w-7xl mx-auto w-full">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-background to-background" />
         <div className="text-center max-w-4xl mx-auto flex flex-col items-center">
-          <Badge variant="outline" className="mb-6 py-1.5 px-4 bg-background/50 backdrop-blur-sm border-primary/20 text-primary rounded-full font-medium">
-            <span className="flex w-2 h-2 rounded-full bg-primary mr-2 animate-pulse" />
-            Built for IT Service Providers
-          </Badge>
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground mb-8 leading-[1.1] animate-in fade-in slide-in-from-bottom-8 duration-700">
             Stop losing hours to <br className="hidden md:block" />
             <span className="text-muted-foreground">messy Word quotes.</span>
