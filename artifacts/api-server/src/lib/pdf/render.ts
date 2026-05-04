@@ -84,13 +84,16 @@ const objectStorageService = new ObjectStorageService();
 function extractObjectPath(url: string): string | null {
   // Already a normalized internal path
   if (url.startsWith("/objects/")) return url;
-  // Full serving URL: https://<host>/api/storage/objects/<id>
+  // Relative serving URL: /api/storage/objects/<id> (when REPLIT_DEV_DOMAIN is absent)
+  const relMatch = url.match(/\/api\/storage(\/objects\/.+)/);
+  if (relMatch) return relMatch[1];
+  // Absolute serving URL: https://<host>/api/storage/objects/<id>
   try {
     const parsed = new URL(url);
-    const match = parsed.pathname.match(/(\/objects\/.+)/);
-    if (match) return match[1];
+    const absMatch = parsed.pathname.match(/(\/objects\/.+)/);
+    if (absMatch) return absMatch[1];
   } catch {
-    // not a valid URL — fall through
+    // not a valid absolute URL — fall through
   }
   return null;
 }
