@@ -29,6 +29,19 @@ import { formatCurrency } from "@/lib/format";
 const inputCls =
   "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500";
 
+function evaluateFormulaClient(formula: string): number | null {
+  const trimmed = formula.trim();
+  if (!trimmed) return null;
+  if (!/^[\d\s.()+\-*/]+$/.test(trimmed)) return null;
+  try {
+    const result = new Function(`"use strict"; return (${trimmed});`)();
+    if (typeof result !== "number" || !isFinite(result) || isNaN(result) || result < 0) return null;
+    return result;
+  } catch {
+    return null;
+  }
+}
+
 const SECONDARY_CURRENCIES = [
   { code: "EUR", name: "Euro" },
   { code: "GBP", name: "British Pound" },
@@ -113,6 +126,7 @@ const emptyLineItem = (): LineItemInput => ({
   quantity: 1,
   unit: "hours",
   unitPrice: 0,
+  rateFormula: null,
   position: 0,
 });
 
@@ -182,6 +196,7 @@ export default function QuotationFormPage() {
           quantity: parseFloat(li.quantity),
           unit: li.unit as LineItemInput["unit"],
           unitPrice: parseFloat(li.unitPrice),
+          rateFormula: li.rateFormula ?? null,
           position: idx,
         }))
       );
@@ -191,6 +206,20 @@ export default function QuotationFormPage() {
   function updateLineItem(index: number, key: keyof LineItemInput, value: unknown) {
     setLineItems((prev) =>
       prev.map((li, i) => (i === index ? { ...li, [key]: value } : li))
+    );
+  }
+
+  function handleFormulaChange(index: number, formula: string) {
+    const evaluated = formula.trim() ? evaluateFormulaClient(formula) : null;
+    setLineItems((prev) =>
+      prev.map((li, i) => {
+        if (i !== index) return li;
+        return {
+          ...li,
+          rateFormula: formula || null,
+          unitPrice: evaluated !== null ? evaluated : li.unitPrice,
+        };
+      })
     );
   }
 
@@ -422,16 +451,26 @@ export default function QuotationFormPage() {
                     <SelectItem value="fixed" className="text-white text-sm">fixed</SelectItem>
                   </SelectContent>
                 </Select>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
+                <div className="flex flex-col gap-1">
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={li.unitPrice}
+                      onChange={(e) => updateLineItem(idx, "unitPrice", parseFloat(e.target.value) || 0)}
+                      className={`${inputCls} h-8 text-sm pl-6 ${li.rateFormula ? "opacity-60" : ""}`}
+                      readOnly={!!li.rateFormula}
+                      data-testid={`line-item-price-${idx}`}
+                    />
+                  </div>
                   <Input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={li.unitPrice}
-                    onChange={(e) => updateLineItem(idx, "unitPrice", parseFloat(e.target.value) || 0)}
-                    className={`${inputCls} h-8 text-sm pl-6`}
-                    data-testid={`line-item-price-${idx}`}
+                    value={li.rateFormula ?? ""}
+                    onChange={(e) => handleFormulaChange(idx, e.target.value)}
+                    placeholder="Formula (e.g. 30*0.0032)"
+                    className={`${inputCls} h-6 text-xs font-mono`}
+                    data-testid={`line-item-formula-${idx}`}
                   />
                 </div>
                 <span className="text-slate-200 text-sm font-medium tabular-nums">

@@ -264,9 +264,14 @@ export default function QuotationDetailPage() {
             </div>
             <span className="text-slate-300 text-sm">{item.quantity}</span>
             <span className="text-slate-400 text-sm">{item.unit}</span>
-            <span className="text-slate-300 text-sm">
-              {formatCurrency(item.unitPrice, quotation.currency)}
-            </span>
+            <div>
+              <span className="text-slate-300 text-sm">
+                {formatCurrency(item.unitPrice, quotation.currency)}
+              </span>
+              {item.rateFormula && (
+                <p className="text-slate-600 text-xs mt-0.5 font-mono">({item.rateFormula})</p>
+              )}
+            </div>
             <span className="text-white text-sm font-medium">
               {formatCurrency(item.lineTotal, quotation.currency)}
             </span>

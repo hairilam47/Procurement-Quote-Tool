@@ -3,6 +3,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import { db, quotationsTable, lineItemsTable, clientsTable, companySettingsTable } from "@workspace/db";
 import { quotationSchema, changeStatusSchema } from "../lib/validation";
 import { computeTotals } from "../lib/calculations";
+import { evaluateFormula } from "../lib/formula";
 import { generateId } from "../lib/id";
 import { renderQuotationPdf } from "../lib/pdf/render";
 import { requireAuth } from "./auth";
@@ -123,12 +124,53 @@ router.get("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
   }
 });
 
+type LineItemWithFormula = {
+  sku?: string | null;
+  description: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  rateFormula?: string | null;
+  position: number;
+};
+
+/**
+ * Evaluate any rate formulas in the line items, replacing unitPrice with the
+ * computed result. Returns a 400 error response via res if any formula is invalid.
+ */
+function applyFormulas(
+  lineItems: LineItemWithFormula[],
+): { ok: true; items: LineItemWithFormula[] } | { ok: false; error: string } {
+  let error: string | null = null;
+  const items = lineItems.map((li, idx) => {
+    if (!li.rateFormula || error) return li;
+    try {
+      const price = evaluateFormula(li.rateFormula);
+      return { ...li, unitPrice: price };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Formula evaluation failed";
+      error = `Line item ${idx + 1}: ${msg}`;
+      return li;
+    }
+  });
+  if (error) return { ok: false, error };
+  return { ok: true, items };
+}
+
 // Create quotation
 router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
   try {
     const data = quotationSchema.parse(req.body);
+
+    const formulaResult = applyFormulas(data.lineItems);
+    if (!formulaResult.ok) {
+      res.status(400).json({ error: formulaResult.error });
+      return;
+    }
+    const resolvedLineItems = formulaResult.items;
+
     const totals = computeTotals(
-      data.lineItems,
+      resolvedLineItems,
       { type: data.discountType ?? null, value: data.discountValue },
       data.taxRate,
     );
@@ -172,9 +214,9 @@ router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
         template: data.template,
       });
 
-      if (data.lineItems.length > 0) {
+      if (resolvedLineItems.length > 0) {
         await tx.insert(lineItemsTable).values(
-          data.lineItems.map((li, i) => ({
+          resolvedLineItems.map((li, i) => ({
             id: generateId(),
             quotationId: id,
             sku: li.sku ?? null,
@@ -182,6 +224,7 @@ router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
             quantity: String(li.quantity),
             unit: li.unit,
             unitPrice: String(li.unitPrice),
+            rateFormula: li.rateFormula ?? null,
             lineTotal: totals.lineTotals[i].toFixed(2),
             position: i,
           })),
@@ -211,8 +254,16 @@ router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
 router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
   try {
     const data = quotationSchema.parse(req.body);
+
+    const formulaResult = applyFormulas(data.lineItems);
+    if (!formulaResult.ok) {
+      res.status(400).json({ error: formulaResult.error });
+      return;
+    }
+    const resolvedLineItems = formulaResult.items;
+
     const totals = computeTotals(
-      data.lineItems,
+      resolvedLineItems,
       { type: data.discountType ?? null, value: data.discountValue },
       data.taxRate,
     );
@@ -285,9 +336,9 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
         })
         .where(eq(quotationsTable.id, String(req.params.id)));
 
-      if (data.lineItems.length > 0) {
+      if (resolvedLineItems.length > 0) {
         await tx.insert(lineItemsTable).values(
-          data.lineItems.map((li, i) => ({
+          resolvedLineItems.map((li, i) => ({
             id: generateId(),
             quotationId: String(req.params.id),
             sku: li.sku ?? null,
@@ -295,6 +346,7 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
             quantity: String(li.quantity),
             unit: li.unit,
             unitPrice: String(li.unitPrice),
+            rateFormula: li.rateFormula ?? null,
             lineTotal: totals.lineTotals[i].toFixed(2),
             position: i,
           })),
@@ -441,6 +493,7 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
             quantity: li.quantity,
             unit: li.unit,
             unitPrice: li.unitPrice,
+            rateFormula: li.rateFormula ?? null,
             lineTotal: li.lineTotal,
             position: li.position,
           })),

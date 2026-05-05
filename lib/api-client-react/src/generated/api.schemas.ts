@@ -57,6 +57,7 @@ export interface LineItem {
   quantity: string;
   unit: string;
   unitPrice: string;
+  rateFormula?: string | null;
   lineTotal: string;
   position: number;
 }
@@ -76,6 +77,7 @@ export interface LineItemInput {
   quantity: number;
   unit?: LineItemInputUnit;
   unitPrice: number;
+  rateFormula?: string | null;
   position?: number;
 }
 

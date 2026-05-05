@@ -74,6 +74,7 @@ export const lineItemsTable = pgTable(
     quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull(),
     unit: text("unit").notNull().default("hours"),
     unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
+    rateFormula: text("rate_formula"),
     lineTotal: numeric("line_total", { precision: 12, scale: 2 }).notNull(),
     position: integer("position").notNull().default(0),
   },

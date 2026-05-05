@@ -7,6 +7,7 @@ export const lineItemSchema = z.object({
   quantity: z.coerce.number().positive("Quantity must be > 0"),
   unit: z.enum(["hours", "days", "fixed"]).default("hours"),
   unitPrice: z.coerce.number().nonnegative(),
+  rateFormula: z.string().max(500).optional().nullable(),
   position: z.number().int().nonnegative().default(0),
 });
 

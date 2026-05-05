@@ -5,6 +5,7 @@ export type TemplateLineItem = {
   quantity: string;
   unit: string;
   unitPrice: string;
+  rateFormula?: string | null;
   lineTotal: string;
 };
 

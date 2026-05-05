@@ -332,9 +332,14 @@ export function ClassicTemplate({
                 {Number(li.quantity).toFixed(2)}
               </Text>
               <Text style={{ width: colUnit, textAlign: "right" }}>{li.unit}</Text>
-              <Text style={{ width: colPrice, textAlign: "right" }}>
-                {fmtMoney(li.unitPrice, cur)}
-              </Text>
+              <View style={{ width: colPrice, textAlign: "right" }}>
+                <Text style={{ textAlign: "right" }}>{fmtMoney(li.unitPrice, cur)}</Text>
+                {li.rateFormula ? (
+                  <Text style={{ fontSize: 7, color: C.muted, textAlign: "right", marginTop: 2 }}>
+                    ({li.rateFormula})
+                  </Text>
+                ) : null}
+              </View>
               <Text style={{ width: colTotal, textAlign: "right" }}>
                 {fmtMoney(li.lineTotal, cur)}
               </Text>
