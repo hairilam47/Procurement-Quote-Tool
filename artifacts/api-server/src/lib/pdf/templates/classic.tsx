@@ -7,7 +7,6 @@ import {
   Image,
   Link,
   StyleSheet,
-  Font,
 } from "@react-pdf/renderer";
 import type { TemplateProps } from "./types";
 
@@ -18,6 +17,8 @@ const C = {
   accent: "#1f2937",
   bg: "#ffffff",
   subtle: "#f9fafb",
+  deferred: "#9ca3af",
+  deferredBg: "#f3f4f6",
 };
 
 const s = StyleSheet.create({
@@ -100,6 +101,24 @@ const s = StyleSheet.create({
     paddingHorizontal: 4,
     borderBottom: `0.5pt solid ${C.line}`,
   },
+  trDeferred: {
+    flexDirection: "row",
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderBottom: `0.5pt solid ${C.line}`,
+    backgroundColor: C.deferredBg,
+    opacity: 0.85,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+    borderTop: `1pt dashed ${C.deferred}`,
+    borderBottom: `0.5pt solid ${C.line}`,
+    backgroundColor: C.deferredBg,
+    marginTop: 2,
+  },
   cDesc: { width: "50%", paddingRight: 8 },
   cQty: { width: "12%", textAlign: "right" },
   cUnit: { width: "13%", textAlign: "right" },
@@ -116,6 +135,16 @@ const s = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 3,
+  },
+  amountDueRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 5,
+    marginTop: 3,
+    borderTop: `1pt solid ${C.line}`,
+    borderBottom: `1pt solid ${C.ink}`,
+    fontFamily: "Times-Bold",
+    fontSize: 11,
   },
   grandRow: {
     flexDirection: "row",
@@ -211,6 +240,10 @@ export function ClassicTemplate({
   const sec = quote.secondaryCurrency ?? null;
   const rate = quote.secondaryExchangeRate ?? null;
   const hasSec = !!(sec && rate);
+
+  const requiredItems = quote.lineItems.filter((li) => li.paymentRequired !== false);
+  const deferredItems = quote.lineItems.filter((li) => li.paymentRequired === false);
+  const hasDeferred = deferredItems.length > 0;
 
   const colDesc = hasSec ? "38%" : "50%";
   const colQty = hasSec ? "10%" : "12%";
@@ -318,7 +351,9 @@ export function ClassicTemplate({
               </Text>
             )}
           </View>
-          {quote.lineItems.map((li) => (
+
+          {/* Required items */}
+          {requiredItems.map((li) => (
             <View key={li.id} style={s.tr} wrap={false}>
               <View style={{ width: colDesc, paddingRight: 8 }}>
                 <Text>{li.description}</Text>
@@ -350,6 +385,49 @@ export function ClassicTemplate({
               )}
             </View>
           ))}
+
+          {/* Deferred items */}
+          {hasDeferred && (
+            <>
+              <View style={s.dividerRow} wrap={false}>
+                <Text style={{ fontSize: 8, fontFamily: "Times-Bold", color: C.deferred, textTransform: "uppercase", letterSpacing: 1 }}>
+                  Deferred items (billed on delivery)
+                </Text>
+              </View>
+              {deferredItems.map((li) => (
+                <View key={li.id} style={s.trDeferred} wrap={false}>
+                  <View style={{ width: colDesc, paddingRight: 8 }}>
+                    <Text style={{ color: C.muted }}>{li.description}</Text>
+                    {li.sku ? (
+                      <Text style={{ fontSize: 8, color: C.deferred, marginTop: 2 }}>
+                        SKU: {li.sku}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text style={{ width: colQty, textAlign: "right", color: C.muted }}>
+                    {Number(li.quantity).toFixed(2)}
+                  </Text>
+                  <Text style={{ width: colUnit, textAlign: "right", color: C.muted }}>{li.unit}</Text>
+                  <View style={{ width: colPrice, textAlign: "right" }}>
+                    <Text style={{ textAlign: "right", color: C.muted }}>{fmtMoney(li.unitPrice, cur)}</Text>
+                    {li.rateFormula ? (
+                      <Text style={{ fontSize: 7, color: C.deferred, textAlign: "right", marginTop: 2 }}>
+                        ({li.rateFormula})
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text style={{ width: colTotal, textAlign: "right", color: C.muted }}>
+                    {fmtMoney(li.lineTotal, cur)}
+                  </Text>
+                  {hasSec && (
+                    <Text style={{ width: "15%", textAlign: "right", color: C.deferred }}>
+                      {fmtMoney(conv(li.lineTotal, rate), sec!)}
+                    </Text>
+                  )}
+                </View>
+              ))}
+            </>
+          )}
         </View>
 
         {/* Totals — double-ruled */}
@@ -408,8 +486,21 @@ export function ClassicTemplate({
                 )}
               </View>
             )}
+            {hasDeferred && (
+              <View style={[s.amountDueRow, { marginBottom: 4 }]}>
+                <Text style={{ flex: 1 }}>Amount due now</Text>
+                <Text style={{ width: hasSec ? "30%" : undefined, textAlign: hasSec ? "right" : undefined }}>
+                  {fmtMoney(quote.requiredTotal, cur)}
+                </Text>
+                {hasSec && (
+                  <Text style={{ width: "30%", textAlign: "right" }}>
+                    {fmtMoney(conv(quote.requiredTotal, rate), sec!)}
+                  </Text>
+                )}
+              </View>
+            )}
             <View style={s.grandRow}>
-              <Text style={{ flex: 1 }}>Total Due</Text>
+              <Text style={{ flex: 1 }}>{hasDeferred ? "Full quotation total" : "Total Due"}</Text>
               <Text style={{ width: hasSec ? "30%" : undefined, textAlign: hasSec ? "right" : undefined }}>
                 {fmtMoney(quote.total, cur)}
               </Text>

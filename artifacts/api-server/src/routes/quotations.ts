@@ -76,6 +76,7 @@ router.get("/quotations", requireAuth, async (req, res): Promise<void> => {
         subtotal: quotationsTable.subtotal,
         discountAmount: quotationsTable.discountAmount,
         taxAmount: quotationsTable.taxAmount,
+        requiredTotal: quotationsTable.requiredTotal,
         secondaryCurrency: quotationsTable.secondaryCurrency,
         secondaryExchangeRate: quotationsTable.secondaryExchangeRate,
       })
@@ -131,6 +132,7 @@ type LineItemWithFormula = {
   unit: string;
   unitPrice: number;
   rateFormula?: string | null;
+  paymentRequired: boolean;
   position: number;
 };
 
@@ -207,6 +209,7 @@ router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
         discountAmount: totals.discountAmount.toFixed(2),
         taxAmount: totals.taxAmount.toFixed(2),
         total: totals.total.toFixed(2),
+        requiredTotal: totals.requiredTotal.toFixed(2),
         notes: data.notes ?? null,
         terms: data.terms ?? null,
         paymentUrl: data.paymentUrl ?? null,
@@ -225,6 +228,7 @@ router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
             unit: li.unit,
             unitPrice: String(li.unitPrice),
             rateFormula: li.rateFormula ?? null,
+            paymentRequired: li.paymentRequired,
             lineTotal: totals.lineTotals[i].toFixed(2),
             position: i,
           })),
@@ -327,6 +331,7 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
           discountAmount: totals.discountAmount.toFixed(2),
           taxAmount: totals.taxAmount.toFixed(2),
           total: totals.total.toFixed(2),
+          requiredTotal: totals.requiredTotal.toFixed(2),
           notes: data.notes ?? null,
           terms: data.terms ?? null,
           paymentUrl: data.paymentUrl ?? null,
@@ -347,6 +352,7 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
             unit: li.unit,
             unitPrice: String(li.unitPrice),
             rateFormula: li.rateFormula ?? null,
+            paymentRequired: li.paymentRequired,
             lineTotal: totals.lineTotals[i].toFixed(2),
             position: i,
           })),
@@ -494,6 +500,7 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
             unit: li.unit,
             unitPrice: li.unitPrice,
             rateFormula: li.rateFormula ?? null,
+            paymentRequired: li.paymentRequired,
             lineTotal: li.lineTotal,
             position: li.position,
           })),

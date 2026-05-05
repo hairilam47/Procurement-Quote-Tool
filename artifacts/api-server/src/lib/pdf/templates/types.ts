@@ -6,6 +6,7 @@ export type TemplateLineItem = {
   unit: string;
   unitPrice: string;
   rateFormula?: string | null;
+  paymentRequired: boolean;
   lineTotal: string;
 };
 
@@ -26,6 +27,7 @@ export type TemplateProps = {
     taxAmount: string;
     subtotal: string;
     total: string;
+    requiredTotal: string;
     notes: string | null | undefined;
     terms: string | null | undefined;
     paymentUrl: string | null | undefined;

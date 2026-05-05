@@ -127,6 +127,7 @@ const emptyLineItem = (): LineItemInput => ({
   unit: "hours",
   unitPrice: 0,
   rateFormula: null,
+  paymentRequired: true,
   position: 0,
 });
 
@@ -197,6 +198,7 @@ export default function QuotationFormPage() {
           unit: li.unit as LineItemInput["unit"],
           unitPrice: parseFloat(li.unitPrice),
           rateFormula: li.rateFormula ?? null,
+          paymentRequired: li.paymentRequired !== false,
           position: idx,
         }))
       );
@@ -245,6 +247,19 @@ export default function QuotationFormPage() {
   const taxableAmount = subtotal - discountAmount;
   const taxAmount = taxableAmount * (taxRate / 100);
   const total = taxableAmount + taxAmount;
+
+  const hasDeferred = lineItems.some((li) => li.paymentRequired === false);
+  const requiredSubtotal = lineItems
+    .filter((li) => li.paymentRequired !== false)
+    .reduce((sum, li) => sum + (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0), 0);
+  const requiredDiscountAmount =
+    discountType === "PERCENTAGE"
+      ? requiredSubtotal * (discountValue / 100)
+      : discountType === "FIXED" && subtotal > 0
+      ? discountAmount * (requiredSubtotal / subtotal)
+      : 0;
+  const requiredTaxableAmount = requiredSubtotal - requiredDiscountAmount;
+  const requiredTotal = requiredTaxableAmount + requiredTaxableAmount * (taxRate / 100);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -411,8 +426,9 @@ export default function QuotationFormPage() {
 
           {lineItems.map((li, idx) => {
             const rowTotal = (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0);
+            const isDeferred = li.paymentRequired === false;
             return (
-              <div key={idx} className="grid grid-cols-[2.5fr_0.7fr_0.7fr_1fr_1fr_auto] gap-2 px-5 py-2.5 border-b border-slate-800/30 last:border-0 items-center">
+              <div key={idx} className={`grid grid-cols-[2.5fr_0.7fr_0.7fr_1fr_1fr_auto] gap-2 px-5 py-2.5 border-b border-slate-800/30 last:border-0 items-center transition-opacity ${isDeferred ? "opacity-60" : ""}`}>
                 <div className="flex flex-col gap-1">
                   <Input
                     value={li.description}
@@ -428,6 +444,17 @@ export default function QuotationFormPage() {
                     className={`${inputCls} h-6 text-xs`}
                     data-testid={`line-item-sku-${idx}`}
                   />
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <Switch
+                      checked={!isDeferred}
+                      onCheckedChange={(v) => updateLineItem(idx, "paymentRequired", v)}
+                      className="scale-75 origin-left"
+                      data-testid={`line-item-required-${idx}`}
+                    />
+                    <span className="text-xs text-slate-500">
+                      {isDeferred ? "Deferred" : "Required now"}
+                    </span>
+                  </div>
                 </div>
                 <Input
                   type="number"
@@ -508,9 +535,19 @@ export default function QuotationFormPage() {
                   <span className="text-slate-300">{formatCurrency(taxAmount, currency)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm border-t border-slate-700 pt-1.5 mt-1">
-                <span className="text-white font-bold">Total</span>
-                <span className="text-white font-bold text-base">{formatCurrency(total, currency)}</span>
+              {hasDeferred && (
+                <div className="flex justify-between text-sm border-t border-slate-700 pt-1.5 mt-1">
+                  <span className="text-blue-400 font-semibold">Amount due now</span>
+                  <span className="text-blue-400 font-semibold">{formatCurrency(requiredTotal, currency)}</span>
+                </div>
+              )}
+              <div className={`flex justify-between text-sm pt-1.5 mt-1 ${hasDeferred ? "" : "border-t border-slate-700"}`}>
+                <span className={hasDeferred ? "text-slate-400" : "text-white font-bold"}>
+                  {hasDeferred ? "Full total" : "Total"}
+                </span>
+                <span className={hasDeferred ? "text-slate-400" : "text-white font-bold text-base"}>
+                  {formatCurrency(total, currency)}
+                </span>
               </div>
             </div>
           </div>

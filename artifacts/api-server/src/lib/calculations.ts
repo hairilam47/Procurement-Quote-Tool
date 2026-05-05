@@ -3,6 +3,7 @@ import Decimal from "decimal.js";
 export type LineForCalc = {
   quantity: number | string;
   unitPrice: number | string;
+  paymentRequired?: boolean;
 };
 
 export type Totals = {
@@ -12,6 +13,7 @@ export type Totals = {
   taxAmount: Decimal;
   total: Decimal;
   lineTotals: Decimal[];
+  requiredTotal: Decimal;
 };
 
 const D = (v: number | string | null | undefined) =>
@@ -52,5 +54,39 @@ export function computeTotals(
     .toDecimalPlaces(2);
   const total = taxableBase.add(taxAmount).toDecimalPlaces(2);
 
-  return { subtotal, discountAmount, taxableBase, taxAmount, total, lineTotals };
+  // Required-only subtotal (items with paymentRequired !== false)
+  const requiredLineTotals = lines.map((l, i) =>
+    l.paymentRequired === false ? new Decimal(0) : lineTotals[i],
+  );
+  const requiredSubtotal = requiredLineTotals.reduce(
+    (acc, x) => acc.add(x),
+    new Decimal(0),
+  );
+
+  let requiredDiscountAmount = new Decimal(0);
+  if (discount.type === "PERCENTAGE") {
+    requiredDiscountAmount = requiredSubtotal
+      .mul(D(discount.value))
+      .div(100)
+      .toDecimalPlaces(2);
+  } else if (discount.type === "FIXED") {
+    // Proportional allocation of fixed discount
+    if (subtotal.gt(0)) {
+      requiredDiscountAmount = discountAmount
+        .mul(requiredSubtotal)
+        .div(subtotal)
+        .toDecimalPlaces(2);
+    }
+  }
+  if (requiredDiscountAmount.gt(requiredSubtotal)) requiredDiscountAmount = requiredSubtotal;
+  if (requiredDiscountAmount.lt(0)) requiredDiscountAmount = new Decimal(0);
+
+  const requiredTaxableBase = requiredSubtotal.sub(requiredDiscountAmount);
+  const requiredTaxAmount = requiredTaxableBase
+    .mul(D(taxRatePct))
+    .div(100)
+    .toDecimalPlaces(2);
+  const requiredTotal = requiredTaxableBase.add(requiredTaxAmount).toDecimalPlaces(2);
+
+  return { subtotal, discountAmount, taxableBase, taxAmount, total, lineTotals, requiredTotal };
 }

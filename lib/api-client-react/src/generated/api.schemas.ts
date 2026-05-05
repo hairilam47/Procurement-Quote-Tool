@@ -58,6 +58,7 @@ export interface LineItem {
   unit: string;
   unitPrice: string;
   rateFormula?: string | null;
+  paymentRequired: boolean;
   lineTotal: string;
   position: number;
 }
@@ -78,6 +79,7 @@ export interface LineItemInput {
   unit?: LineItemInputUnit;
   unitPrice: number;
   rateFormula?: string | null;
+  paymentRequired?: boolean;
   position?: number;
 }
 
@@ -122,6 +124,7 @@ export interface QuotationSummary {
   secondaryExchangeRate?: string | null;
   status: string;
   total: string;
+  requiredTotal?: string;
   currency: string;
   issueDate: string;
   validUntil: string;

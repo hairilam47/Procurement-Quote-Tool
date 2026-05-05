@@ -14,6 +14,8 @@ type LineItem = {
   quantity: string;
   unit: string;
   unitPrice: string;
+  rateFormula?: string | null;
+  paymentRequired: boolean;
   lineTotal: string;
 };
 
@@ -33,6 +35,7 @@ type QuoteData = {
   taxAmount: string;
   subtotal: string;
   total: string;
+  requiredTotal: string;
   notes: string | null;
   terms: string | null;
   paymentUrl: string | null;

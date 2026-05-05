@@ -251,32 +251,42 @@ export default function QuotationDetailPage() {
             </span>
           ))}
         </div>
-        {lineItems.map((item) => (
-          <div
-            key={item.id}
-            className="grid grid-cols-[3fr_1fr_1fr_1fr_1fr] px-5 py-3 border-b border-slate-800/30 last:border-0"
-          >
-            <div>
-              <span className="text-white text-sm">{item.description}</span>
-              {item.sku && (
-                <p className="text-slate-500 text-xs mt-0.5">SKU: {item.sku}</p>
-              )}
-            </div>
-            <span className="text-slate-300 text-sm">{item.quantity}</span>
-            <span className="text-slate-400 text-sm">{item.unit}</span>
-            <div>
-              <span className="text-slate-300 text-sm">
-                {formatCurrency(item.unitPrice, quotation.currency)}
+        {lineItems.map((item) => {
+          const isDeferred = item.paymentRequired === false;
+          return (
+            <div
+              key={item.id}
+              className={`grid grid-cols-[3fr_1fr_1fr_1fr_1fr] px-5 py-3 border-b border-slate-800/30 last:border-0 ${isDeferred ? "opacity-60 bg-slate-800/20" : ""}`}
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-white text-sm">{item.description}</span>
+                  {isDeferred && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 font-medium">
+                      Deferred
+                    </span>
+                  )}
+                </div>
+                {item.sku && (
+                  <p className="text-slate-500 text-xs mt-0.5">SKU: {item.sku}</p>
+                )}
+              </div>
+              <span className="text-slate-300 text-sm">{item.quantity}</span>
+              <span className="text-slate-400 text-sm">{item.unit}</span>
+              <div>
+                <span className="text-slate-300 text-sm">
+                  {formatCurrency(item.unitPrice, quotation.currency)}
+                </span>
+                {item.rateFormula && (
+                  <p className="text-slate-600 text-xs mt-0.5 font-mono">({item.rateFormula})</p>
+                )}
+              </div>
+              <span className="text-white text-sm font-medium">
+                {formatCurrency(item.lineTotal, quotation.currency)}
               </span>
-              {item.rateFormula && (
-                <p className="text-slate-600 text-xs mt-0.5 font-mono">({item.rateFormula})</p>
-              )}
             </div>
-            <span className="text-white text-sm font-medium">
-              {formatCurrency(item.lineTotal, quotation.currency)}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Totals */}
@@ -324,9 +334,20 @@ export default function QuotationDetailPage() {
                   secondary={hasSec ? conv(quotation.taxAmount ?? "0") : undefined}
                 />
               ) : null}
+              {lineItems.some((li) => li.paymentRequired === false) && quotation.requiredTotal && (
+                <div className="border-t border-slate-700 pt-2 mt-2">
+                  <DualTotalRow
+                    label="Amount due now"
+                    primary={formatCurrency(quotation.requiredTotal, quotation.currency)}
+                    secondary={hasSec ? conv(quotation.requiredTotal) : undefined}
+                    bold
+                    className="text-blue-400"
+                  />
+                </div>
+              )}
               <div className="border-t border-slate-700 pt-2 mt-2">
                 <DualTotalRow
-                  label="Total"
+                  label={lineItems.some((li) => li.paymentRequired === false) ? "Full quotation total" : "Total"}
                   primary={formatCurrency(quotation.total, quotation.currency)}
                   secondary={hasSec ? conv(quotation.total) : undefined}
                   bold

@@ -18,6 +18,8 @@ const C = {
   accentSoft: "#dbeafe",
   bg: "#ffffff",
   subtle: "#f8fafc",
+  deferred: "#94a3b8",
+  deferredBg: "#f1f5f9",
 };
 
 const conv = (amount: string | number, rate: string | null | undefined): string => {
@@ -118,6 +120,24 @@ const s = StyleSheet.create({
     borderBottom: `1pt solid ${C.line}`,
     backgroundColor: C.subtle,
   },
+  trDeferred: {
+    flexDirection: "row",
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderBottom: `1pt solid ${C.line}`,
+    backgroundColor: C.deferredBg,
+    opacity: 0.8,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: C.deferredBg,
+    borderBottom: `1pt solid ${C.line}`,
+    borderTop: `1pt dashed ${C.deferred}`,
+    marginTop: 2,
+  },
   cDesc: { width: "50%", paddingRight: 8 },
   cQty: { width: "12%", textAlign: "right" },
   cUnit: { width: "13%", textAlign: "right" },
@@ -134,6 +154,19 @@ const s = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 4,
+  },
+  amountDueRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    marginTop: 2,
+    borderTop: `1pt solid ${C.line}`,
+    backgroundColor: C.accentSoft,
+    paddingHorizontal: 6,
+    borderRadius: 3,
+    fontFamily: "Helvetica-Bold",
+    color: C.accent,
+    fontSize: 11,
   },
   grandRow: {
     flexDirection: "row",
@@ -226,6 +259,10 @@ export function ModernTemplate({
   const sec = quote.secondaryCurrency ?? null;
   const rate = quote.secondaryExchangeRate ?? null;
   const hasSec = !!(sec && rate);
+
+  const requiredItems = quote.lineItems.filter((li) => li.paymentRequired !== false);
+  const deferredItems = quote.lineItems.filter((li) => li.paymentRequired === false);
+  const hasDeferred = deferredItems.length > 0;
 
   const colDesc = hasSec ? "38%" : "50%";
   const colQty = hasSec ? "10%" : "12%";
@@ -336,7 +373,9 @@ export function ModernTemplate({
               </Text>
             )}
           </View>
-          {quote.lineItems.map((li, idx) => (
+
+          {/* Required items */}
+          {requiredItems.map((li, idx) => (
             <View key={li.id} style={idx % 2 === 0 ? s.tr : s.trAlt} wrap={false}>
               <View style={{ width: colDesc, paddingRight: 8 }}>
                 <Text>{li.description}</Text>
@@ -368,6 +407,49 @@ export function ModernTemplate({
               )}
             </View>
           ))}
+
+          {/* Deferred items section */}
+          {hasDeferred && (
+            <>
+              <View style={s.dividerRow} wrap={false}>
+                <Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold", color: C.deferred, textTransform: "uppercase", letterSpacing: 1 }}>
+                  Deferred items (billed on delivery)
+                </Text>
+              </View>
+              {deferredItems.map((li) => (
+                <View key={li.id} style={s.trDeferred} wrap={false}>
+                  <View style={{ width: colDesc, paddingRight: 8 }}>
+                    <Text style={{ color: C.muted }}>{li.description}</Text>
+                    {li.sku ? (
+                      <Text style={{ fontSize: 8, color: C.deferred, marginTop: 2 }}>
+                        SKU: {li.sku}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text style={{ width: colQty, textAlign: "right", color: C.muted }}>
+                    {Number(li.quantity).toFixed(2)}
+                  </Text>
+                  <Text style={{ width: colUnit, textAlign: "right", color: C.muted }}>{li.unit}</Text>
+                  <View style={{ width: colPrice, textAlign: "right" }}>
+                    <Text style={{ textAlign: "right", color: C.muted }}>{fmtMoney(li.unitPrice, cur)}</Text>
+                    {li.rateFormula ? (
+                      <Text style={{ fontSize: 7, color: C.deferred, textAlign: "right", marginTop: 2 }}>
+                        ({li.rateFormula})
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text style={{ width: colTotal, textAlign: "right", color: C.muted }}>
+                    {fmtMoney(li.lineTotal, cur)}
+                  </Text>
+                  {hasSec && (
+                    <Text style={{ width: "15%", textAlign: "right", color: C.deferred }}>
+                      {fmtMoney(conv(li.lineTotal, rate), sec!)}
+                    </Text>
+                  )}
+                </View>
+              ))}
+            </>
+          )}
         </View>
 
         {/* Totals */}
@@ -426,8 +508,21 @@ export function ModernTemplate({
                 )}
               </View>
             )}
+            {hasDeferred && (
+              <View style={[s.amountDueRow, { marginBottom: 4 }]}>
+                <Text style={{ flex: 1 }}>Amount due now</Text>
+                <Text style={{ width: hasSec ? "30%" : undefined, textAlign: hasSec ? "right" : undefined }}>
+                  {fmtMoney(quote.requiredTotal, cur)}
+                </Text>
+                {hasSec && (
+                  <Text style={{ width: "30%", textAlign: "right" }}>
+                    {fmtMoney(conv(quote.requiredTotal, rate), sec!)}
+                  </Text>
+                )}
+              </View>
+            )}
             <View style={s.grandRow}>
-              <Text style={{ flex: 1 }}>Total</Text>
+              <Text style={{ flex: 1 }}>{hasDeferred ? "Full quotation total" : "Total"}</Text>
               <Text style={{ width: hasSec ? "30%" : undefined, textAlign: hasSec ? "right" : undefined }}>
                 {fmtMoney(quote.total, cur)}
               </Text>

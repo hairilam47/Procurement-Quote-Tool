@@ -44,6 +44,7 @@ export const quotationsTable = pgTable(
       .notNull()
       .default("0"),
     total: numeric("total", { precision: 12, scale: 2 }).notNull().default("0"),
+    requiredTotal: numeric("required_total", { precision: 12, scale: 2 }).notNull().default("0"),
     notes: text("notes"),
     terms: text("terms"),
     paymentUrl: text("payment_url"),
@@ -75,6 +76,7 @@ export const lineItemsTable = pgTable(
     unit: text("unit").notNull().default("hours"),
     unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
     rateFormula: text("rate_formula"),
+    paymentRequired: boolean("payment_required").notNull().default(true),
     lineTotal: numeric("line_total", { precision: 12, scale: 2 }).notNull(),
     position: integer("position").notNull().default(0),
   },

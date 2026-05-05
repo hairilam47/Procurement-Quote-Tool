@@ -8,6 +8,7 @@ export const lineItemSchema = z.object({
   unit: z.enum(["hours", "days", "fixed"]).default("hours"),
   unitPrice: z.coerce.number().nonnegative(),
   rateFormula: z.string().max(500).optional().nullable(),
+  paymentRequired: z.boolean().default(true),
   position: z.number().int().nonnegative().default(0),
 });
 
