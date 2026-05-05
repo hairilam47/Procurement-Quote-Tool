@@ -75,6 +75,8 @@ router.get("/quotations", requireAuth, async (req, res): Promise<void> => {
         subtotal: quotationsTable.subtotal,
         discountAmount: quotationsTable.discountAmount,
         taxAmount: quotationsTable.taxAmount,
+        secondaryCurrency: quotationsTable.secondaryCurrency,
+        secondaryExchangeRate: quotationsTable.secondaryExchangeRate,
       })
       .from(quotationsTable)
       .leftJoin(clientsTable, eq(quotationsTable.clientId, clientsTable.id))

@@ -116,6 +116,8 @@ export interface QuotationInput {
 export interface QuotationSummary {
   id: string;
   number: string;
+  secondaryCurrency?: string | null;
+  secondaryExchangeRate?: string | null;
   status: string;
   total: string;
   currency: string;
