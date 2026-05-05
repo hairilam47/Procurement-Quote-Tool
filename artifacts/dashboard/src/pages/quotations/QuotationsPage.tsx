@@ -124,9 +124,18 @@ export default function QuotationsPage() {
                         {STATUS_LABELS[q.status] ?? q.status}
                       </span>
                     </span>
-                    <span className="text-white text-sm font-semibold">
-                      {formatCurrency(q.total, q.currency)}
-                    </span>
+                    <div>
+                      <p className="text-white text-sm font-semibold">
+                        {q.requiredTotal && q.requiredTotal !== q.total
+                          ? `Full total: ${formatCurrency(q.total, q.currency)}`
+                          : formatCurrency(q.total, q.currency)}
+                      </p>
+                      {q.requiredTotal && q.requiredTotal !== q.total && (
+                        <p className="text-amber-400 text-xs mt-0.5">
+                          Amount due now: {formatCurrency(q.requiredTotal, q.currency)}
+                        </p>
+                      )}
+                    </div>
                     <span className="text-slate-400 text-sm">{formatDate(q.validUntil)}</span>
                     <span className="text-blue-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                       View &rarr;
