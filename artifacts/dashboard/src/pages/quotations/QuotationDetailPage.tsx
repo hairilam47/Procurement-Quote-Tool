@@ -380,25 +380,23 @@ export default function QuotationDetailPage() {
                   secondary={hasSec ? conv(quotation.taxAmount ?? "0") : undefined}
                 />
               ) : null}
-              {lineItems.some((li) => li.paymentRequired === false) && quotation.requiredTotal && (
-                <div className="border-t border-slate-700 pt-2 mt-2">
-                  <DualTotalRow
-                    label="Amount due now"
-                    primary={formatCurrency(quotation.requiredTotal, quotation.currency)}
-                    secondary={hasSec ? conv(quotation.requiredTotal) : undefined}
-                    bold
-                    className="text-blue-400"
-                  />
-                </div>
-              )}
               <div className="border-t border-slate-700 pt-2 mt-2">
                 <DualTotalRow
-                  label={lineItems.some((li) => li.paymentRequired === false) ? "Full quotation total" : "Total"}
+                  label={lineItems.some((li) => li.paymentRequired === false) ? "Full total" : "Total"}
                   primary={formatCurrency(quotation.total, quotation.currency)}
                   secondary={hasSec ? conv(quotation.total) : undefined}
                   bold
                 />
               </div>
+              {lineItems.some((li) => li.paymentRequired === false) && quotation.requiredTotal && quotation.requiredTotal !== quotation.total && (
+                <DualTotalRow
+                  label="Due now"
+                  primary={formatCurrency(quotation.requiredTotal, quotation.currency)}
+                  secondary={hasSec ? conv(quotation.requiredTotal) : undefined}
+                  bold
+                  className="text-amber-400"
+                />
+              )}
               {hasSec && (
                 <p className="text-slate-600 text-xs text-right pt-1">
                   1 {quotation.currency} = {rate.toFixed(6)} {sec} (rate at creation)

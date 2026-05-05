@@ -132,7 +132,7 @@ export default function QuotationsPage() {
                       </p>
                       {q.requiredTotal && q.requiredTotal !== q.total && (
                         <p className="text-amber-400 text-xs mt-0.5">
-                          Amount due now: {formatCurrency(q.requiredTotal, q.currency)}
+                          Due now: {formatCurrency(q.requiredTotal, q.currency)}
                         </p>
                       )}
                     </div>
