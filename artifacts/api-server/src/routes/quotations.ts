@@ -132,11 +132,17 @@ router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
     );
     const id = generateId();
 
-    // Fetch exchange rate if secondary currency requested
+    // Fetch exchange rate at creation time — required when secondary currency is set
     const secCurrency = data.secondaryCurrency ?? null;
     let secRate: number | null = null;
     if (secCurrency) {
       secRate = await fetchExchangeRate(data.currency, secCurrency);
+      if (secRate === null) {
+        res.status(400).json({
+          error: `Could not fetch exchange rate for ${data.currency} → ${secCurrency}. Check that both currency codes are valid ISO 4217 codes supported by frankfurter.app.`,
+        });
+        return;
+      }
     }
 
     await db.transaction(async (tx) => {
@@ -209,11 +215,42 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
       data.taxRate,
     );
 
-    // Fetch exchange rate if secondary currency requested
+    // Load the existing row to check whether currencies have changed
+    const [existing] = await db
+      .select({
+        currency: quotationsTable.currency,
+        secondaryCurrency: quotationsTable.secondaryCurrency,
+        secondaryExchangeRate: quotationsTable.secondaryExchangeRate,
+      })
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, String(req.params.id)));
+
+    if (!existing) {
+      res.status(404).json({ error: "Quotation not found" });
+      return;
+    }
+
     const secCurrency = data.secondaryCurrency ?? null;
-    let secRate: number | null = null;
+    let secRate: string | null = existing.secondaryExchangeRate;
+
     if (secCurrency) {
-      secRate = await fetchExchangeRate(data.currency, secCurrency);
+      const currenciesChanged =
+        secCurrency !== existing.secondaryCurrency ||
+        data.currency !== existing.currency;
+      if (currenciesChanged || !secRate) {
+        // Only re-fetch when the currency pair has changed
+        const freshRate = await fetchExchangeRate(data.currency, secCurrency);
+        if (freshRate === null) {
+          res.status(400).json({
+            error: `Could not fetch exchange rate for ${data.currency} → ${secCurrency}. Check that both currency codes are valid ISO 4217 codes supported by frankfurter.app.`,
+          });
+          return;
+        }
+        secRate = String(freshRate);
+      }
+      // Otherwise keep the previously frozen rate
+    } else {
+      secRate = null;
     }
 
     await db.transaction(async (tx) => {
@@ -229,7 +266,7 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
           validUntil: data.validUntil,
           currency: data.currency,
           secondaryCurrency: secCurrency,
-          secondaryExchangeRate: secRate !== null ? String(secRate) : null,
+          secondaryExchangeRate: secRate,
           discountType: data.discountType ?? null,
           discountValue: String(data.discountValue),
           taxRate: String(data.taxRate),
@@ -354,6 +391,18 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
     const newId = generateId();
     const today = new Date();
 
+    // For the duplicate (a new quote created today), fetch a fresh rate so the
+    // rate is frozen at this new creation event. Fall back to the source rate
+    // if the external service is unavailable.
+    let dupSecRate: string | null = src.secondaryExchangeRate;
+    if (src.secondaryCurrency) {
+      const freshRate = await fetchExchangeRate(src.currency, src.secondaryCurrency);
+      if (freshRate !== null) {
+        dupSecRate = String(freshRate);
+      }
+      // If fetch fails, keep source rate as best-effort fallback
+    }
+
     await db.transaction(async (tx) => {
       const number = await nextQuoteNumberInTx(tx);
       await tx.insert(quotationsTable).values({
@@ -365,7 +414,7 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
         validUntil: today,
         currency: src.currency,
         secondaryCurrency: src.secondaryCurrency,
-        secondaryExchangeRate: src.secondaryExchangeRate,
+        secondaryExchangeRate: dupSecRate,
         discountType: src.discountType,
         discountValue: src.discountValue,
         taxRate: src.taxRate,

@@ -29,6 +29,46 @@ import { formatCurrency } from "@/lib/format";
 const inputCls =
   "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500";
 
+const SECONDARY_CURRENCIES = [
+  { code: "EUR", name: "Euro" },
+  { code: "GBP", name: "British Pound" },
+  { code: "JPY", name: "Japanese Yen" },
+  { code: "AUD", name: "Australian Dollar" },
+  { code: "CAD", name: "Canadian Dollar" },
+  { code: "CHF", name: "Swiss Franc" },
+  { code: "CNY", name: "Chinese Yuan" },
+  { code: "HKD", name: "Hong Kong Dollar" },
+  { code: "NZD", name: "New Zealand Dollar" },
+  { code: "SEK", name: "Swedish Krona" },
+  { code: "NOK", name: "Norwegian Krone" },
+  { code: "DKK", name: "Danish Krone" },
+  { code: "SGD", name: "Singapore Dollar" },
+  { code: "MXN", name: "Mexican Peso" },
+  { code: "BRL", name: "Brazilian Real" },
+  { code: "INR", name: "Indian Rupee" },
+  { code: "ZAR", name: "South African Rand" },
+  { code: "KRW", name: "South Korean Won" },
+  { code: "MYR", name: "Malaysian Ringgit" },
+  { code: "THB", name: "Thai Baht" },
+  { code: "IDR", name: "Indonesian Rupiah" },
+  { code: "PHP", name: "Philippine Peso" },
+  { code: "TWD", name: "Taiwan Dollar" },
+  { code: "AED", name: "UAE Dirham" },
+  { code: "SAR", name: "Saudi Riyal" },
+  { code: "PLN", name: "Polish Zloty" },
+  { code: "CZK", name: "Czech Koruna" },
+  { code: "HUF", name: "Hungarian Forint" },
+  { code: "ILS", name: "Israeli Shekel" },
+  { code: "TRY", name: "Turkish Lira" },
+  { code: "RUB", name: "Russian Ruble" },
+  { code: "USD", name: "US Dollar" },
+  { code: "CLP", name: "Chilean Peso" },
+  { code: "COP", name: "Colombian Peso" },
+  { code: "QAR", name: "Qatari Riyal" },
+  { code: "KWD", name: "Kuwaiti Dinar" },
+  { code: "VND", name: "Vietnamese Dong" },
+];
+
 function Field({
   label,
   children,
@@ -287,14 +327,22 @@ export default function QuotationFormPage() {
               />
             </Field>
             <Field label="Secondary Currency (optional)">
-              <Input
-                value={secondaryCurrency}
-                onChange={(e) => setSecondaryCurrency(e.target.value.toUpperCase())}
-                className={inputCls}
-                maxLength={3}
-                placeholder="e.g. EUR"
-                data-testid="secondary-currency-input"
-              />
+              <Select
+                value={secondaryCurrency || "none"}
+                onValueChange={(v) => setSecondaryCurrency(v === "none" ? "" : v)}
+              >
+                <SelectTrigger className={inputCls} data-testid="secondary-currency-input">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700 max-h-60">
+                  <SelectItem value="none" className="text-white">None</SelectItem>
+                  {SECONDARY_CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code} className="text-white">
+                      {c.code} — {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
             <Field label="Template">
               <Select value={template} onValueChange={(v) => setTemplate(v as "MODERN" | "CLASSIC")}>
