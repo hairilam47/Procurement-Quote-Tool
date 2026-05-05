@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 
 const STATUSES = ["ALL", "DRAFT", "SENT", "ACCEPTED", "REJECTED", "PAID", "EXPIRED"];
+const DEFERRED_FILTER = "DEFERRED";
 
 const container = {
   hidden: { opacity: 0 },
@@ -25,12 +26,18 @@ export default function QuotationsPage() {
   const [status, setStatus] = useState("ALL");
   const [search, setSearch] = useState("");
 
-  const apiStatus = status === "ALL" ? undefined : status;
+  const isDeferred = status === DEFERRED_FILTER;
+  const apiStatus = status === "ALL" || isDeferred ? undefined : status;
   const { data: quotations = [], isLoading } = useListQuotations(
     apiStatus ? { status: apiStatus } : undefined
   );
 
   const filtered = quotations.filter((q) => {
+    if (isDeferred) {
+      const total = parseFloat(q.total ?? "0");
+      const requiredTotal = parseFloat(q.requiredTotal ?? "0");
+      if (!(requiredTotal < total)) return false;
+    }
     if (!search) return true;
     const s = search.toLowerCase();
     return (
@@ -79,6 +86,9 @@ export default function QuotationsPage() {
                 {s === "ALL" ? "All statuses" : STATUS_LABELS[s]}
               </SelectItem>
             ))}
+            <SelectItem value={DEFERRED_FILTER} className="text-amber-400">
+              Has deferred items
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
