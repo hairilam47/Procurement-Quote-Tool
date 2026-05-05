@@ -7,6 +7,7 @@ import { ClassicTemplate } from "./templates/classic";
 import type { TemplateProps, TemplateLineItem } from "./templates/types";
 import { ObjectStorageService } from "../objectStorage";
 
+
 type LineItem = {
   id: string;
   sku?: string | null;
@@ -127,6 +128,67 @@ async function fetchLogoDataUrl(
   } catch {
     return undefined;
   }
+}
+
+export async function renderFollowUpInvoicePdf(args: {
+  quote: QuoteData;
+  client: ClientData;
+  company: CompanyData;
+  invoiceNumber: string;
+}): Promise<Buffer> {
+  const { quote, client, company, invoiceNumber } = args;
+
+  const effectiveClient =
+    (quote.clientSnapshot as ClientData | null) ?? client;
+  const effectiveCompany =
+    (quote.companySnapshot as CompanyData | null) ?? company;
+
+  const logoDataUrl = await fetchLogoDataUrl(effectiveCompany.logoUrl);
+
+  const deferredItems = quote.lineItems.filter(
+    (li) => li.paymentRequired === false,
+  );
+
+  const deferredSubtotal = deferredItems
+    .reduce((sum, li) => sum + Number(li.lineTotal), 0)
+    .toFixed(2);
+
+  const followUpQuote = {
+    ...quote,
+    number: invoiceNumber,
+    lineItems: deferredItems.map((li) => ({
+      ...li,
+      paymentRequired: true,
+    })) as TemplateLineItem[],
+    subtotal: deferredSubtotal,
+    discountType: null,
+    discountValue: "0",
+    discountAmount: "0",
+    taxAmount: "0",
+    taxRate: "0",
+    total: deferredSubtotal,
+    requiredTotal: deferredSubtotal,
+    paymentUrl: null,
+    showQrCode: false,
+  };
+
+  const props: TemplateProps = {
+    quote: followUpQuote,
+    client: effectiveClient,
+    company: effectiveCompany,
+    logoDataUrl,
+    invoiceMode: {
+      documentTitle: "FOLLOW-UP INVOICE",
+      referenceNumber: quote.number,
+    },
+  };
+
+  const Component =
+    quote.template === "CLASSIC" ? ClassicTemplate : ModernTemplate;
+
+  return (await renderToBuffer(
+    React.createElement(Component, props) as React.ReactElement<DocumentProps>,
+  )) as Buffer;
 }
 
 export async function renderQuotationPdf(args: {

@@ -16,6 +16,7 @@ import {
   Download,
   Copy,
   ChevronDown,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -92,6 +93,18 @@ export default function QuotationDetailPage() {
     }
   }
 
+  async function handleFollowUpInvoice() {
+    try {
+      const res = await fetch(`/api/quotations/${id}/followup-invoice-pdf`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch {
+      toast({ title: "Failed to generate follow-up invoice", variant: "destructive" });
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4 max-w-3xl">
@@ -109,6 +122,10 @@ export default function QuotationDetailPage() {
   const transitions = STATUS_TRANSITIONS[quotation.status] ?? [];
   const lineItems = quotation.lineItems ?? [];
   const client = quotation.client;
+  const hasDeferredItems = lineItems.some((li) => li.paymentRequired === false);
+  const showFollowUpInvoice =
+    (quotation.status === "ACCEPTED" || quotation.status === "PAID") &&
+    hasDeferredItems;
 
   return (
     <motion.div
@@ -147,6 +164,17 @@ export default function QuotationDetailPage() {
           >
             <Download size={13} className="mr-1.5" /> PDF
           </Button>
+          {showFollowUpInvoice && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleFollowUpInvoice}
+              className="border-amber-700 text-amber-400 hover:text-amber-200 hover:bg-amber-900/30"
+              data-testid="followup-invoice-btn"
+            >
+              <FileText size={13} className="mr-1.5" /> Follow-up Invoice
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"

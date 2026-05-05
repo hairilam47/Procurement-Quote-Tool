@@ -5,7 +5,7 @@ import { quotationSchema, changeStatusSchema } from "../lib/validation";
 import { computeTotals } from "../lib/calculations";
 import { evaluateFormula } from "../lib/formula";
 import { generateId } from "../lib/id";
-import { renderQuotationPdf } from "../lib/pdf/render";
+import { renderQuotationPdf, renderFollowUpInvoicePdf } from "../lib/pdf/render";
 import { requireAuth } from "./auth";
 import { getZodErrors } from "../lib/zodError";
 
@@ -534,6 +534,69 @@ router.delete("/quotations/:id", requireAuth, async (req, res): Promise<void> =>
     res.status(204).send();
   } catch {
     res.status(500).json({ error: "Failed to delete quotation" });
+  }
+});
+
+// Follow-up invoice PDF endpoint (deferred items only)
+router.get("/quotations/:id/followup-invoice-pdf", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const [quote] = await db
+      .select()
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, String(req.params.id)));
+    if (!quote) {
+      res.status(404).json({ error: "Quotation not found" });
+      return;
+    }
+
+    if (quote.status !== "ACCEPTED" && quote.status !== "PAID") {
+      res.status(400).json({ error: "Follow-up invoice is only available for ACCEPTED or PAID quotations" });
+      return;
+    }
+
+    const [client] = await db
+      .select()
+      .from(clientsTable)
+      .where(eq(clientsTable.id, quote.clientId));
+
+    const lineItems = await db
+      .select()
+      .from(lineItemsTable)
+      .where(eq(lineItemsTable.quotationId, quote.id))
+      .orderBy(lineItemsTable.position);
+
+    const deferredItems = lineItems.filter((li) => li.paymentRequired === false);
+    if (deferredItems.length === 0) {
+      res.status(400).json({ error: "This quotation has no deferred items" });
+      return;
+    }
+
+    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    if (!settings) {
+      res.status(400).json({ error: "Configure company settings first" });
+      return;
+    }
+
+    // Generate a follow-up invoice number based on the original quote number
+    const invoiceNumber = `${quote.number}-FI`;
+
+    const buffer = await renderFollowUpInvoicePdf({
+      quote: { ...quote, lineItems },
+      client,
+      company: settings,
+      invoiceNumber,
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${invoiceNumber}.pdf"`,
+    );
+    res.setHeader("Cache-Control", "private, no-store");
+    res.send(buffer);
+  } catch (err) {
+    console.error("[followup-invoice-pdf]", err);
+    res.status(500).json({ error: "PDF render failed" });
   }
 });
 

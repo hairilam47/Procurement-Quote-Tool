@@ -254,6 +254,7 @@ export function ModernTemplate({
   company,
   logoDataUrl,
   qrDataUrl,
+  invoiceMode,
 }: TemplateProps) {
   const cur = quote.currency;
   const sec = quote.secondaryCurrency ?? null;
@@ -263,6 +264,9 @@ export function ModernTemplate({
   const requiredItems = quote.lineItems.filter((li) => li.paymentRequired !== false);
   const deferredItems = quote.lineItems.filter((li) => li.paymentRequired === false);
   const hasDeferred = deferredItems.length > 0;
+
+  const docTitle = invoiceMode?.documentTitle ?? "QUOTATION";
+  const isFollowUp = !!invoiceMode;
 
   const colDesc = hasSec ? "38%" : "50%";
   const colQty = hasSec ? "10%" : "12%";
@@ -306,7 +310,14 @@ export function ModernTemplate({
 
         {/* Title */}
         <View style={s.titleRow}>
-          <Text style={s.title}>QUOTATION</Text>
+          <View>
+            <Text style={s.title}>{docTitle}</Text>
+            {isFollowUp && invoiceMode && (
+              <Text style={{ fontSize: 9, color: C.muted, marginTop: 3 }}>
+                Re: Quotation {invoiceMode.referenceNumber}
+              </Text>
+            )}
+          </View>
           <Text style={s.numberPill}>{quote.number}</Text>
         </View>
 
@@ -374,80 +385,118 @@ export function ModernTemplate({
             )}
           </View>
 
-          {/* Required items */}
-          {requiredItems.map((li, idx) => (
-            <View key={li.id} style={idx % 2 === 0 ? s.tr : s.trAlt} wrap={false}>
-              <View style={{ width: colDesc, paddingRight: 8 }}>
-                <Text>{li.description}</Text>
-                {li.sku ? (
-                  <Text style={{ fontSize: 8, color: C.muted, marginTop: 2 }}>
-                    SKU: {li.sku}
-                  </Text>
-                ) : null}
-              </View>
-              <Text style={{ width: colQty, textAlign: "right" }}>
-                {Number(li.quantity).toFixed(2)}
-              </Text>
-              <Text style={{ width: colUnit, textAlign: "right" }}>{li.unit}</Text>
-              <View style={{ width: colPrice, textAlign: "right" }}>
-                <Text style={{ textAlign: "right" }}>{fmtMoney(li.unitPrice, cur)}</Text>
-                {li.rateFormula ? (
-                  <Text style={{ fontSize: 7, color: C.muted, textAlign: "right", marginTop: 2 }}>
-                    ({li.rateFormula})
-                  </Text>
-                ) : null}
-              </View>
-              <Text style={{ width: colTotal, textAlign: "right" }}>
-                {fmtMoney(li.lineTotal, cur)}
-              </Text>
-              {hasSec && (
-                <Text style={{ width: "15%", textAlign: "right", color: C.muted }}>
-                  {fmtMoney(conv(li.lineTotal, rate), sec!)}
+          {/* In follow-up invoice mode: show all items as regular rows */}
+          {isFollowUp ? (
+            quote.lineItems.map((li, idx) => (
+              <View key={li.id} style={idx % 2 === 0 ? s.tr : s.trAlt} wrap={false}>
+                <View style={{ width: colDesc, paddingRight: 8 }}>
+                  <Text>{li.description}</Text>
+                  {li.sku ? (
+                    <Text style={{ fontSize: 8, color: C.muted, marginTop: 2 }}>
+                      SKU: {li.sku}
+                    </Text>
+                  ) : null}
+                </View>
+                <Text style={{ width: colQty, textAlign: "right" }}>
+                  {Number(li.quantity).toFixed(2)}
                 </Text>
-              )}
-            </View>
-          ))}
-
-          {/* Deferred items section */}
-          {hasDeferred && (
+                <Text style={{ width: colUnit, textAlign: "right" }}>{li.unit}</Text>
+                <View style={{ width: colPrice, textAlign: "right" }}>
+                  <Text style={{ textAlign: "right" }}>{fmtMoney(li.unitPrice, cur)}</Text>
+                  {li.rateFormula ? (
+                    <Text style={{ fontSize: 7, color: C.muted, textAlign: "right", marginTop: 2 }}>
+                      ({li.rateFormula})
+                    </Text>
+                  ) : null}
+                </View>
+                <Text style={{ width: colTotal, textAlign: "right" }}>
+                  {fmtMoney(li.lineTotal, cur)}
+                </Text>
+                {hasSec && (
+                  <Text style={{ width: "15%", textAlign: "right", color: C.muted }}>
+                    {fmtMoney(conv(li.lineTotal, rate), sec!)}
+                  </Text>
+                )}
+              </View>
+            ))
+          ) : (
             <>
-              <View style={s.dividerRow} wrap={false}>
-                <Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold", color: C.deferred, textTransform: "uppercase", letterSpacing: 1 }}>
-                  Deferred items (billed on delivery)
-                </Text>
-              </View>
-              {deferredItems.map((li) => (
-                <View key={li.id} style={s.trDeferred} wrap={false}>
+              {/* Required items */}
+              {requiredItems.map((li, idx) => (
+                <View key={li.id} style={idx % 2 === 0 ? s.tr : s.trAlt} wrap={false}>
                   <View style={{ width: colDesc, paddingRight: 8 }}>
-                    <Text style={{ color: C.muted }}>{li.description}</Text>
+                    <Text>{li.description}</Text>
                     {li.sku ? (
-                      <Text style={{ fontSize: 8, color: C.deferred, marginTop: 2 }}>
+                      <Text style={{ fontSize: 8, color: C.muted, marginTop: 2 }}>
                         SKU: {li.sku}
                       </Text>
                     ) : null}
                   </View>
-                  <Text style={{ width: colQty, textAlign: "right", color: C.muted }}>
+                  <Text style={{ width: colQty, textAlign: "right" }}>
                     {Number(li.quantity).toFixed(2)}
                   </Text>
-                  <Text style={{ width: colUnit, textAlign: "right", color: C.muted }}>{li.unit}</Text>
+                  <Text style={{ width: colUnit, textAlign: "right" }}>{li.unit}</Text>
                   <View style={{ width: colPrice, textAlign: "right" }}>
-                    <Text style={{ textAlign: "right", color: C.muted }}>{fmtMoney(li.unitPrice, cur)}</Text>
+                    <Text style={{ textAlign: "right" }}>{fmtMoney(li.unitPrice, cur)}</Text>
                     {li.rateFormula ? (
-                      <Text style={{ fontSize: 7, color: C.deferred, textAlign: "right", marginTop: 2 }}>
+                      <Text style={{ fontSize: 7, color: C.muted, textAlign: "right", marginTop: 2 }}>
                         ({li.rateFormula})
                       </Text>
                     ) : null}
                   </View>
-                  <Text style={{ width: colTotal, textAlign: "right", color: C.muted }}>
+                  <Text style={{ width: colTotal, textAlign: "right" }}>
                     {fmtMoney(li.lineTotal, cur)}
                   </Text>
                   {hasSec && (
-                    <Text style={{ width: "15%", textAlign: "right", color: C.deferred }}>
+                    <Text style={{ width: "15%", textAlign: "right", color: C.muted }}>
                       {fmtMoney(conv(li.lineTotal, rate), sec!)}
                     </Text>
                   )}
                 </View>
               ))}
+
+              {/* Deferred items section */}
+              {hasDeferred && (
+                <>
+                  <View style={s.dividerRow} wrap={false}>
+                    <Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold", color: C.deferred, textTransform: "uppercase", letterSpacing: 1 }}>
+                      Deferred items (billed on delivery)
+                    </Text>
+                  </View>
+                  {deferredItems.map((li) => (
+                    <View key={li.id} style={s.trDeferred} wrap={false}>
+                      <View style={{ width: colDesc, paddingRight: 8 }}>
+                        <Text style={{ color: C.muted }}>{li.description}</Text>
+                        {li.sku ? (
+                          <Text style={{ fontSize: 8, color: C.deferred, marginTop: 2 }}>
+                            SKU: {li.sku}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Text style={{ width: colQty, textAlign: "right", color: C.muted }}>
+                        {Number(li.quantity).toFixed(2)}
+                      </Text>
+                      <Text style={{ width: colUnit, textAlign: "right", color: C.muted }}>{li.unit}</Text>
+                      <View style={{ width: colPrice, textAlign: "right" }}>
+                        <Text style={{ textAlign: "right", color: C.muted }}>{fmtMoney(li.unitPrice, cur)}</Text>
+                        {li.rateFormula ? (
+                          <Text style={{ fontSize: 7, color: C.deferred, textAlign: "right", marginTop: 2 }}>
+                            ({li.rateFormula})
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Text style={{ width: colTotal, textAlign: "right", color: C.muted }}>
+                        {fmtMoney(li.lineTotal, cur)}
+                      </Text>
+                      {hasSec && (
+                        <Text style={{ width: "15%", textAlign: "right", color: C.deferred }}>
+                          {fmtMoney(conv(li.lineTotal, rate), sec!)}
+                        </Text>
+                      )}
+                    </View>
+                  ))}
+                </>
+              )}
             </>
           )}
         </View>
@@ -577,7 +626,7 @@ export function ModernTemplate({
         {/* Fixed footer */}
         <View style={s.footer} fixed>
           <Text>
-            {company.name} · Quotation {quote.number}
+            {company.name} · {isFollowUp && invoiceMode ? `Follow-up Invoice · Ref: ${invoiceMode.referenceNumber}` : `Quotation ${quote.number}`}
           </Text>
           <Text
             render={({ pageNumber, totalPages }) =>

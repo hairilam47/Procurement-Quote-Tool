@@ -10,7 +10,13 @@ export type TemplateLineItem = {
   lineTotal: string;
 };
 
+export type InvoiceMode = {
+  documentTitle: string;
+  referenceNumber: string;
+};
+
 export type TemplateProps = {
+  invoiceMode?: InvoiceMode;
   quote: {
     id: string;
     number: string;
