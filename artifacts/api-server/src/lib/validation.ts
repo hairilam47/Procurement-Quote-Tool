@@ -16,6 +16,12 @@ export const quotationSchema = z
     issueDate: z.coerce.date(),
     validUntil: z.coerce.date(),
     currency: z.string().length(3).default("USD"),
+    secondaryCurrency: z
+      .string()
+      .length(3)
+      .optional()
+      .nullable()
+      .or(z.literal("").transform(() => null)),
     discountType: z.enum(["PERCENTAGE", "FIXED"]).nullable().optional(),
     discountValue: z.coerce.number().nonnegative().default(0),
     taxRate: z.coerce.number().min(0).max(100).default(0),

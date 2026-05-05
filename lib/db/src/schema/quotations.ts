@@ -25,6 +25,8 @@ export const quotationsTable = pgTable(
     clientSnapshot: json("client_snapshot"),
     companySnapshot: json("company_snapshot"),
     currency: text("currency").notNull().default("USD"),
+    secondaryCurrency: text("secondary_currency"),
+    secondaryExchangeRate: numeric("secondary_exchange_rate", { precision: 18, scale: 6 }),
     discountType: text("discount_type"),
     discountValue: numeric("discount_value", { precision: 12, scale: 2 })
       .notNull()

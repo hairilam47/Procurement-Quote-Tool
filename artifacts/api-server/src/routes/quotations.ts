@@ -8,6 +8,25 @@ import { renderQuotationPdf } from "../lib/pdf/render";
 import { requireAuth } from "./auth";
 import { getZodErrors } from "../lib/zodError";
 
+/**
+ * Fetch the live exchange rate from frankfurter.app.
+ * Returns null on any failure so callers can degrade gracefully.
+ */
+async function fetchExchangeRate(from: string, to: string): Promise<number | null> {
+  try {
+    if (from.toUpperCase() === to.toUpperCase()) return 1;
+    const res = await fetch(
+      `https://api.frankfurter.app/latest?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      { signal: AbortSignal.timeout(5000) },
+    );
+    if (!res.ok) return null;
+    const json = await res.json() as { rates?: Record<string, number> };
+    return json.rates?.[to.toUpperCase()] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 const router = Router();
 
 /** Generate next quote number atomically using a pg advisory lock (held for the duration of the TX). */
@@ -113,6 +132,13 @@ router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
     );
     const id = generateId();
 
+    // Fetch exchange rate if secondary currency requested
+    const secCurrency = data.secondaryCurrency ?? null;
+    let secRate: number | null = null;
+    if (secCurrency) {
+      secRate = await fetchExchangeRate(data.currency, secCurrency);
+    }
+
     await db.transaction(async (tx) => {
       const number = await nextQuoteNumberInTx(tx);
       await tx.insert(quotationsTable).values({
@@ -122,6 +148,8 @@ router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
         issueDate: data.issueDate,
         validUntil: data.validUntil,
         currency: data.currency,
+        secondaryCurrency: secCurrency,
+        secondaryExchangeRate: secRate !== null ? String(secRate) : null,
         discountType: data.discountType ?? null,
         discountValue: String(data.discountValue),
         taxRate: String(data.taxRate),
@@ -181,6 +209,13 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
       data.taxRate,
     );
 
+    // Fetch exchange rate if secondary currency requested
+    const secCurrency = data.secondaryCurrency ?? null;
+    let secRate: number | null = null;
+    if (secCurrency) {
+      secRate = await fetchExchangeRate(data.currency, secCurrency);
+    }
+
     await db.transaction(async (tx) => {
       await tx
         .delete(lineItemsTable)
@@ -193,6 +228,8 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
           issueDate: data.issueDate,
           validUntil: data.validUntil,
           currency: data.currency,
+          secondaryCurrency: secCurrency,
+          secondaryExchangeRate: secRate !== null ? String(secRate) : null,
           discountType: data.discountType ?? null,
           discountValue: String(data.discountValue),
           taxRate: String(data.taxRate),
@@ -327,6 +364,8 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
         issueDate: today,
         validUntil: today,
         currency: src.currency,
+        secondaryCurrency: src.secondaryCurrency,
+        secondaryExchangeRate: src.secondaryExchangeRate,
         discountType: src.discountType,
         discountValue: src.discountValue,
         taxRate: src.taxRate,

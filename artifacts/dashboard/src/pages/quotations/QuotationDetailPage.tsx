@@ -207,7 +207,14 @@ export default function QuotationDetailPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MetaCard label="Issue Date" value={formatDate(quotation.issueDate)} />
         <MetaCard label="Valid Until" value={formatDate(quotation.validUntil)} />
-        <MetaCard label="Currency" value={quotation.currency} />
+        <MetaCard
+          label="Currency"
+          value={
+            quotation.secondaryCurrency
+              ? `${quotation.currency} / ${quotation.secondaryCurrency}`
+              : quotation.currency
+          }
+        />
         <MetaCard label="Template" value={quotation.template ?? "MODERN"} />
       </div>
 
@@ -269,32 +276,65 @@ export default function QuotationDetailPage() {
 
       {/* Totals */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-        <div className="space-y-2 max-w-xs ml-auto">
-          <TotalRow
-            label="Subtotal"
-            value={formatCurrency(quotation.subtotal ?? "0", quotation.currency)}
-          />
-          {quotation.discountType && (
-            <TotalRow
-              label={`Discount (${quotation.discountType === "PERCENTAGE" ? `${quotation.discountValue}%` : "fixed"})`}
-              value={`- ${formatCurrency(quotation.discountAmount ?? "0", quotation.currency)}`}
-              className="text-amber-400"
-            />
-          )}
-          {quotation.taxRate && parseFloat(quotation.taxRate) > 0 ? (
-            <TotalRow
-              label={`Tax (${quotation.taxRate}%)`}
-              value={formatCurrency(quotation.taxAmount ?? "0", quotation.currency)}
-            />
-          ) : null}
-          <div className="border-t border-slate-700 pt-2 mt-2">
-            <TotalRow
-              label="Total"
-              value={formatCurrency(quotation.total, quotation.currency)}
-              bold
-            />
-          </div>
-        </div>
+        {(() => {
+          const sec = quotation.secondaryCurrency;
+          const rate = quotation.secondaryExchangeRate
+            ? parseFloat(quotation.secondaryExchangeRate)
+            : null;
+          const hasSec = !!(sec && rate);
+          const conv = (amount: string | number) => {
+            if (!rate) return "";
+            const n = typeof amount === "number" ? amount : parseFloat(amount ?? "0");
+            return formatCurrency((n * rate).toFixed(2), sec!);
+          };
+          return (
+            <div className={`space-y-2 ${hasSec ? "max-w-sm" : "max-w-xs"} ml-auto`}>
+              {hasSec && (
+                <div className="flex justify-end gap-6 pb-1 border-b border-slate-800 mb-1">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider w-20 text-right">
+                    {quotation.currency}
+                  </span>
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider w-20 text-right">
+                    {sec}
+                  </span>
+                </div>
+              )}
+              <DualTotalRow
+                label="Subtotal"
+                primary={formatCurrency(quotation.subtotal ?? "0", quotation.currency)}
+                secondary={hasSec ? conv(quotation.subtotal ?? "0") : undefined}
+              />
+              {quotation.discountType && (
+                <DualTotalRow
+                  label={`Discount (${quotation.discountType === "PERCENTAGE" ? `${quotation.discountValue}%` : "fixed"})`}
+                  primary={`- ${formatCurrency(quotation.discountAmount ?? "0", quotation.currency)}`}
+                  secondary={hasSec ? `- ${conv(quotation.discountAmount ?? "0")}` : undefined}
+                  className="text-amber-400"
+                />
+              )}
+              {quotation.taxRate && parseFloat(quotation.taxRate) > 0 ? (
+                <DualTotalRow
+                  label={`Tax (${quotation.taxRate}%)`}
+                  primary={formatCurrency(quotation.taxAmount ?? "0", quotation.currency)}
+                  secondary={hasSec ? conv(quotation.taxAmount ?? "0") : undefined}
+                />
+              ) : null}
+              <div className="border-t border-slate-700 pt-2 mt-2">
+                <DualTotalRow
+                  label="Total"
+                  primary={formatCurrency(quotation.total, quotation.currency)}
+                  secondary={hasSec ? conv(quotation.total) : undefined}
+                  bold
+                />
+              </div>
+              {hasSec && (
+                <p className="text-slate-600 text-xs text-right pt-1">
+                  1 {quotation.currency} = {rate.toFixed(6)} {sec} (rate at creation)
+                </p>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Notes & Terms */}
@@ -331,23 +371,30 @@ function MetaCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function TotalRow({
+function DualTotalRow({
   label,
-  value,
+  primary,
+  secondary,
   bold,
   className,
 }: {
   label: string;
-  value: string;
+  primary: string;
+  secondary?: string;
   bold?: boolean;
   className?: string;
 }) {
   return (
-    <div className="flex justify-between items-center">
-      <span className={`text-sm ${bold ? "text-white font-bold" : "text-slate-400"}`}>{label}</span>
-      <span className={`text-sm ${bold ? "text-white font-bold text-base" : "text-slate-300"} ${className ?? ""}`}>
-        {value}
+    <div className="flex justify-between items-center gap-2">
+      <span className={`text-sm flex-1 ${bold ? "text-white font-bold" : "text-slate-400"}`}>{label}</span>
+      <span className={`text-sm w-24 text-right ${bold ? "text-white font-bold text-base" : "text-slate-300"} ${className ?? ""}`}>
+        {primary}
       </span>
+      {secondary !== undefined && (
+        <span className={`text-sm w-24 text-right ${bold ? "text-slate-300 font-bold" : "text-slate-500"} ${className ?? ""}`}>
+          {secondary}
+        </span>
+      )}
     </div>
   );
 }

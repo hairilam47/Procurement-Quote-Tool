@@ -20,6 +20,12 @@ const C = {
   subtle: "#f8fafc",
 };
 
+const conv = (amount: string | number, rate: string | null | undefined): string => {
+  if (!rate) return "";
+  const n = typeof amount === "number" ? amount : Number(amount ?? 0);
+  return (n * Number(rate)).toFixed(2);
+};
+
 const s = StyleSheet.create({
   page: {
     paddingTop: 40,
@@ -123,6 +129,7 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   totalsBox: { width: 240 },
+  totalsBoxDual: { width: 320 },
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -216,6 +223,15 @@ export function ModernTemplate({
   qrDataUrl,
 }: TemplateProps) {
   const cur = quote.currency;
+  const sec = quote.secondaryCurrency ?? null;
+  const rate = quote.secondaryExchangeRate ?? null;
+  const hasSec = !!(sec && rate);
+
+  const colDesc = hasSec ? "38%" : "50%";
+  const colQty = hasSec ? "10%" : "12%";
+  const colUnit = hasSec ? "10%" : "13%";
+  const colPrice = "12%";
+  const colTotal = hasSec ? "15%" : "13%";
 
   return (
     <Document title={quote.number} author={company.name}>
@@ -280,7 +296,15 @@ export function ModernTemplate({
             <Text style={s.colLabel}>Status</Text>
             <Text style={s.bold}>{quote.status}</Text>
             <Text style={[s.colLabel, { marginTop: 8 }]}>Currency</Text>
-            <Text>{cur}</Text>
+            <Text>{cur}{hasSec ? ` / ${sec}` : ""}</Text>
+            {hasSec && (
+              <>
+                <Text style={[s.colLabel, { marginTop: 8 }]}>Exchange Rate</Text>
+                <Text style={{ fontSize: 8, color: C.muted }}>
+                  1 {cur} = {Number(rate).toFixed(6)} {sec}
+                </Text>
+              </>
+            )}
           </View>
         </View>
 
@@ -299,15 +323,22 @@ export function ModernTemplate({
         {/* Line items table */}
         <View style={s.table}>
           <View style={s.thead} fixed>
-            <Text style={s.cDesc}>Description</Text>
-            <Text style={s.cQty}>Qty</Text>
-            <Text style={s.cUnit}>Unit</Text>
-            <Text style={s.cPrice}>Unit price</Text>
-            <Text style={s.cTotal}>Total</Text>
+            <Text style={{ width: colDesc, paddingRight: 8 }}>Description</Text>
+            <Text style={{ width: colQty, textAlign: "right" }}>Qty</Text>
+            <Text style={{ width: colUnit, textAlign: "right" }}>Unit</Text>
+            <Text style={{ width: colPrice, textAlign: "right" }}>Unit price</Text>
+            <Text style={{ width: colTotal, textAlign: "right" }}>
+              Total ({cur})
+            </Text>
+            {hasSec && (
+              <Text style={{ width: "15%", textAlign: "right" }}>
+                Total ({sec})
+              </Text>
+            )}
           </View>
           {quote.lineItems.map((li, idx) => (
             <View key={li.id} style={idx % 2 === 0 ? s.tr : s.trAlt} wrap={false}>
-              <View style={s.cDesc}>
+              <View style={{ width: colDesc, paddingRight: 8 }}>
                 <Text>{li.description}</Text>
                 {li.sku ? (
                   <Text style={{ fontSize: 8, color: C.muted, marginTop: 2 }}>
@@ -315,41 +346,91 @@ export function ModernTemplate({
                   </Text>
                 ) : null}
               </View>
-              <Text style={s.cQty}>{Number(li.quantity).toFixed(2)}</Text>
-              <Text style={s.cUnit}>{li.unit}</Text>
-              <Text style={s.cPrice}>{fmtMoney(li.unitPrice, cur)}</Text>
-              <Text style={s.cTotal}>{fmtMoney(li.lineTotal, cur)}</Text>
+              <Text style={{ width: colQty, textAlign: "right" }}>
+                {Number(li.quantity).toFixed(2)}
+              </Text>
+              <Text style={{ width: colUnit, textAlign: "right" }}>{li.unit}</Text>
+              <Text style={{ width: colPrice, textAlign: "right" }}>
+                {fmtMoney(li.unitPrice, cur)}
+              </Text>
+              <Text style={{ width: colTotal, textAlign: "right" }}>
+                {fmtMoney(li.lineTotal, cur)}
+              </Text>
+              {hasSec && (
+                <Text style={{ width: "15%", textAlign: "right", color: C.muted }}>
+                  {fmtMoney(conv(li.lineTotal, rate), sec!)}
+                </Text>
+              )}
             </View>
           ))}
         </View>
 
         {/* Totals */}
         <View style={s.totalsWrap} wrap={false}>
-          <View style={s.totalsBox}>
+          <View style={hasSec ? s.totalsBoxDual : s.totalsBox}>
+            {hasSec && (
+              <View style={[s.totalRow, { paddingBottom: 4, borderBottom: `1pt solid ${C.line}` }]}>
+                <Text style={{ width: "40%", color: C.muted, fontSize: 8 }} />
+                <Text style={{ width: "30%", textAlign: "right", fontFamily: "Helvetica-Bold", fontSize: 8, color: C.muted }}>
+                  {cur}
+                </Text>
+                <Text style={{ width: "30%", textAlign: "right", fontFamily: "Helvetica-Bold", fontSize: 8, color: C.muted }}>
+                  {sec}
+                </Text>
+              </View>
+            )}
             <View style={s.totalRow}>
-              <Text>Subtotal</Text>
-              <Text>{fmtMoney(quote.subtotal, cur)}</Text>
+              <Text style={{ flex: 1 }}>Subtotal</Text>
+              <Text style={{ width: hasSec ? "30%" : undefined, textAlign: hasSec ? "right" : undefined }}>
+                {fmtMoney(quote.subtotal, cur)}
+              </Text>
+              {hasSec && (
+                <Text style={{ width: "30%", textAlign: "right", color: C.muted }}>
+                  {fmtMoney(conv(quote.subtotal, rate), sec!)}
+                </Text>
+              )}
             </View>
             {Number(quote.discountAmount) > 0 && (
               <View style={s.totalRow}>
-                <Text>
+                <Text style={{ flex: 1 }}>
                   Discount
                   {quote.discountType === "PERCENTAGE"
                     ? ` (${Number(quote.discountValue)}%)`
                     : ""}
                 </Text>
-                <Text>−{fmtMoney(quote.discountAmount, cur)}</Text>
+                <Text style={{ width: hasSec ? "30%" : undefined, textAlign: hasSec ? "right" : undefined }}>
+                  −{fmtMoney(quote.discountAmount, cur)}
+                </Text>
+                {hasSec && (
+                  <Text style={{ width: "30%", textAlign: "right", color: C.muted }}>
+                    −{fmtMoney(conv(quote.discountAmount, rate), sec!)}
+                  </Text>
+                )}
               </View>
             )}
             {Number(quote.taxRate) > 0 && (
               <View style={s.totalRow}>
-                <Text>Tax ({Number(quote.taxRate)}%)</Text>
-                <Text>{fmtMoney(quote.taxAmount, cur)}</Text>
+                <Text style={{ flex: 1 }}>Tax ({Number(quote.taxRate)}%)</Text>
+                <Text style={{ width: hasSec ? "30%" : undefined, textAlign: hasSec ? "right" : undefined }}>
+                  {fmtMoney(quote.taxAmount, cur)}
+                </Text>
+                {hasSec && (
+                  <Text style={{ width: "30%", textAlign: "right", color: C.muted }}>
+                    {fmtMoney(conv(quote.taxAmount, rate), sec!)}
+                  </Text>
+                )}
               </View>
             )}
             <View style={s.grandRow}>
-              <Text>Total</Text>
-              <Text>{fmtMoney(quote.total, cur)}</Text>
+              <Text style={{ flex: 1 }}>Total</Text>
+              <Text style={{ width: hasSec ? "30%" : undefined, textAlign: hasSec ? "right" : undefined }}>
+                {fmtMoney(quote.total, cur)}
+              </Text>
+              {hasSec && (
+                <Text style={{ width: "30%", textAlign: "right" }}>
+                  {fmtMoney(conv(quote.total, rate), sec!)}
+                </Text>
+              )}
             </View>
           </View>
         </View>

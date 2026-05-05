@@ -96,6 +96,7 @@ export default function QuotationFormPage() {
   const [issueDate, setIssueDate] = useState(today());
   const [validUntil, setValidUntil] = useState(thirtyDays());
   const [currency, setCurrency] = useState("USD");
+  const [secondaryCurrency, setSecondaryCurrency] = useState<string>("");
   const [discountType, setDiscountType] = useState<QuotationInputDiscountType>(null);
   const [discountValue, setDiscountValue] = useState(0);
   const [taxRate, setTaxRate] = useState(0);
@@ -124,6 +125,7 @@ export default function QuotationFormPage() {
     setIssueDate(existing.issueDate.split("T")[0]);
     setValidUntil(existing.validUntil.split("T")[0]);
     setCurrency(existing.currency);
+    setSecondaryCurrency(existing.secondaryCurrency ?? "");
     setDiscountType((existing.discountType as QuotationInputDiscountType) ?? null);
     setDiscountValue(parseFloat(existing.discountValue ?? "0"));
     setTaxRate(parseFloat(existing.taxRate ?? "0"));
@@ -191,6 +193,7 @@ export default function QuotationFormPage() {
       issueDate,
       validUntil,
       currency,
+      secondaryCurrency: secondaryCurrency.trim().toUpperCase() || null,
       discountType: discountType ?? null,
       discountValue: discountValue || 0,
       taxRate: taxRate || 0,
@@ -281,6 +284,16 @@ export default function QuotationFormPage() {
                 className={inputCls}
                 maxLength={3}
                 placeholder="USD"
+              />
+            </Field>
+            <Field label="Secondary Currency (optional)">
+              <Input
+                value={secondaryCurrency}
+                onChange={(e) => setSecondaryCurrency(e.target.value.toUpperCase())}
+                className={inputCls}
+                maxLength={3}
+                placeholder="e.g. EUR"
+                data-testid="secondary-currency-input"
               />
             </Field>
             <Field label="Template">

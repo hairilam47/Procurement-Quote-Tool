@@ -101,6 +101,7 @@ export interface QuotationInput {
   issueDate: string;
   validUntil: string;
   currency?: string;
+  secondaryCurrency?: string | null;
   discountType?: QuotationInputDiscountType;
   discountValue?: number;
   taxRate?: number;
@@ -141,6 +142,8 @@ export type QuotationDetail = QuotationSummary & {
   sentAt?: string | null;
   acceptedAt?: string | null;
   paidAt?: string | null;
+  secondaryCurrency?: string | null;
+  secondaryExchangeRate?: string | null;
   client?: Client;
   lineItems?: LineItem[];
 };

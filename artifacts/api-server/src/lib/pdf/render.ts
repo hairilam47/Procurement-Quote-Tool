@@ -24,6 +24,8 @@ type QuoteData = {
   issueDate: Date;
   validUntil: Date;
   currency: string;
+  secondaryCurrency?: string | null;
+  secondaryExchangeRate?: string | null;
   discountType: string | null;
   discountValue: string;
   discountAmount: string;

@@ -16,6 +16,8 @@ export type TemplateProps = {
     issueDate: Date | string;
     validUntil: Date | string;
     currency: string;
+    secondaryCurrency?: string | null;
+    secondaryExchangeRate?: string | null;
     discountType: string | null | undefined;
     discountValue: string;
     discountAmount: string;
