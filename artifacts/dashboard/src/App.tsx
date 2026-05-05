@@ -15,6 +15,7 @@ import ClientFormPage from "@/pages/clients/ClientFormPage";
 import ClientDetailPage from "@/pages/clients/ClientDetailPage";
 import SettingsPage from "@/pages/SettingsPage";
 import SignInPage from "@/pages/SignInPage";
+import SignUpPage from "@/pages/SignUpPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -99,8 +100,9 @@ function ProtectedRoutes() {
 function AppRoutes() {
   return (
     <Switch>
-      {/* Sign-in route — always accessible */}
+      {/* Auth routes — always accessible */}
       <Route path="/sign-in/*?" component={SignInPage} />
+      <Route path="/sign-up/*?" component={SignUpPage} />
 
       {/* All other routes — protected */}
       <Route>
@@ -123,7 +125,7 @@ function ClerkProviderWithRoutes() {
       publishableKey={clerkPubKey}
       proxyUrl={clerkProxyUrl}
       signInUrl={`${basePath}/sign-in`}
-      signUpUrl={`${basePath}/sign-in`}
+      signUpUrl={`${basePath}/sign-up`}
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >

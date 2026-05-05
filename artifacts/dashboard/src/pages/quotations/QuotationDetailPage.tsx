@@ -81,27 +81,45 @@ export default function QuotationDetailPage() {
     }
   }
 
+  async function openPdfBlob(url: string, filename: string) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   async function handleDownloadPdf() {
     try {
       const res = await fetch(`/api/quotations/${id}/pdf`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Failed to generate PDF");
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
-    } catch {
-      toast({ title: "Failed to generate PDF", variant: "destructive" });
+      await openPdfBlob(url, `${quotation?.number ?? id}.pdf`);
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Failed to generate PDF", variant: "destructive" });
     }
   }
 
   async function handleFollowUpInvoice() {
     try {
       const res = await fetch(`/api/quotations/${id}/followup-invoice-pdf`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Failed to generate follow-up invoice");
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
-    } catch {
-      toast({ title: "Failed to generate follow-up invoice", variant: "destructive" });
+      await openPdfBlob(url, `${quotation?.number ?? id}-FI.pdf`);
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Failed to generate follow-up invoice", variant: "destructive" });
     }
   }
 
