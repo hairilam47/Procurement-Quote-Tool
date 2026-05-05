@@ -482,6 +482,7 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
         discountAmount: src.discountAmount,
         taxAmount: src.taxAmount,
         total: src.total,
+        requiredTotal: src.requiredTotal,
         notes: src.notes,
         terms: src.terms,
         paymentUrl: src.paymentUrl,
