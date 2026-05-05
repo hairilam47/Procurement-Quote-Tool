@@ -8,7 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx/esm --test src/lib/formula.test.ts"
+    "test": "node --import tsx/esm --test src/lib/formula.test.ts src/lib/calculations.test.ts"
   },
   "dependencies": {
     "@clerk/express": "^2.1.12",
