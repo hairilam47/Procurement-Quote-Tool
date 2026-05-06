@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Trash2, Loader2, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
 const inputCls =
@@ -310,7 +310,7 @@ export default function QuotationFormPage() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-3xl space-y-5"
+      className="w-full max-w-5xl space-y-5"
     >
       {/* Header */}
       <div className="flex items-center gap-3">
@@ -416,7 +416,7 @@ export default function QuotationFormPage() {
           </div>
 
           {/* Column headers */}
-          <div className="grid grid-cols-[2.5fr_0.7fr_0.7fr_1fr_1fr_auto] gap-2 px-5 py-2 border-b border-slate-800/60">
+          <div className="grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2 border-b border-slate-800/60">
             {["Description", "Qty", "Unit", "Unit Price", "Total", ""].map((h) => (
               <span key={h} className="text-xs text-slate-500 uppercase tracking-wider font-medium">
                 {h}
@@ -428,7 +428,7 @@ export default function QuotationFormPage() {
             const rowTotal = (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0);
             const isDeferred = li.paymentRequired === false;
             return (
-              <div key={idx} className={`grid grid-cols-[2.5fr_0.7fr_0.7fr_1fr_1fr_auto] gap-2 px-5 py-2.5 border-b border-slate-800/30 last:border-0 items-center transition-opacity ${isDeferred ? "opacity-60" : ""}`}>
+              <div key={idx} className={`grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2.5 border-b border-slate-800/30 last:border-0 items-center transition-opacity ${isDeferred ? "opacity-60" : ""}`}>
                 <div className="flex flex-col gap-1">
                   <Input
                     value={li.description}
@@ -440,7 +440,7 @@ export default function QuotationFormPage() {
                   <Input
                     value={li.sku ?? ""}
                     onChange={(e) => updateLineItem(idx, "sku", e.target.value || null)}
-                    placeholder="SKU / Product code (optional)"
+                    placeholder="SKU (optional)"
                     className={`${inputCls} h-6 text-xs`}
                     data-testid={`line-item-sku-${idx}`}
                   />
@@ -495,7 +495,7 @@ export default function QuotationFormPage() {
                   <Input
                     value={li.rateFormula ?? ""}
                     onChange={(e) => handleFormulaChange(idx, e.target.value)}
-                    placeholder="Formula (e.g. 30*0.0032)"
+                    placeholder="e.g. 30*0.0032"
                     className={`${inputCls} h-6 text-xs font-mono`}
                     data-testid={`line-item-formula-${idx}`}
                   />
@@ -555,7 +555,7 @@ export default function QuotationFormPage() {
 
         {/* Pricing adjustments */}
         <Section title="Pricing Adjustments">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <Field label="Discount Type">
               <Select
                 value={discountType ?? "none"}
