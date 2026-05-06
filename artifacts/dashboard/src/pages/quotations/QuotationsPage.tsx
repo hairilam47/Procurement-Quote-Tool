@@ -3,7 +3,7 @@ import { useListQuotations } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { formatCurrency, formatDate, statusBadge, STATUS_LABELS } from "@/lib/format";
-import { Plus, Search, Filter } from "lucide-react";
+import { Plus, Search, Filter, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -22,9 +22,12 @@ const container = {
 };
 const row = { hidden: { opacity: 0, x: -8 }, show: { opacity: 1, x: 0 } };
 
+type SortOption = "DEFAULT" | "AMOUNT_ASC" | "AMOUNT_DESC";
+
 export default function QuotationsPage() {
   const [status, setStatus] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<SortOption>("DEFAULT");
 
   const isDeferred = status === DEFERRED_FILTER;
   const apiStatus = status === "ALL" || isDeferred ? undefined : status;
@@ -45,6 +48,25 @@ export default function QuotationsPage() {
       (q.clientName ?? "").toLowerCase().includes(s) ||
       (q.clientCompany ?? "").toLowerCase().includes(s)
     );
+  });
+
+  const sorted = sort === "DEFAULT" ? filtered : [...filtered].sort((a, b) => {
+    const aTotal = parseFloat(a.total ?? "0");
+    const bTotal = parseFloat(b.total ?? "0");
+    const aRequired = parseFloat(a.requiredTotal ?? a.total ?? "0");
+    const bRequired = parseFloat(b.requiredTotal ?? b.total ?? "0");
+    const aIsSplit = aRequired < aTotal;
+    const bIsSplit = bRequired < bTotal;
+
+    if (sort === "AMOUNT_DESC") {
+      if (aIsSplit && !bIsSplit) return -1;
+      if (!aIsSplit && bIsSplit) return 1;
+      return bRequired - aRequired;
+    } else {
+      if (aIsSplit && !bIsSplit) return -1;
+      if (!aIsSplit && bIsSplit) return 1;
+      return aRequired - bRequired;
+    }
   });
 
   return (
@@ -91,6 +113,17 @@ export default function QuotationsPage() {
             </SelectItem>
           </SelectContent>
         </Select>
+        <Select value={sort} onValueChange={(v) => setSort(v as SortOption)}>
+          <SelectTrigger className="w-48 bg-slate-900 border-slate-700 text-white h-9" data-testid="sort-select">
+            <ArrowUpDown size={13} className="mr-1.5 text-slate-500" />
+            <SelectValue placeholder="Sort by..." />
+          </SelectTrigger>
+          <SelectContent className="bg-slate-900 border-slate-700">
+            <SelectItem value="DEFAULT" className="text-white">Default order</SelectItem>
+            <SelectItem value="AMOUNT_DESC" className="text-white">Due now: High to Low</SelectItem>
+            <SelectItem value="AMOUNT_ASC" className="text-white">Due now: Low to High</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
@@ -105,7 +138,7 @@ export default function QuotationsPage() {
 
         {isLoading ? (
           <div className="p-8 text-center text-slate-500 text-sm">Loading...</div>
-        ) : filtered.length === 0 ? (
+        ) : sorted.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-slate-500 text-sm">No quotations found</p>
             <Link href="/quotations/new">
@@ -116,7 +149,7 @@ export default function QuotationsPage() {
           </div>
         ) : (
           <motion.div variants={container} initial="hidden" animate="show">
-            {filtered.map((q) => (
+            {sorted.map((q) => (
               <motion.div key={q.id} variants={row}>
                 <Link href={`/quotations/${q.id}`}>
                   <div className="grid grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] gap-0 items-center px-4 py-3.5 border-b border-slate-800/50 hover:bg-slate-800/50 transition-colors cursor-pointer group">
