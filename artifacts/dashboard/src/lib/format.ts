@@ -1,11 +1,19 @@
 export function formatCurrency(amount: string | number, currency = "USD"): string {
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
   if (isNaN(num)) return "-";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(num);
+  const code = (currency ?? "").trim().toUpperCase();
+  if (code.length !== 3) {
+    return num.toFixed(2);
+  }
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: code,
+      minimumFractionDigits: 2,
+    }).format(num);
+  } catch {
+    return `${code} ${num.toFixed(2)}`;
+  }
 }
 
 export function formatDate(date: string | null | undefined): string {
