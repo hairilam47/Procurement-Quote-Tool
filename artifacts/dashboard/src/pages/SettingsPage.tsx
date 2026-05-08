@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useGetSettings, useUpdateSettings } from "@workspace/api-client-react";
+import { BeamCard } from "@/components/ui/beam-card";
 import type { SettingsInput, SettingsInputDefaultTemplate } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -159,7 +160,7 @@ export default function SettingsPage() {
     return (
       <div className="space-y-4">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-12 bg-slate-800 rounded-lg animate-pulse" />
+          <div key={i} className="h-12 bg-muted rounded-lg animate-pulse" />
         ))}
       </div>
     );
@@ -173,18 +174,18 @@ export default function SettingsPage() {
     >
       <div className="flex items-center gap-2">
         <Settings size={20} className="text-blue-400" />
-        <h1 className="text-2xl font-bold text-white">Company Settings</h1>
+        <h1 className="text-2xl font-bold text-foreground">Company Settings</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Logo */}
         <Section title="Logo">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-slate-800 border border-slate-700 rounded-xl flex items-center justify-center overflow-hidden">
+            <div className="w-16 h-16 bg-muted border border-border rounded-xl flex items-center justify-center overflow-hidden">
               {logoPreview ? (
                 <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
               ) : (
-                <Upload size={20} className="text-slate-500" />
+                <Upload size={20} className="text-muted-foreground" />
               )}
             </div>
             <div>
@@ -202,7 +203,7 @@ export default function SettingsPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+                className="border-border text-muted-foreground hover:text-foreground hover:bg-muted"
                 onClick={() => fileRef.current?.click()}
                 disabled={logoUploading}
               >
@@ -212,7 +213,7 @@ export default function SettingsPage() {
                   "Upload Logo"
                 )}
               </Button>
-              <p className="text-slate-500 text-xs mt-1">PNG, JPG, SVG up to 5MB</p>
+              <p className="text-muted-foreground text-xs mt-1">PNG, JPG, SVG up to 5MB</p>
             </div>
           </div>
         </Section>
@@ -352,9 +353,9 @@ export default function SettingsPage() {
                 <SelectTrigger className={inputCls}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
-                  <SelectItem value="MODERN" className="text-white">Modern</SelectItem>
-                  <SelectItem value="CLASSIC" className="text-white">Classic</SelectItem>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="MODERN" className="text-foreground">Modern</SelectItem>
+                  <SelectItem value="CLASSIC" className="text-foreground">Classic</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -402,7 +403,7 @@ export default function SettingsPage() {
       {/* Billing */}
       <Section title="Billing">
         {subscriptionLoading ? (
-          <div className="h-10 bg-slate-800 rounded-lg animate-pulse" />
+          <div className="h-10 bg-muted rounded-lg animate-pulse" />
         ) : subscriptionData?.subscription ? (
           <BillingInfo
             subscription={subscriptionData.subscription}
@@ -411,12 +412,12 @@ export default function SettingsPage() {
           />
         ) : (
           <div className="flex items-center justify-between">
-            <p className="text-slate-400 text-sm">No active subscription found.</p>
+            <p className="text-muted-foreground text-sm">No active subscription found.</p>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+              className="border-border text-muted-foreground hover:text-foreground hover:bg-muted"
               onClick={handleManageBilling}
               disabled={portalLoading}
               data-testid="manage-billing-btn"
@@ -469,12 +470,12 @@ function BillingInfo({
     <div className="flex items-center justify-between gap-4 flex-wrap">
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <span className="text-white font-medium">{subscription.planName}</span>
-          <span className={`text-xs font-semibold uppercase ${statusColor[subscription.status] ?? "text-slate-400"}`}>
+          <span className="text-foreground font-medium">{subscription.planName}</span>
+          <span className={`text-xs font-semibold uppercase ${statusColor[subscription.status] ?? "text-muted-foreground"}`}>
             {statusLabel[subscription.status] ?? subscription.status}
           </span>
         </div>
-        <p className="text-slate-400 text-sm">
+        <p className="text-muted-foreground text-sm">
           {subscription.cancelAtPeriodEnd
             ? `Cancels on ${renewalDate}`
             : `Renews on ${renewalDate}`}
@@ -484,7 +485,7 @@ function BillingInfo({
         type="button"
         variant="outline"
         size="sm"
-        className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+        className="border-border text-muted-foreground hover:text-foreground hover:bg-muted"
         onClick={onManage}
         disabled={loading}
         data-testid="manage-billing-btn"
@@ -499,14 +500,14 @@ function BillingInfo({
   );
 }
 
-const inputCls = "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500";
+const inputCls = "bg-input border-border text-foreground placeholder:text-muted-foreground focus:border-blue-500";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-      <h2 className="text-sm font-semibold text-slate-300 border-b border-slate-800 pb-3">{title}</h2>
+    <BeamCard className="p-5 space-y-4">
+      <h2 className="text-sm font-semibold text-muted-foreground border-b border-border pb-3">{title}</h2>
       {children}
-    </div>
+    </BeamCard>
   );
 }
 
@@ -523,7 +524,7 @@ function Field({
 }) {
   return (
     <div className={`space-y-1.5 ${className ?? ""}`}>
-      <Label className="text-slate-400 text-xs">
+      <Label className="text-muted-foreground text-xs">
         {label}
         {required && <span className="text-blue-400 ml-0.5">*</span>}
       </Label>

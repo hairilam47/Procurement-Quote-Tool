@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { UserButton } from "@clerk/react";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -12,6 +13,8 @@ import {
   X,
   PanelLeftClose,
   PanelLeftOpen,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 const navItems = [
@@ -48,7 +51,7 @@ function NavLinks({
                 collapsed ? "justify-center px-2" : "",
                 isActive
                   ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
               <Icon size={15} className="flex-shrink-0" />
@@ -73,6 +76,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       return false;
     }
   });
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme !== "light";
 
   useEffect(() => {
     try {
@@ -83,7 +88,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }, [collapsed]);
 
   return (
-    <div className="flex h-screen bg-slate-950 overflow-hidden">
+    <div className="flex h-screen bg-background overflow-hidden">
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
@@ -95,7 +100,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Sidebar — desktop always visible, mobile slides in */}
       <aside
         className={cn(
-          "fixed md:static inset-y-0 left-0 z-30 flex-shrink-0 flex flex-col bg-slate-900 border-r border-slate-800 transition-all duration-200",
+          "fixed md:static inset-y-0 left-0 z-30 flex-shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200",
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
           collapsed ? "w-14" : "w-56"
         )}
@@ -103,7 +108,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {/* Logo */}
         <div
           className={cn(
-            "h-14 flex items-center border-b border-slate-800 flex-shrink-0",
+            "h-14 flex items-center border-b border-sidebar-border flex-shrink-0",
             collapsed ? "px-0 justify-center" : "gap-2.5 px-4"
           )}
         >
@@ -113,14 +118,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </svg>
           </div>
           {!collapsed && (
-            <span className="font-bold text-white tracking-tight text-sm truncate">
+            <span className="font-bold text-foreground tracking-tight text-sm truncate">
               QuoteFlow
             </span>
           )}
           {/* Mobile close button */}
           {!collapsed && (
             <button
-              className="ml-auto text-slate-400 hover:text-white md:hidden"
+              className="ml-auto text-muted-foreground hover:text-foreground md:hidden"
               onClick={() => setMobileOpen(false)}
               aria-label="Close menu"
             >
@@ -137,19 +142,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {/* User + collapse toggle */}
         <div
           className={cn(
-            "p-3 border-t border-slate-800 flex items-center",
+            "p-3 border-t border-sidebar-border flex items-center",
             collapsed ? "flex-col gap-3 justify-center" : "gap-2.5"
           )}
         >
           <UserButton />
           {!collapsed && (
-            <span className="text-slate-400 text-xs flex-1 truncate">
+            <span className="text-muted-foreground text-xs flex-1 truncate">
               Account
             </span>
           )}
+          {/* Theme toggle */}
+          <button
+            className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted p-1"
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            title={isDark ? "Light mode" : "Dark mode"}
+          >
+            {isDark ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
           {/* Desktop collapse toggle */}
           <button
-            className="hidden md:flex items-center justify-center text-slate-400 hover:text-white transition-colors rounded-md hover:bg-slate-800 p-1"
+            className="hidden md:flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted p-1"
             onClick={() => setCollapsed((c) => !c)}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -164,11 +178,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-slate-950 min-w-0">
+      <div className="flex-1 flex flex-col overflow-hidden bg-background min-w-0">
         {/* Top bar */}
-        <header className="h-14 flex items-center px-4 md:px-6 border-b border-slate-800 flex-shrink-0 gap-3">
+        <header className="h-14 flex items-center px-4 md:px-6 border-b border-border flex-shrink-0 gap-3">
           <button
-            className="md:hidden text-slate-400 hover:text-white transition-colors"
+            className="md:hidden text-muted-foreground hover:text-foreground transition-colors"
             onClick={() => setMobileOpen(true)}
             aria-label="Open menu"
             data-testid="mobile-menu-btn"
@@ -188,20 +202,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
 function Breadcrumb({ location }: { location: string }) {
   const parts = location.split("/").filter(Boolean);
   if (parts.length === 0) {
-    return <span className="text-sm font-medium text-white">Dashboard</span>;
+    return <span className="text-sm font-medium text-foreground">Dashboard</span>;
   }
   return (
     <div className="flex items-center gap-1.5 text-sm min-w-0">
-      <span className="text-slate-500 hidden sm:inline">Home</span>
+      <span className="text-muted-foreground hidden sm:inline">Home</span>
       {parts.map((part, i) => (
         <span key={i} className="flex items-center gap-1.5 min-w-0">
-          <ChevronRight size={12} className="text-slate-600 flex-shrink-0 hidden sm:inline" />
+          <ChevronRight size={12} className="text-muted-foreground/60 flex-shrink-0 hidden sm:inline" />
           <span
             className={cn(
               "truncate",
               i === parts.length - 1
-                ? "text-white font-medium"
-                : "text-slate-500"
+                ? "text-foreground font-medium"
+                : "text-muted-foreground"
             )}
           >
             {part.charAt(0).toUpperCase() + part.slice(1)}

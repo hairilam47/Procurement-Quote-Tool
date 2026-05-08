@@ -14,7 +14,7 @@ export default function SignUpPage() {
           </div>
           <span className="text-2xl font-bold text-white tracking-tight">QuoteFlow</span>
         </div>
-        <p className="text-slate-400 text-sm">Professional IT services quotation management</p>
+        <p className="text-muted-foreground text-sm">Professional IT services quotation management</p>
       </div>
       <SignUp
         routing="path"

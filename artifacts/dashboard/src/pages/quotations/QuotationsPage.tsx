@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { formatCurrency, formatDate, statusBadge, STATUS_LABELS } from "@/lib/format";
 import { Plus, Search, Filter, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { BeamCard } from "@/components/ui/beam-card";
 import {
   Select,
   SelectContent,
@@ -74,8 +75,8 @@ export default function QuotationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Quotations</h1>
-          <p className="text-slate-400 text-sm mt-0.5">{quotations.length} total</p>
+          <h1 className="text-2xl font-bold text-foreground">Quotations</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">{quotations.length} total</p>
         </div>
         <Link href="/quotations/new">
           <span data-testid="new-quotation-btn" className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
@@ -88,23 +89,23 @@ export default function QuotationsPage() {
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-48">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search quotations..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500 h-9"
+            className="pl-9 bg-input border-border text-foreground placeholder:text-muted-foreground h-9"
             data-testid="quotations-search"
           />
         </div>
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-40 bg-slate-900 border-slate-700 text-white h-9">
-            <Filter size={13} className="mr-1.5 text-slate-500" />
+          <SelectTrigger className="w-40 bg-input border-border text-foreground h-9">
+            <Filter size={13} className="mr-1.5 text-muted-foreground" />
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
-          <SelectContent className="bg-slate-900 border-slate-700">
+          <SelectContent className="bg-popover border-border">
             {STATUSES.map((s) => (
-              <SelectItem key={s} value={s} className="text-white">
+              <SelectItem key={s} value={s} className="text-foreground">
                 {s === "ALL" ? "All statuses" : STATUS_LABELS[s]}
               </SelectItem>
             ))}
@@ -114,33 +115,33 @@ export default function QuotationsPage() {
           </SelectContent>
         </Select>
         <Select value={sort} onValueChange={(v) => setSort(v as SortOption)}>
-          <SelectTrigger className="w-48 bg-slate-900 border-slate-700 text-white h-9" data-testid="sort-select">
-            <ArrowUpDown size={13} className="mr-1.5 text-slate-500" />
+          <SelectTrigger className="w-48 bg-input border-border text-foreground h-9" data-testid="sort-select">
+            <ArrowUpDown size={13} className="mr-1.5 text-muted-foreground" />
             <SelectValue placeholder="Sort by..." />
           </SelectTrigger>
-          <SelectContent className="bg-slate-900 border-slate-700">
-            <SelectItem value="DEFAULT" className="text-white">Default order</SelectItem>
-            <SelectItem value="AMOUNT_DESC" className="text-white">Due now: High to Low</SelectItem>
-            <SelectItem value="AMOUNT_ASC" className="text-white">Due now: Low to High</SelectItem>
+          <SelectContent className="bg-popover border-border">
+            <SelectItem value="DEFAULT" className="text-foreground">Default order</SelectItem>
+            <SelectItem value="AMOUNT_DESC" className="text-foreground">Due now: High to Low</SelectItem>
+            <SelectItem value="AMOUNT_ASC" className="text-foreground">Due now: Low to High</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-        <div className="grid grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] gap-0 border-b border-slate-800 px-4 py-2.5">
+      <BeamCard>
+        <div className="grid grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] gap-0 border-b border-border px-4 py-2.5">
           {["Number", "Client", "Status", "Total", "Valid Until", ""].map((h) => (
-            <span key={h} className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <span key={h} className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               {h}
             </span>
           ))}
         </div>
 
         {isLoading ? (
-          <div className="p-8 text-center text-slate-500 text-sm">Loading...</div>
+          <div className="p-8 text-center text-muted-foreground text-sm">Loading...</div>
         ) : sorted.length === 0 ? (
           <div className="p-12 text-center">
-            <p className="text-slate-500 text-sm">No quotations found</p>
+            <p className="text-muted-foreground text-sm">No quotations found</p>
             <Link href="/quotations/new">
               <span className="inline-flex items-center gap-1 text-blue-400 text-sm mt-2 cursor-pointer hover:text-blue-300">
                 <Plus size={13} /> Create your first quotation
@@ -152,12 +153,12 @@ export default function QuotationsPage() {
             {sorted.map((q) => (
               <motion.div key={q.id} variants={row}>
                 <Link href={`/quotations/${q.id}`}>
-                  <div className="grid grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] gap-0 items-center px-4 py-3.5 border-b border-slate-800/50 hover:bg-slate-800/50 transition-colors cursor-pointer group">
-                    <span className="text-white text-sm font-mono font-medium">{q.number}</span>
+                  <div className="grid grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] gap-0 items-center px-4 py-3.5 border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer group">
+                    <span className="text-foreground text-sm font-mono font-medium">{q.number}</span>
                     <div className="min-w-0 pr-4">
-                      <p className="text-white text-sm truncate">{q.clientName ?? "-"}</p>
+                      <p className="text-foreground text-sm truncate">{q.clientName ?? "-"}</p>
                       {q.clientCompany && (
-                        <p className="text-slate-500 text-xs truncate">{q.clientCompany}</p>
+                        <p className="text-muted-foreground text-xs truncate">{q.clientCompany}</p>
                       )}
                     </div>
                     <span>
@@ -168,7 +169,7 @@ export default function QuotationsPage() {
                       </span>
                     </span>
                     <div>
-                      <p className="text-white text-sm font-semibold">
+                      <p className="text-foreground text-sm font-semibold">
                         {q.requiredTotal && q.requiredTotal !== q.total
                           ? `Full total: ${formatCurrency(q.total, q.currency)}`
                           : formatCurrency(q.total, q.currency)}
@@ -179,7 +180,7 @@ export default function QuotationsPage() {
                         </p>
                       )}
                     </div>
-                    <span className="text-slate-400 text-sm">{formatDate(q.validUntil)}</span>
+                    <span className="text-muted-foreground text-sm">{formatDate(q.validUntil)}</span>
                     <span className="text-blue-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                       View &rarr;
                     </span>
@@ -189,7 +190,7 @@ export default function QuotationsPage() {
             ))}
           </motion.div>
         )}
-      </div>
+      </BeamCard>
     </div>
   );
 }

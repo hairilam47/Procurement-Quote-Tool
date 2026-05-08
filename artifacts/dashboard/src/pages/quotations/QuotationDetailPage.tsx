@@ -5,6 +5,7 @@ import {
   useDuplicateQuotation,
   getGetQuotationQueryKey,
 } from "@workspace/api-client-react";
+import { BeamCard } from "@/components/ui/beam-card";
 import type { ChangeQuotationStatusBodyStatus } from "@workspace/api-client-react";
 import { useParams, useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
@@ -127,14 +128,14 @@ export default function QuotationDetailPage() {
     return (
       <div className="space-y-4 max-w-3xl">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-24 bg-slate-800 rounded-xl animate-pulse" />
+          <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />
         ))}
       </div>
     );
   }
 
   if (!quotation) {
-    return <div className="text-slate-500 text-sm">Quotation not found.</div>;
+    return <div className="text-muted-foreground text-sm">Quotation not found.</div>;
   }
 
   const transitions = STATUS_TRANSITIONS[quotation.status] ?? [];
@@ -154,18 +155,18 @@ export default function QuotationDetailPage() {
       {/* Header */}
       <div className="flex items-start gap-3">
         <Link href="/quotations">
-          <span className="text-slate-400 hover:text-white cursor-pointer transition-colors mt-1">
+          <span className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors mt-1">
             <ArrowLeft size={18} />
           </span>
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-white font-mono">{quotation.number}</h1>
+            <h1 className="text-2xl font-bold text-foreground font-mono">{quotation.number}</h1>
             <span className={`text-sm px-2.5 py-1 rounded-full font-medium ${statusBadge(quotation.status)}`}>
               {STATUS_LABELS[quotation.status] ?? quotation.status}
             </span>
           </div>
-          <p className="text-slate-400 text-sm mt-0.5">
+          <p className="text-muted-foreground text-sm mt-0.5">
             {client?.name ?? "Unknown client"}
             {client?.company ? ` · ${client.company}` : ""}
           </p>
@@ -177,7 +178,7 @@ export default function QuotationDetailPage() {
             variant="outline"
             size="sm"
             onClick={handleDownloadPdf}
-            className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+            className="border-border text-muted-foreground hover:text-foreground hover:bg-muted"
             data-testid="view-pdf-btn"
           >
             <Download size={13} className="mr-1.5" /> PDF
@@ -198,14 +199,14 @@ export default function QuotationDetailPage() {
             size="sm"
             onClick={handleDuplicate}
             disabled={duplicate.isPending}
-            className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+            className="border-border text-muted-foreground hover:text-foreground hover:bg-muted"
             data-testid="duplicate-btn"
           >
             <Copy size={13} className="mr-1.5" /> Duplicate
           </Button>
           {quotation.status === "DRAFT" && (
             <Link href={`/quotations/${id}/edit`}>
-              <Button variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800">
+              <Button variant="outline" size="sm" className="border-border text-muted-foreground hover:text-foreground hover:bg-muted">
                 <Edit size={13} className="mr-1.5" /> Edit
               </Button>
             </Link>
@@ -217,12 +218,12 @@ export default function QuotationDetailPage() {
                   Change Status <ChevronDown size={13} className="ml-1" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-slate-900 border-slate-700" align="end">
+              <DropdownMenuContent className="bg-popover border-border" align="end">
                 {transitions.map((s) => (
                   <DropdownMenuItem
                     key={s}
                     onClick={() => handleStatusChange(s)}
-                    className="text-white hover:bg-slate-800 cursor-pointer"
+                    className="text-foreground hover:bg-muted cursor-pointer"
                   >
                     Mark as {STATUS_LABELS[s]}
                   </DropdownMenuItem>
@@ -232,12 +233,12 @@ export default function QuotationDetailPage() {
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 px-2">
+              <Button variant="outline" size="sm" className="border-border text-muted-foreground hover:text-foreground hover:bg-muted px-2">
                 <ChevronDown size={13} />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-slate-900 border-slate-700" align="end">
-              <DropdownMenuSeparator className="bg-slate-800" />
+            <DropdownMenuContent className="bg-popover border-border" align="end">
+              <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem
                 onClick={handleDelete}
                 className="text-red-400 hover:bg-red-900/20 cursor-pointer"
@@ -266,33 +267,33 @@ export default function QuotationDetailPage() {
 
       {/* Client */}
       {client && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-slate-300 mb-3 border-b border-slate-800 pb-3">
+        <BeamCard className="p-5">
+          <h2 className="text-sm font-semibold text-muted-foreground mb-3 border-b border-border pb-3">
             Client
           </h2>
           <Link href={`/clients/${client.id}`}>
             <div className="cursor-pointer hover:text-blue-400 transition-colors">
-              <p className="text-white font-medium">{client.name}</p>
-              {client.company && <p className="text-slate-400 text-sm">{client.company}</p>}
-              <p className="text-slate-500 text-sm">{client.email}</p>
+              <p className="text-foreground font-medium">{client.name}</p>
+              {client.company && <p className="text-muted-foreground text-sm">{client.company}</p>}
+              <p className="text-muted-foreground text-sm">{client.email}</p>
               {client.addressLine1 && (
-                <p className="text-slate-600 text-xs mt-1">
+                <p className="text-muted-foreground/60 text-xs mt-1">
                   {[client.addressLine1, client.city, client.country].filter(Boolean).join(", ")}
                 </p>
               )}
             </div>
           </Link>
-        </div>
+        </BeamCard>
       )}
 
       {/* Line items */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-slate-800">
-          <h2 className="text-sm font-semibold text-slate-300">Line Items</h2>
+      <BeamCard>
+        <div className="px-5 py-3 border-b border-border">
+          <h2 className="text-sm font-semibold text-muted-foreground">Line Items</h2>
         </div>
-        <div className="grid grid-cols-[3fr_1fr_1fr_1fr_1fr] border-b border-slate-800/60 px-5 py-2">
+        <div className="grid grid-cols-[3fr_1fr_1fr_1fr_1fr] border-b border-border/60 px-5 py-2">
           {["Description", "Qty", "Unit", "Unit Price", "Total"].map((h) => (
-            <span key={h} className="text-xs text-slate-500 uppercase tracking-wider font-medium">
+            <span key={h} className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
               {h}
             </span>
           ))}
@@ -302,41 +303,41 @@ export default function QuotationDetailPage() {
           return (
             <div
               key={item.id}
-              className={`grid grid-cols-[3fr_1fr_1fr_1fr_1fr] px-5 py-3 border-b border-slate-800/30 last:border-0 ${isDeferred ? "opacity-60 bg-slate-800/20" : ""}`}
+              className={`grid grid-cols-[3fr_1fr_1fr_1fr_1fr] px-5 py-3 border-b border-border/30 last:border-0 ${isDeferred ? "opacity-60 bg-muted/20" : ""}`}
             >
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-white text-sm">{item.description}</span>
+                  <span className="text-foreground text-sm">{item.description}</span>
                   {isDeferred && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 font-medium">
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">
                       Deferred
                     </span>
                   )}
                 </div>
                 {item.sku && (
-                  <p className="text-slate-500 text-xs mt-0.5">SKU: {item.sku}</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">SKU: {item.sku}</p>
                 )}
               </div>
-              <span className="text-slate-300 text-sm">{item.quantity}</span>
-              <span className="text-slate-400 text-sm">{item.unit}</span>
+              <span className="text-foreground/80 text-sm">{item.quantity}</span>
+              <span className="text-muted-foreground text-sm">{item.unit}</span>
               <div>
-                <span className="text-slate-300 text-sm">
+                <span className="text-foreground/80 text-sm">
                   {formatCurrency(item.unitPrice, quotation.currency)}
                 </span>
                 {item.rateFormula && (
-                  <p className="text-slate-600 text-xs mt-0.5 font-mono">({item.rateFormula})</p>
+                  <p className="text-muted-foreground/60 text-xs mt-0.5 font-mono">({item.rateFormula})</p>
                 )}
               </div>
-              <span className="text-white text-sm font-medium">
+              <span className="text-foreground text-sm font-medium">
                 {formatCurrency(item.lineTotal, quotation.currency)}
               </span>
             </div>
           );
         })}
-      </div>
+      </BeamCard>
 
       {/* Totals */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+      <BeamCard className="p-5">
         {(() => {
           const sec = quotation.secondaryCurrency;
           const rate = quotation.secondaryExchangeRate
@@ -351,11 +352,11 @@ export default function QuotationDetailPage() {
           return (
             <div className={`space-y-2 ${hasSec ? "max-w-sm" : "max-w-xs"} ml-auto`}>
               {hasSec && (
-                <div className="flex justify-end gap-6 pb-1 border-b border-slate-800 mb-1">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider w-20 text-right">
+                <div className="flex justify-end gap-6 pb-1 border-b border-border mb-1">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider w-20 text-right">
                     {quotation.currency}
                   </span>
-                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider w-20 text-right">
+                  <span className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider w-20 text-right">
                     {sec}
                   </span>
                 </div>
@@ -380,7 +381,7 @@ export default function QuotationDetailPage() {
                   secondary={hasSec ? conv(quotation.taxAmount ?? "0") : undefined}
                 />
               ) : null}
-              <div className="border-t border-slate-700 pt-2 mt-2">
+              <div className="border-t border-border pt-2 mt-2">
                 <DualTotalRow
                   label={lineItems.some((li) => li.paymentRequired === false) ? "Full total" : "Total"}
                   primary={formatCurrency(quotation.total, quotation.currency)}
@@ -398,34 +399,34 @@ export default function QuotationDetailPage() {
                 />
               )}
               {hasSec && (
-                <p className="text-slate-600 text-xs text-right pt-1">
+                <p className="text-muted-foreground/60 text-xs text-right pt-1">
                   1 {quotation.currency} = {rate.toFixed(6)} {sec} (rate at creation)
                 </p>
               )}
             </div>
           );
         })()}
-      </div>
+      </BeamCard>
 
       {/* Notes & Terms */}
       {(quotation.notes || quotation.terms) && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+        <BeamCard className="p-5 space-y-4">
           {quotation.notes && (
             <div>
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Notes</h3>
-              <p className="text-slate-300 text-sm whitespace-pre-line">{quotation.notes}</p>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Notes</h3>
+              <p className="text-foreground/80 text-sm whitespace-pre-line">{quotation.notes}</p>
             </div>
           )}
           {quotation.terms && (
             <div>
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Terms & Conditions</h3>
-              <p className="text-slate-400 text-sm whitespace-pre-line">{quotation.terms}</p>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Terms & Conditions</h3>
+              <p className="text-muted-foreground text-sm whitespace-pre-line">{quotation.terms}</p>
             </div>
           )}
-        </div>
+        </BeamCard>
       )}
 
-      <p className="text-slate-600 text-xs">
+      <p className="text-muted-foreground/60 text-xs">
         Created {formatDate(quotation.createdAt ?? "")}
       </p>
     </motion.div>
@@ -434,10 +435,10 @@ export default function QuotationDetailPage() {
 
 function MetaCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
-      <p className="text-slate-500 text-xs mb-0.5">{label}</p>
-      <p className="text-white text-sm font-medium">{value}</p>
-    </div>
+    <BeamCard className="p-3.5">
+      <p className="text-muted-foreground text-xs mb-0.5">{label}</p>
+      <p className="text-foreground text-sm font-medium">{value}</p>
+    </BeamCard>
   );
 }
 
@@ -456,12 +457,12 @@ function DualTotalRow({
 }) {
   return (
     <div className="flex justify-between items-center gap-2">
-      <span className={`text-sm flex-1 ${bold ? "text-white font-bold" : "text-slate-400"}`}>{label}</span>
-      <span className={`text-sm w-24 text-right ${bold ? "text-white font-bold text-base" : "text-slate-300"} ${className ?? ""}`}>
+      <span className={`text-sm flex-1 ${bold ? "text-foreground font-bold" : "text-muted-foreground"}`}>{label}</span>
+      <span className={`text-sm w-24 text-right ${bold ? "text-foreground font-bold text-base" : "text-foreground/80"} ${className ?? ""}`}>
         {primary}
       </span>
       {secondary !== undefined && (
-        <span className={`text-sm w-24 text-right ${bold ? "text-slate-300 font-bold" : "text-slate-500"} ${className ?? ""}`}>
+        <span className={`text-sm w-24 text-right ${bold ? "text-foreground/90 font-bold" : "text-muted-foreground"} ${className ?? ""}`}>
           {secondary}
         </span>
       )}

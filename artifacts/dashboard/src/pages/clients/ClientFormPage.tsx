@@ -5,6 +5,7 @@ import {
   useGetClient,
   getGetClientQueryKey,
 } from "@workspace/api-client-react";
+import { BeamCard } from "@/components/ui/beam-card";
 import type { ClientInput } from "@workspace/api-client-react";
 import { useLocation, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +18,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 
 const inputCls =
-  "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500";
+  "bg-input border-border text-foreground placeholder:text-muted-foreground focus:border-blue-500";
 
 function Field({
   label,
@@ -32,7 +33,7 @@ function Field({
 }) {
   return (
     <div className={`space-y-1.5 ${className ?? ""}`}>
-      <Label className="text-slate-400 text-xs">
+      <Label className="text-muted-foreground text-xs">
         {label}
         {required && <span className="text-blue-400 ml-0.5">*</span>}
       </Label>
@@ -118,18 +119,18 @@ export default function ClientFormPage() {
     >
       <div className="flex items-center gap-3">
         <Link href={isEdit && id ? `/clients/${id}` : "/clients"}>
-          <span className="text-slate-400 hover:text-white cursor-pointer transition-colors">
+          <span className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
             <ArrowLeft size={18} />
           </span>
         </Link>
-        <h1 className="text-2xl font-bold text-white">
+        <h1 className="text-2xl font-bold text-foreground">
           {isEdit ? "Edit Client" : "New Client"}
         </h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-slate-300 border-b border-slate-800 pb-3">
+        <BeamCard className="p-5 space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground border-b border-border pb-3">
             Contact Information
           </h2>
           <div className="grid grid-cols-2 gap-4">
@@ -165,10 +166,10 @@ export default function ClientFormPage() {
               />
             </Field>
           </div>
-        </div>
+        </BeamCard>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-slate-300 border-b border-slate-800 pb-3">
+        <BeamCard className="p-5 space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground border-b border-border pb-3">
             Address
           </h2>
           <div className="grid grid-cols-2 gap-4">
@@ -215,10 +216,10 @@ export default function ClientFormPage() {
               />
             </Field>
           </div>
-        </div>
+        </BeamCard>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-slate-300 border-b border-slate-800 pb-3">
+        <BeamCard className="p-5 space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground border-b border-border pb-3">
             Notes
           </h2>
           <Textarea
@@ -227,11 +228,11 @@ export default function ClientFormPage() {
             className={`${inputCls} min-h-[80px]`}
             placeholder="Internal notes about this client..."
           />
-        </div>
+        </BeamCard>
 
         <div className="flex justify-end gap-3">
           <Link href={isEdit && id ? `/clients/${id}` : "/clients"}>
-            <Button type="button" variant="outline" className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800">
+            <Button type="button" variant="outline" className="border-border text-muted-foreground hover:text-foreground hover:bg-muted">
               Cancel
             </Button>
           </Link>

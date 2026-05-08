@@ -1,4 +1,5 @@
 import { useGetClient, useDeleteClient, useListQuotations } from "@workspace/api-client-react";
+import { BeamCard } from "@/components/ui/beam-card";
 import { useParams, useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { formatDate, formatCurrency, statusBadge, STATUS_LABELS } from "@/lib/format";
@@ -32,7 +33,7 @@ export default function ClientDetailPage() {
     return (
       <div className="space-y-4 max-w-2xl">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-24 bg-slate-800 rounded-xl animate-pulse" />
+          <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />
         ))}
       </div>
     );
@@ -40,7 +41,7 @@ export default function ClientDetailPage() {
 
   if (!client) {
     return (
-      <div className="text-slate-500 text-sm">Client not found.</div>
+      <div className="text-muted-foreground text-sm">Client not found.</div>
     );
   }
 
@@ -62,17 +63,17 @@ export default function ClientDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/clients">
-          <span className="text-slate-400 hover:text-white cursor-pointer transition-colors">
+          <span className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
             <ArrowLeft size={18} />
           </span>
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold text-white truncate">{client.name}</h1>
-          {client.company && <p className="text-slate-400 text-sm">{client.company}</p>}
+          <h1 className="text-2xl font-bold text-foreground truncate">{client.name}</h1>
+          {client.company && <p className="text-muted-foreground text-sm">{client.company}</p>}
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <Link href={`/clients/${id}/edit`}>
-            <Button variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800">
+            <Button variant="outline" size="sm" className="border-border text-muted-foreground hover:text-foreground hover:bg-muted">
               <Edit size={13} className="mr-1.5" /> Edit
             </Button>
           </Link>
@@ -80,7 +81,7 @@ export default function ClientDetailPage() {
             variant="outline"
             size="sm"
             onClick={handleDelete}
-            className="border-slate-700 text-red-400 hover:text-red-300 hover:bg-red-900/20"
+            className="border-border text-red-400 hover:text-red-300 hover:bg-red-900/20"
           >
             <Trash2 size={13} className="mr-1.5" /> Delete
           </Button>
@@ -88,8 +89,8 @@ export default function ClientDetailPage() {
       </div>
 
       {/* Info card */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
-        <h2 className="text-sm font-semibold text-slate-300 border-b border-slate-800 pb-3">
+      <BeamCard className="p-5 space-y-3">
+        <h2 className="text-sm font-semibold text-muted-foreground border-b border-border pb-3">
           Contact Details
         </h2>
         <InfoRow icon={Mail} label="Email" value={client.email} />
@@ -99,17 +100,17 @@ export default function ClientDetailPage() {
           <InfoRow icon={MapPin} label="Address" value={addressParts.join(", ")} />
         )}
         {client.notes && (
-          <div className="pt-2 border-t border-slate-800">
-            <p className="text-slate-500 text-xs mb-1">Notes</p>
-            <p className="text-slate-300 text-sm whitespace-pre-line">{client.notes}</p>
+          <div className="pt-2 border-t border-border">
+            <p className="text-muted-foreground text-xs mb-1">Notes</p>
+            <p className="text-foreground/80 text-sm whitespace-pre-line">{client.notes}</p>
           </div>
         )}
-      </div>
+      </BeamCard>
 
       {/* Quotation history */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+      <BeamCard className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
             <FileText size={14} className="text-blue-400" />
             Quotations ({quotations.length})
           </h2>
@@ -120,14 +121,14 @@ export default function ClientDetailPage() {
           </Link>
         </div>
         {quotations.length === 0 ? (
-          <p className="text-slate-500 text-sm py-4 text-center">No quotations yet</p>
+          <p className="text-muted-foreground text-sm py-4 text-center">No quotations yet</p>
         ) : (
           <div className="space-y-2">
             {quotations.map((q) => (
               <Link key={q.id} href={`/quotations/${q.id}`}>
-                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer">
+                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer">
                   <div>
-                    <span className="text-white text-sm font-mono font-medium">{q.number}</span>
+                    <span className="text-foreground text-sm font-mono font-medium">{q.number}</span>
                     <span
                       className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge(q.status)}`}
                     >
@@ -135,19 +136,19 @@ export default function ClientDetailPage() {
                     </span>
                   </div>
                   <div className="text-right">
-                    <p className="text-white text-sm font-semibold">
+                    <p className="text-foreground text-sm font-semibold">
                       {formatCurrency(q.total, q.currency)}
                     </p>
-                    <p className="text-slate-500 text-xs">{formatDate(q.issueDate)}</p>
+                    <p className="text-muted-foreground text-xs">{formatDate(q.issueDate)}</p>
                   </div>
                 </div>
               </Link>
             ))}
           </div>
         )}
-      </div>
+      </BeamCard>
 
-      <p className="text-slate-600 text-xs">
+      <p className="text-muted-foreground/60 text-xs">
         Created {formatDate(client.createdAt)} · Updated {formatDate(client.updatedAt)}
       </p>
     </motion.div>
@@ -165,10 +166,10 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <Icon size={14} className="text-slate-500 mt-0.5 flex-shrink-0" />
+      <Icon size={14} className="text-muted-foreground mt-0.5 flex-shrink-0" />
       <div>
-        <p className="text-slate-500 text-xs">{label}</p>
-        <p className="text-slate-200 text-sm">{value}</p>
+        <p className="text-muted-foreground text-xs">{label}</p>
+        <p className="text-foreground/90 text-sm">{value}</p>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import {
   useGetSettings,
   getGetQuotationQueryKey,
 } from "@workspace/api-client-react";
+import { BeamCard } from "@/components/ui/beam-card";
 import type { QuotationInput, LineItemInput, QuotationInputDiscountType } from "@workspace/api-client-react";
 import { useLocation, useParams, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -27,7 +28,7 @@ import { ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
 const inputCls =
-  "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500";
+  "bg-input border-border text-foreground placeholder:text-muted-foreground focus:border-blue-500";
 
 function evaluateFormulaClient(formula: string): number | null {
   const trimmed = formula.trim();
@@ -95,7 +96,7 @@ function Field({
 }) {
   return (
     <div className={`space-y-1.5 ${className ?? ""}`}>
-      <Label className="text-slate-400 text-xs">
+      <Label className="text-muted-foreground text-xs">
         {label}
         {required && <span className="text-blue-400 ml-0.5">*</span>}
       </Label>
@@ -106,10 +107,10 @@ function Field({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-      <h2 className="text-sm font-semibold text-slate-300 border-b border-slate-800 pb-3">{title}</h2>
+    <BeamCard className="p-5 space-y-4">
+      <h2 className="text-sm font-semibold text-muted-foreground border-b border-border pb-3">{title}</h2>
       {children}
-    </div>
+    </BeamCard>
   );
 }
 
@@ -315,11 +316,11 @@ export default function QuotationFormPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link href={isEdit && id ? `/quotations/${id}` : "/quotations"}>
-          <span className="text-slate-400 hover:text-white cursor-pointer transition-colors">
+          <span className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
             <ArrowLeft size={18} />
           </span>
         </Link>
-        <h1 className="text-2xl font-bold text-white">
+        <h1 className="text-2xl font-bold text-foreground">
           {isEdit ? "Edit Quotation" : "New Quotation"}
         </h1>
       </div>
@@ -333,9 +334,9 @@ export default function QuotationFormPage() {
                 <SelectTrigger className={inputCls}>
                   <SelectValue placeholder="Select a client..." />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectContent className="bg-popover border-border">
                   {clients.map((c) => (
-                    <SelectItem key={c.id} value={c.id} className="text-white">
+                    <SelectItem key={c.id} value={c.id} className="text-foreground">
                       {c.name}
                       {c.company ? ` — ${c.company}` : ""}
                     </SelectItem>
@@ -378,10 +379,10 @@ export default function QuotationFormPage() {
                 <SelectTrigger className={inputCls} data-testid="secondary-currency-input">
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700 max-h-60">
-                  <SelectItem value="none" className="text-white">None</SelectItem>
+                <SelectContent className="bg-popover border-border max-h-60">
+                  <SelectItem value="none" className="text-foreground">None</SelectItem>
                   {SECONDARY_CURRENCIES.map((c) => (
-                    <SelectItem key={c.code} value={c.code} className="text-white">
+                    <SelectItem key={c.code} value={c.code} className="text-foreground">
                       {c.code} — {c.name}
                     </SelectItem>
                   ))}
@@ -393,9 +394,9 @@ export default function QuotationFormPage() {
                 <SelectTrigger className={inputCls}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
-                  <SelectItem value="MODERN" className="text-white">Modern</SelectItem>
-                  <SelectItem value="CLASSIC" className="text-white">Classic</SelectItem>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="MODERN" className="text-foreground">Modern</SelectItem>
+                  <SelectItem value="CLASSIC" className="text-foreground">Classic</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -403,9 +404,9 @@ export default function QuotationFormPage() {
         </Section>
 
         {/* Line Items */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-800 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-300">Line Items</h2>
+        <BeamCard>
+          <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-muted-foreground">Line Items</h2>
             <button
               type="button"
               onClick={addLineItem}
@@ -416,9 +417,9 @@ export default function QuotationFormPage() {
           </div>
 
           {/* Column headers */}
-          <div className="grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2 border-b border-slate-800/60">
+          <div className="grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2 border-b border-border/60">
             {["Description", "Qty", "Unit", "Unit Price", "Total", ""].map((h) => (
-              <span key={h} className="text-xs text-slate-500 uppercase tracking-wider font-medium">
+              <span key={h} className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
                 {h}
               </span>
             ))}
@@ -428,7 +429,7 @@ export default function QuotationFormPage() {
             const rowTotal = (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0);
             const isDeferred = li.paymentRequired === false;
             return (
-              <div key={idx} className={`grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2.5 border-b border-slate-800/30 last:border-0 items-center transition-opacity ${isDeferred ? "opacity-60" : ""}`}>
+              <div key={idx} className={`grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2.5 border-b border-border/30 last:border-0 items-center transition-opacity ${isDeferred ? "opacity-60" : ""}`}>
                 <div className="flex flex-col gap-1">
                   <Input
                     value={li.description}
@@ -451,7 +452,7 @@ export default function QuotationFormPage() {
                       className="scale-75 origin-left"
                       data-testid={`line-item-required-${idx}`}
                     />
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-muted-foreground">
                       {isDeferred ? "Deferred" : "Required now"}
                     </span>
                   </div>
@@ -472,15 +473,15 @@ export default function QuotationFormPage() {
                   <SelectTrigger className={`${inputCls} h-8 text-sm`}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700">
-                    <SelectItem value="hours" className="text-white text-sm">hrs</SelectItem>
-                    <SelectItem value="days" className="text-white text-sm">days</SelectItem>
-                    <SelectItem value="fixed" className="text-white text-sm">fixed</SelectItem>
+                  <SelectContent className="bg-popover border-border">
+                    <SelectItem value="hours" className="text-foreground text-sm">hrs</SelectItem>
+                    <SelectItem value="days" className="text-foreground text-sm">days</SelectItem>
+                    <SelectItem value="fixed" className="text-foreground text-sm">fixed</SelectItem>
                   </SelectContent>
                 </Select>
                 <div className="flex flex-col gap-1">
                   <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
                     <Input
                       type="number"
                       min={0}
@@ -500,13 +501,13 @@ export default function QuotationFormPage() {
                     data-testid={`line-item-formula-${idx}`}
                   />
                 </div>
-                <span className="text-slate-200 text-sm font-medium tabular-nums">
+                <span className="text-foreground/90 text-sm font-medium tabular-nums">
                   {formatCurrency(rowTotal, currency)}
                 </span>
                 <button
                   type="button"
                   onClick={() => removeLineItem(idx)}
-                  className="text-slate-600 hover:text-red-400 transition-colors p-1"
+                  className="text-muted-foreground/40 hover:text-red-400 transition-colors p-1"
                   disabled={lineItems.length === 1}
                   data-testid={`remove-line-item-${idx}`}
                 >
@@ -517,41 +518,41 @@ export default function QuotationFormPage() {
           })}
 
           {/* Totals */}
-          <div className="px-5 py-4 border-t border-slate-800 bg-slate-800/30">
+          <div className="px-5 py-4 border-t border-border bg-muted/30">
             <div className="max-w-xs ml-auto space-y-1.5">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Subtotal</span>
-                <span className="text-white">{formatCurrency(subtotal, currency)}</span>
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="text-foreground">{formatCurrency(subtotal, currency)}</span>
               </div>
               {discountType && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Discount</span>
+                  <span className="text-muted-foreground">Discount</span>
                   <span className="text-amber-400">- {formatCurrency(discountAmount, currency)}</span>
                 </div>
               )}
               {taxRate > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Tax ({taxRate}%)</span>
-                  <span className="text-slate-300">{formatCurrency(taxAmount, currency)}</span>
+                  <span className="text-muted-foreground">Tax ({taxRate}%)</span>
+                  <span className="text-foreground/80">{formatCurrency(taxAmount, currency)}</span>
                 </div>
               )}
               {hasDeferred && (
-                <div className="flex justify-between text-sm border-t border-slate-700 pt-1.5 mt-1">
+                <div className="flex justify-between text-sm border-t border-border pt-1.5 mt-1">
                   <span className="text-blue-400 font-semibold">Amount due now</span>
                   <span className="text-blue-400 font-semibold">{formatCurrency(requiredTotal, currency)}</span>
                 </div>
               )}
-              <div className={`flex justify-between text-sm pt-1.5 mt-1 ${hasDeferred ? "" : "border-t border-slate-700"}`}>
-                <span className={hasDeferred ? "text-slate-400" : "text-white font-bold"}>
+              <div className={`flex justify-between text-sm pt-1.5 mt-1 ${hasDeferred ? "" : "border-t border-border"}`}>
+                <span className={hasDeferred ? "text-muted-foreground" : "text-foreground font-bold"}>
                   {hasDeferred ? "Full total" : "Total"}
                 </span>
-                <span className={hasDeferred ? "text-slate-400" : "text-white font-bold text-base"}>
+                <span className={hasDeferred ? "text-muted-foreground" : "text-foreground font-bold text-base"}>
                   {formatCurrency(total, currency)}
                 </span>
               </div>
             </div>
           </div>
-        </div>
+        </BeamCard>
 
         {/* Pricing adjustments */}
         <Section title="Pricing Adjustments">
@@ -564,10 +565,10 @@ export default function QuotationFormPage() {
                 <SelectTrigger className={inputCls}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
-                  <SelectItem value="none" className="text-white">No discount</SelectItem>
-                  <SelectItem value="PERCENTAGE" className="text-white">Percentage (%)</SelectItem>
-                  <SelectItem value="FIXED" className="text-white">Fixed amount</SelectItem>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="none" className="text-foreground">No discount</SelectItem>
+                  <SelectItem value="PERCENTAGE" className="text-foreground">Percentage (%)</SelectItem>
+                  <SelectItem value="FIXED" className="text-foreground">Fixed amount</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -646,7 +647,7 @@ export default function QuotationFormPage() {
             <Button
               type="button"
               variant="outline"
-              className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+              className="border-border text-muted-foreground hover:text-foreground hover:bg-muted"
             >
               Cancel
             </Button>
