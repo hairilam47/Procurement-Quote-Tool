@@ -43,45 +43,66 @@ function evaluateFormulaClient(formula: string): number | null {
   }
 }
 
-const SECONDARY_CURRENCIES = [
-  { code: "EUR", name: "Euro" },
-  { code: "GBP", name: "British Pound" },
-  { code: "JPY", name: "Japanese Yen" },
+const ALL_CURRENCIES = [
+  { code: "AED", name: "UAE Dirham" },
   { code: "AUD", name: "Australian Dollar" },
+  { code: "BRL", name: "Brazilian Real" },
   { code: "CAD", name: "Canadian Dollar" },
   { code: "CHF", name: "Swiss Franc" },
-  { code: "CNY", name: "Chinese Yuan" },
-  { code: "HKD", name: "Hong Kong Dollar" },
-  { code: "NZD", name: "New Zealand Dollar" },
-  { code: "SEK", name: "Swedish Krona" },
-  { code: "NOK", name: "Norwegian Krone" },
-  { code: "DKK", name: "Danish Krone" },
-  { code: "SGD", name: "Singapore Dollar" },
-  { code: "MXN", name: "Mexican Peso" },
-  { code: "BRL", name: "Brazilian Real" },
-  { code: "INR", name: "Indian Rupee" },
-  { code: "ZAR", name: "South African Rand" },
-  { code: "KRW", name: "South Korean Won" },
-  { code: "MYR", name: "Malaysian Ringgit" },
-  { code: "THB", name: "Thai Baht" },
-  { code: "IDR", name: "Indonesian Rupiah" },
-  { code: "PHP", name: "Philippine Peso" },
-  { code: "TWD", name: "Taiwan Dollar" },
-  { code: "AED", name: "UAE Dirham" },
-  { code: "SAR", name: "Saudi Riyal" },
-  { code: "PLN", name: "Polish Zloty" },
-  { code: "CZK", name: "Czech Koruna" },
-  { code: "HUF", name: "Hungarian Forint" },
-  { code: "ILS", name: "Israeli Shekel" },
-  { code: "TRY", name: "Turkish Lira" },
-  { code: "RUB", name: "Russian Ruble" },
-  { code: "USD", name: "US Dollar" },
   { code: "CLP", name: "Chilean Peso" },
+  { code: "CNY", name: "Chinese Yuan" },
   { code: "COP", name: "Colombian Peso" },
-  { code: "QAR", name: "Qatari Riyal" },
+  { code: "CZK", name: "Czech Koruna" },
+  { code: "DKK", name: "Danish Krone" },
+  { code: "EUR", name: "Euro" },
+  { code: "GBP", name: "British Pound" },
+  { code: "HKD", name: "Hong Kong Dollar" },
+  { code: "HUF", name: "Hungarian Forint" },
+  { code: "IDR", name: "Indonesian Rupiah" },
+  { code: "ILS", name: "Israeli Shekel" },
+  { code: "INR", name: "Indian Rupee" },
+  { code: "JPY", name: "Japanese Yen" },
+  { code: "KRW", name: "South Korean Won" },
   { code: "KWD", name: "Kuwaiti Dinar" },
+  { code: "MXN", name: "Mexican Peso" },
+  { code: "MYR", name: "Malaysian Ringgit" },
+  { code: "NOK", name: "Norwegian Krone" },
+  { code: "NZD", name: "New Zealand Dollar" },
+  { code: "PHP", name: "Philippine Peso" },
+  { code: "PLN", name: "Polish Zloty" },
+  { code: "QAR", name: "Qatari Riyal" },
+  { code: "RUB", name: "Russian Ruble" },
+  { code: "SAR", name: "Saudi Riyal" },
+  { code: "SEK", name: "Swedish Krona" },
+  { code: "SGD", name: "Singapore Dollar" },
+  { code: "THB", name: "Thai Baht" },
+  { code: "TRY", name: "Turkish Lira" },
+  { code: "TWD", name: "Taiwan Dollar" },
+  { code: "USD", name: "US Dollar" },
   { code: "VND", name: "Vietnamese Dong" },
+  { code: "ZAR", name: "South African Rand" },
 ];
+
+const EURO_ZONE = ["AT","BE","CY","EE","FI","FR","DE","GR","IE","IT","LV","LT","LU","MT","NL","PT","SK","SI","ES"];
+const REGION_CURRENCY: Record<string, string> = {
+  NZ: "NZD", AU: "AUD", GB: "GBP", CA: "CAD", JP: "JPY", CN: "CNY",
+  CH: "CHF", HK: "HKD", SE: "SEK", NO: "NOK", DK: "DKK", SG: "SGD",
+  MX: "MXN", BR: "BRL", IN: "INR", ZA: "ZAR", KR: "KRW", MY: "MYR",
+  TH: "THB", ID: "IDR", PH: "PHP", TW: "TWD", AE: "AED", SA: "SAR",
+  PL: "PLN", CZ: "CZK", HU: "HUF", IL: "ILS", TR: "TRY", RU: "RUB",
+  CL: "CLP", CO: "COP", QA: "QAR", KW: "KWD", VN: "VND",
+};
+
+function detectLocaleCurrency(): string {
+  try {
+    const locale = navigator.language || "en-US";
+    const region = locale.split("-")[1]?.toUpperCase();
+    if (region && EURO_ZONE.includes(region)) return "EUR";
+    return (region && REGION_CURRENCY[region]) || "USD";
+  } catch {
+    return "USD";
+  }
+}
 
 function Field({
   label,
@@ -151,7 +172,7 @@ export default function QuotationFormPage() {
   const [clientId, setClientId] = useState("");
   const [issueDate, setIssueDate] = useState(today());
   const [validUntil, setValidUntil] = useState(thirtyDays());
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState(() => detectLocaleCurrency());
   const [secondaryCurrency, setSecondaryCurrency] = useState<string>("");
   const [discountType, setDiscountType] = useState<QuotationInputDiscountType>(null);
   const [discountValue, setDiscountValue] = useState(0);
@@ -362,14 +383,19 @@ export default function QuotationFormPage() {
                 required
               />
             </Field>
-            <Field label="Currency">
-              <Input
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-                className={inputCls}
-                maxLength={3}
-                placeholder="USD"
-              />
+            <Field label="Currency" required>
+              <Select value={currency} onValueChange={setCurrency} data-testid="currency-select">
+                <SelectTrigger className={inputCls} data-testid="currency-select-trigger">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border max-h-60">
+                  {ALL_CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code} className="text-foreground">
+                      {c.code} — {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
             <Field label="Secondary Currency (optional)">
               <Select
@@ -381,7 +407,7 @@ export default function QuotationFormPage() {
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border max-h-60">
                   <SelectItem value="none" className="text-foreground">None</SelectItem>
-                  {SECONDARY_CURRENCIES.map((c) => (
+                  {ALL_CURRENCIES.filter((c) => c.code !== currency).map((c) => (
                     <SelectItem key={c.code} value={c.code} className="text-foreground">
                       {c.code} — {c.name}
                     </SelectItem>
