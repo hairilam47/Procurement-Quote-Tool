@@ -13,6 +13,7 @@ export const companySettingsTable = pgTable("company_settings", {
   email: text("email").notNull(),
   website: text("website"),
   taxNumber: text("tax_number"),
+  registrationNumber: text("registration_number"),
   logoUrl: text("logo_url"),
   currency: text("currency").notNull().default("USD"),
   defaultTaxRate: numeric("default_tax_rate", { precision: 5, scale: 2 })

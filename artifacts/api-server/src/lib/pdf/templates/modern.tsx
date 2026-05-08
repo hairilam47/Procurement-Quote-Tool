@@ -305,6 +305,9 @@ export function ModernTemplate({
             {company.taxNumber && (
               <Text style={s.meta}>Tax No: {company.taxNumber}</Text>
             )}
+            {company.registrationNumber && (
+              <Text style={s.meta}>Reg No: {company.registrationNumber}</Text>
+            )}
           </View>
         </View>
 

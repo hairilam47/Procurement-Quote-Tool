@@ -168,6 +168,7 @@ export interface CompanySettings {
   email: string;
   website?: string | null;
   taxNumber?: string | null;
+  registrationNumber?: string | null;
   logoUrl?: string | null;
   currency: string;
   defaultTaxRate: string;
@@ -198,6 +199,7 @@ export interface SettingsInput {
   email: string;
   website?: string | null;
   taxNumber?: string | null;
+  registrationNumber?: string | null;
   logoUrl?: string | null;
   currency: string;
   defaultTaxRate: number;

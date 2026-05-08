@@ -80,6 +80,7 @@ export const settingsSchema = z.object({
     .nullable()
     .or(z.literal("").transform(() => null)),
   taxNumber: z.string().optional().nullable(),
+  registrationNumber: z.string().optional().nullable(),
   logoUrl: z
     .string()
     .max(1000)

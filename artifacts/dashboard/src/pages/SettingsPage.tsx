@@ -59,6 +59,7 @@ export default function SettingsPage() {
     email: "",
     website: null,
     taxNumber: null,
+    registrationNumber: null,
     logoUrl: null,
     currency: "USD",
     defaultTaxRate: 0,
@@ -82,6 +83,7 @@ export default function SettingsPage() {
       email: settings.email,
       website: settings.website ?? null,
       taxNumber: settings.taxNumber ?? null,
+      registrationNumber: settings.registrationNumber ?? null,
       logoUrl: settings.logoUrl ?? null,
       currency: settings.currency,
       defaultTaxRate: parseFloat(settings.defaultTaxRate),
@@ -254,6 +256,14 @@ export default function SettingsPage() {
                 value={form.taxNumber ?? ""}
                 onChange={(e) => set("taxNumber", e.target.value || null)}
                 className={inputCls}
+              />
+            </Field>
+            <Field label="Company Registration Number">
+              <Input
+                value={form.registrationNumber ?? ""}
+                onChange={(e) => set("registrationNumber", e.target.value || null)}
+                className={inputCls}
+                placeholder="e.g. 12345678"
               />
             </Field>
           </div>

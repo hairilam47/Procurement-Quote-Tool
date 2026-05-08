@@ -65,6 +65,7 @@ export type TemplateProps = {
     email?: string | null;
     website?: string | null;
     taxNumber?: string | null;
+    registrationNumber?: string | null;
     logoUrl?: string | null;
   };
   logoDataUrl?: string;

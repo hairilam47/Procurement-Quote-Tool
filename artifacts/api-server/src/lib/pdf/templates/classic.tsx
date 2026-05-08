@@ -279,6 +279,9 @@ export function ClassicTemplate({
           {company.taxNumber && (
             <Text style={s.meta}>Tax No: {company.taxNumber}</Text>
           )}
+          {company.registrationNumber && (
+            <Text style={s.meta}>Reg No: {company.registrationNumber}</Text>
+          )}
         </View>
 
         {/* Title */}
