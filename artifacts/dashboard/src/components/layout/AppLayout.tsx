@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { UserButton } from "@clerk/react";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,8 @@ import {
   ChevronRight,
   Menu,
   X,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 
 const navItems = [
@@ -23,28 +25,36 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({
+  collapsed,
+  onNavigate,
+}: {
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
   const [location] = useLocation();
   return (
     <nav className="flex-1 px-2 py-3 space-y-0.5">
       {navItems.map(({ href, icon: Icon, label }) => {
         const isActive =
-          href === "/"
-            ? location === "/"
-            : location.startsWith(href);
+          href === "/" ? location === "/" : location.startsWith(href);
         return (
           <Link key={href} href={href} onClick={onNavigate}>
             <span
               data-testid={`nav-${label.toLowerCase()}`}
+              title={collapsed ? label : undefined}
               className={cn(
                 "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-all cursor-pointer",
+                collapsed ? "justify-center px-2" : "",
                 isActive
                   ? "bg-blue-600 text-white shadow-sm"
                   : "text-slate-400 hover:text-white hover:bg-slate-800"
               )}
             >
-              <Icon size={15} />
-              {label}
+              <Icon size={15} className="flex-shrink-0" />
+              {!collapsed && (
+                <span className="truncate">{label}</span>
+              )}
             </span>
           </Link>
         );
@@ -56,6 +66,21 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 export default function AppLayout({ children }: AppLayoutProps) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("sidebar-collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("sidebar-collapsed", String(collapsed));
+    } catch {
+      // ignore
+    }
+  }, [collapsed]);
 
   return (
     <div className="flex h-screen bg-slate-950 overflow-hidden">
@@ -70,33 +95,71 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Sidebar — desktop always visible, mobile slides in */}
       <aside
         className={cn(
-          "fixed md:static inset-y-0 left-0 z-30 w-56 flex-shrink-0 flex flex-col bg-slate-900 border-r border-slate-800 transition-transform duration-200",
-          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          "fixed md:static inset-y-0 left-0 z-30 flex-shrink-0 flex flex-col bg-slate-900 border-r border-slate-800 transition-all duration-200",
+          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+          collapsed ? "w-14" : "w-56"
         )}
       >
         {/* Logo */}
-        <div className="h-14 flex items-center gap-2.5 px-4 border-b border-slate-800">
+        <div
+          className={cn(
+            "h-14 flex items-center border-b border-slate-800 flex-shrink-0",
+            collapsed ? "px-0 justify-center" : "gap-2.5 px-4"
+          )}
+        >
           <div className="w-7 h-7 bg-blue-500 rounded-md flex items-center justify-center flex-shrink-0">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M2 12L6 4L10 10L12 7L14 12H2Z" fill="white" />
             </svg>
           </div>
-          <span className="font-bold text-white tracking-tight text-sm">QuoteFlow</span>
-          <button
-            className="ml-auto text-slate-400 hover:text-white md:hidden"
-            onClick={() => setMobileOpen(false)}
-            aria-label="Close menu"
-          >
-            <X size={16} />
-          </button>
+          {!collapsed && (
+            <span className="font-bold text-white tracking-tight text-sm truncate">
+              QuoteFlow
+            </span>
+          )}
+          {/* Mobile close button */}
+          {!collapsed && (
+            <button
+              className="ml-auto text-slate-400 hover:text-white md:hidden"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close menu"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
 
-        <NavLinks onNavigate={() => setMobileOpen(false)} />
+        <NavLinks
+          collapsed={collapsed}
+          onNavigate={() => setMobileOpen(false)}
+        />
 
-        {/* User */}
-        <div className="p-3 border-t border-slate-800 flex items-center gap-2.5">
+        {/* User + collapse toggle */}
+        <div
+          className={cn(
+            "p-3 border-t border-slate-800 flex items-center",
+            collapsed ? "flex-col gap-3 justify-center" : "gap-2.5"
+          )}
+        >
           <UserButton />
-          <span className="text-slate-400 text-xs">Account</span>
+          {!collapsed && (
+            <span className="text-slate-400 text-xs flex-1 truncate">
+              Account
+            </span>
+          )}
+          {/* Desktop collapse toggle */}
+          <button
+            className="hidden md:flex items-center justify-center text-slate-400 hover:text-white transition-colors rounded-md hover:bg-slate-800 p-1"
+            onClick={() => setCollapsed((c) => !c)}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <PanelLeftOpen size={15} />
+            ) : (
+              <PanelLeftClose size={15} />
+            )}
+          </button>
         </div>
       </aside>
 
