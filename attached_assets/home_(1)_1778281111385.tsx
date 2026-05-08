@@ -513,6 +513,7 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {/* Modern Template */}
             <div className="bg-background border border-border/50 rounded-2xl overflow-hidden hover:shadow-lg hover:border-primary/20 transition-all duration-300 group">
+              {/* PDF Preview */}
               <div className="p-6 pb-0 bg-gradient-to-b from-primary/5 to-background">
                 <div className="bg-white border border-border/30 rounded-xl p-6 shadow-sm min-h-[260px]">
                   <div className="flex justify-between items-start mb-4">
@@ -548,6 +549,7 @@ export default function Home() {
 
             {/* Classic Template */}
             <div className="bg-background border border-border/50 rounded-2xl overflow-hidden hover:shadow-lg hover:border-primary/20 transition-all duration-300 group">
+              {/* PDF Preview */}
               <div className="p-6 pb-0 bg-gradient-to-b from-muted/30 to-background">
                 <div className="bg-[#fafaf8] border border-border/30 rounded-xl p-6 shadow-sm min-h-[260px]">
                   <div className="flex justify-between items-start mb-4">
