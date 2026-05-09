@@ -245,7 +245,7 @@ export default function Home() {
               Quotes that <span className="text-primary">close.</span>
             </h1>
             <p className="text-xl md:text-2xl text-white/70 mb-10 max-w-2xl leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
-              Professional IT service quotations — created in minutes, sent with a
+              Professional service quotations — created in minutes, sent with a
               link, paid with a click. The quoting engine your MSP deserves.
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 w-full sm:w-auto">
