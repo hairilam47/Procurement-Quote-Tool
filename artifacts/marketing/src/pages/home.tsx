@@ -2,6 +2,11 @@ import React, { useState, useEffect } from "react";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/fade-in";
+import heroQuotationBuilder from "@/assets/hero/quotation-builder.png";
+import heroDashboardOverview from "@/assets/hero/dashboard-overview.png";
+import heroClientAccept from "@/assets/hero/quotation-detail.png";
+import heroClientsList from "@/assets/hero/clients-list.png";
+import heroPdfPreview from "@/assets/hero/pdf-preview.png";
 import {
   ArrowRight, CheckCircle2, FileText, Settings, CreditCard, Users, Zap,
   Shield, Loader2, BarChart, Clock, PenTool, Globe, Layers, Send,
@@ -47,7 +52,7 @@ export default function Home() {
             {[0, 1].map((setIdx) => (
               <React.Fragment key={setIdx}>
                 {/* Card 1: Quotation Builder */}
-                <div className="blur-sm opacity-30 pointer-events-none select-none w-[520px] shrink-0 bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+                <div className="blur-sm opacity-30 pointer-events-none select-none w-[520px] shrink-0 bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
                     <div className="flex gap-1.5">
                       <div className="w-3 h-3 rounded-full bg-red-400/60" />
@@ -58,37 +63,11 @@ export default function Home() {
                       <span className="text-xs text-white/40">app.quoteflow.io/quotations/new</span>
                     </div>
                   </div>
-                  <div className="p-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-white/80 text-sm">New Quotation</span>
-                      <span className="text-xs text-white/40 border border-white/10 rounded-md px-2 py-1">SGD</span>
-                    </div>
-                    <div className="border border-white/10 rounded-xl overflow-hidden">
-                      <div className="grid grid-cols-[2fr_1fr_1fr_1fr] bg-white/5 px-4 py-2.5 text-xs font-medium text-white/40 uppercase tracking-wide">
-                        <span>Description</span><span>Qty</span><span>Price</span><span className="text-right">Total</span>
-                      </div>
-                      {[
-                        { desc: "Network Setup & Config", qty: 1, price: "1,680", total: "1,680" },
-                        { desc: "Cloud Migration (AWS)", qty: 3, price: "1,190", total: "3,570" },
-                        { desc: "Security Audit & Report", qty: 1, price: "3,360", total: "3,360" },
-                      ].map((row, i) => (
-                        <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr] px-4 py-3 text-xs border-t border-white/10 items-center">
-                          <span className="text-white/70">{row.desc}</span>
-                          <span className="text-white/40">{row.qty}</span>
-                          <span className="text-white/40">{row.price}</span>
-                          <span className="text-right text-blue-400/80 font-semibold">{row.total}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex justify-end items-center gap-4 bg-blue-500/10 border border-blue-400/20 rounded-xl px-4 py-3">
-                      <span className="text-xs text-white/40">Subtotal SGD 8,610 · GST 9%</span>
-                      <span className="text-sm font-bold text-white/80">Total: SGD 9,385.00</span>
-                    </div>
-                  </div>
+                  <img src={heroQuotationBuilder} alt="Quotation Builder" className="w-full object-cover object-top" style={{ height: 380 }} />
                 </div>
 
                 {/* Card 2: Dashboard Overview */}
-                <div className="blur-sm opacity-30 pointer-events-none select-none w-[480px] shrink-0 bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+                <div className="blur-sm opacity-30 pointer-events-none select-none w-[480px] shrink-0 bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
                     <div className="flex gap-1.5">
                       <div className="w-3 h-3 rounded-full bg-red-400/60" />
@@ -99,27 +78,11 @@ export default function Home() {
                       <span className="text-xs text-white/40">app.quoteflow.io/dashboard</span>
                     </div>
                   </div>
-                  <div className="p-6 space-y-4">
-                    <span className="font-semibold text-white/80 text-sm">Dashboard Overview</span>
-                    <div className="grid grid-cols-2 gap-3 mt-3">
-                      {[
-                        { label: "Total Quotes", value: "142", sub: "+12 this month" },
-                        { label: "Revenue", value: "SGD 284k", sub: "+18% vs last month" },
-                        { label: "Pending", value: "23", sub: "Awaiting response" },
-                        { label: "Accept Rate", value: "68%", sub: "Above industry avg" },
-                      ].map((stat) => (
-                        <div key={stat.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
-                          <div className="text-xs text-white/40 mb-1">{stat.label}</div>
-                          <div className="text-lg font-bold text-white/80">{stat.value}</div>
-                          <div className="text-xs text-blue-400/70 mt-1">{stat.sub}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <img src={heroDashboardOverview} alt="Dashboard Overview" className="w-full object-cover object-top" style={{ height: 340 }} />
                 </div>
 
-                {/* Card 3: Client Accept View */}
-                <div className="blur-sm opacity-30 pointer-events-none select-none w-[420px] shrink-0 bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+                {/* Card 3: Quotation Detail */}
+                <div className="blur-sm opacity-30 pointer-events-none select-none w-[420px] shrink-0 bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
                     <div className="flex gap-1.5">
                       <div className="w-3 h-3 rounded-full bg-red-400/60" />
@@ -127,32 +90,14 @@ export default function Home() {
                       <div className="w-3 h-3 rounded-full bg-green-400/60" />
                     </div>
                     <div className="flex-1 mx-3 bg-white/5 border border-white/10 rounded-md px-3 py-1">
-                      <span className="text-xs text-white/40">quoteflow.io/q/abc123</span>
+                      <span className="text-xs text-white/40">app.quoteflow.io/quotations/Q-2026-0008</span>
                     </div>
                   </div>
-                  <div className="p-6 space-y-5">
-                    <div>
-                      <div className="text-xs text-white/40 mb-1">Quotation for</div>
-                      <div className="font-semibold text-white/80">Acme Technologies Pte Ltd</div>
-                    </div>
-                    <div className="bg-blue-500/10 border border-blue-400/20 rounded-xl px-5 py-4 text-center">
-                      <div className="text-xs text-white/40 mb-1">Total Amount</div>
-                      <div className="text-3xl font-bold text-white/90">SGD 9,385.00</div>
-                      <div className="text-xs text-white/40 mt-1">Valid until 30 Jun 2026</div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <div className="bg-blue-500/80 rounded-xl py-3 text-center text-sm font-semibold text-white/90">
-                        Accept &amp; Sign
-                      </div>
-                      <div className="border border-white/15 rounded-xl py-3 text-center text-sm text-white/50">
-                        Download PDF
-                      </div>
-                    </div>
-                  </div>
+                  <img src={heroClientAccept} alt="Quotation Detail" className="w-full object-cover object-top" style={{ height: 360 }} />
                 </div>
 
                 {/* Card 4: Clients List */}
-                <div className="blur-sm opacity-30 pointer-events-none select-none w-[460px] shrink-0 bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+                <div className="blur-sm opacity-30 pointer-events-none select-none w-[460px] shrink-0 bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
                     <div className="flex gap-1.5">
                       <div className="w-3 h-3 rounded-full bg-red-400/60" />
@@ -163,30 +108,11 @@ export default function Home() {
                       <span className="text-xs text-white/40">app.quoteflow.io/clients</span>
                     </div>
                   </div>
-                  <div className="p-6 space-y-4">
-                    <span className="font-semibold text-white/80 text-sm">Clients</span>
-                    <div className="border border-white/10 rounded-xl overflow-hidden mt-3">
-                      <div className="grid grid-cols-[2fr_1fr_1fr] bg-white/5 px-4 py-2.5 text-xs font-medium text-white/40 uppercase tracking-wide">
-                        <span>Client</span><span>Last Quote</span><span className="text-right">Status</span>
-                      </div>
-                      {[
-                        { name: "Acme Technologies", date: "2 May 2026", status: "Accepted", color: "text-green-400/70" },
-                        { name: "Bright Systems", date: "28 Apr 2026", status: "Pending", color: "text-yellow-400/70" },
-                        { name: "CoreLink Pte Ltd", date: "20 Apr 2026", status: "Accepted", color: "text-green-400/70" },
-                        { name: "DataEdge Solutions", date: "15 Apr 2026", status: "Expired", color: "text-red-400/70" },
-                      ].map((c, i) => (
-                        <div key={i} className="grid grid-cols-[2fr_1fr_1fr] px-4 py-3 text-xs border-t border-white/10 items-center">
-                          <span className="text-white/70 font-medium">{c.name}</span>
-                          <span className="text-white/40">{c.date}</span>
-                          <span className={`text-right font-medium ${c.color}`}>{c.status}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <img src={heroClientsList} alt="Clients List" className="w-full object-cover object-top" style={{ height: 360 }} />
                 </div>
 
                 {/* Card 5: PDF Preview */}
-                <div className="blur-sm opacity-30 pointer-events-none select-none w-[440px] shrink-0 bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+                <div className="blur-sm opacity-30 pointer-events-none select-none w-[440px] shrink-0 bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
                     <div className="flex gap-1.5">
                       <div className="w-3 h-3 rounded-full bg-red-400/60" />
@@ -194,37 +120,10 @@ export default function Home() {
                       <div className="w-3 h-3 rounded-full bg-green-400/60" />
                     </div>
                     <div className="flex-1 mx-3 bg-white/5 border border-white/10 rounded-md px-3 py-1">
-                      <span className="text-xs text-white/40">app.quoteflow.io/quotations/42/pdf</span>
+                      <span className="text-xs text-white/40">app.quoteflow.io/quotations/Q-2026-0008/pdf</span>
                     </div>
                   </div>
-                  <div className="p-6 space-y-4">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                      <div>
-                        <div className="font-bold text-white/80 text-sm">QuoteFlow</div>
-                        <div className="text-xs text-white/40">Quotation #QF-0042</div>
-                      </div>
-                      <div className="text-xs text-white/40 text-right">9 May 2026<br />Valid 30 days</div>
-                    </div>
-                    <div className="space-y-2">
-                      {[
-                        { desc: "Network Setup & Config", total: "SGD 1,680" },
-                        { desc: "Cloud Migration (AWS)", total: "SGD 3,570" },
-                        { desc: "Security Audit", total: "SGD 3,360" },
-                      ].map((r, i) => (
-                        <div key={i} className="flex justify-between text-xs">
-                          <span className="text-white/60">{r.desc}</span>
-                          <span className="text-white/70 font-medium">{r.total}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="bg-blue-500/80 rounded-xl px-4 py-3 flex justify-between items-center">
-                      <span className="text-xs text-white/80 font-medium">Total incl. GST</span>
-                      <span className="text-sm font-bold text-white">SGD 9,385.00</span>
-                    </div>
-                    <div className="border border-white/10 rounded-lg px-3 py-2 text-xs text-white/30 italic">
-                      Signed by: J. Smith · 9 May 2026
-                    </div>
-                  </div>
+                  <img src={heroPdfPreview} alt="PDF Preview" className="w-full object-cover object-top" style={{ height: 370 }} />
                 </div>
               </React.Fragment>
             ))}
