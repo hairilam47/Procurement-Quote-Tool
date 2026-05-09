@@ -279,30 +279,33 @@ export default function Home() {
           <div className="animate-marquee w-max flex opacity-50 grayscale group-hover:[animation-play-state:paused]">
             {/* Group 1 */}
             <div className="flex shrink-0 items-center gap-16 px-8">
-              <div className="text-xl font-bold font-serif tracking-tighter">AcmeTech</div>
-              <div className="text-xl font-bold tracking-widest">NEXUS<span className="font-light">IT</span></div>
-              <div className="text-xl font-bold italic">SysGuard</div>
-              <div className="text-xl font-black">CloudBridge</div>
-              <div className="text-xl font-medium tracking-tight">Overture <span className="text-primary">Systems</span></div>
+              <img src={`${import.meta.env.BASE_URL}logos/microsoft.svg`} alt="Microsoft" className="h-8 w-auto" />
+              <img src={`${import.meta.env.BASE_URL}logos/cisco.svg`} alt="Cisco" className="h-8 w-auto" />
+              <img src={`${import.meta.env.BASE_URL}logos/dell.svg`} alt="Dell" className="h-8 w-auto" />
+              <img src={`${import.meta.env.BASE_URL}logos/hp.svg`} alt="HP" className="h-8 w-auto" />
+              <img src={`${import.meta.env.BASE_URL}logos/vmware.svg`} alt="VMware" className="h-8 w-auto" />
+              <img src={`${import.meta.env.BASE_URL}logos/fortinet.svg`} alt="Fortinet" className="h-8 w-auto" />
             </div>
             {/* Group 2 — exact duplicate for seamless loop */}
             <div className="flex shrink-0 items-center gap-16 px-8" aria-hidden="true">
-              <div className="text-xl font-bold font-serif tracking-tighter">AcmeTech</div>
-              <div className="text-xl font-bold tracking-widest">NEXUS<span className="font-light">IT</span></div>
-              <div className="text-xl font-bold italic">SysGuard</div>
-              <div className="text-xl font-black">CloudBridge</div>
-              <div className="text-xl font-medium tracking-tight">Overture <span className="text-primary">Systems</span></div>
+              <img src={`${import.meta.env.BASE_URL}logos/microsoft.svg`} alt="" className="h-8 w-auto" />
+              <img src={`${import.meta.env.BASE_URL}logos/cisco.svg`} alt="" className="h-8 w-auto" />
+              <img src={`${import.meta.env.BASE_URL}logos/dell.svg`} alt="" className="h-8 w-auto" />
+              <img src={`${import.meta.env.BASE_URL}logos/hp.svg`} alt="" className="h-8 w-auto" />
+              <img src={`${import.meta.env.BASE_URL}logos/vmware.svg`} alt="" className="h-8 w-auto" />
+              <img src={`${import.meta.env.BASE_URL}logos/fortinet.svg`} alt="" className="h-8 w-auto" />
             </div>
           </div>
         </div>
 
         {/* Static fallback shown only when prefers-reduced-motion: reduce */}
         <div className="hidden motion-reduce:flex items-center justify-center flex-wrap gap-8 md:gap-16 px-4 opacity-50 grayscale">
-          <div className="text-xl font-bold font-serif tracking-tighter">AcmeTech</div>
-          <div className="text-xl font-bold tracking-widest">NEXUS<span className="font-light">IT</span></div>
-          <div className="text-xl font-bold italic">SysGuard</div>
-          <div className="text-xl font-black">CloudBridge</div>
-          <div className="text-xl font-medium tracking-tight">Overture <span className="text-primary">Systems</span></div>
+          <img src={`${import.meta.env.BASE_URL}logos/microsoft.svg`} alt="Microsoft" className="h-8 w-auto" />
+          <img src={`${import.meta.env.BASE_URL}logos/cisco.svg`} alt="Cisco" className="h-8 w-auto" />
+          <img src={`${import.meta.env.BASE_URL}logos/dell.svg`} alt="Dell" className="h-8 w-auto" />
+          <img src={`${import.meta.env.BASE_URL}logos/hp.svg`} alt="HP" className="h-8 w-auto" />
+          <img src={`${import.meta.env.BASE_URL}logos/vmware.svg`} alt="VMware" className="h-8 w-auto" />
+          <img src={`${import.meta.env.BASE_URL}logos/fortinet.svg`} alt="Fortinet" className="h-8 w-auto" />
         </div>
       </section>
 
