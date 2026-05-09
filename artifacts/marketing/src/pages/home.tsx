@@ -135,17 +135,35 @@ export default function Home() {
       {/* ═══════════════════════════════════════
           SOCIAL PROOF
       ═══════════════════════════════════════ */}
-      <section className="py-10 border-y border-border/40 bg-muted/20">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 text-center">
-          <p className="text-sm font-medium text-muted-foreground mb-6 uppercase tracking-widest">
+      <section className="py-10 border-y border-border/40 bg-muted/20 overflow-hidden">
+        <div className="text-center mb-6 px-4">
+          <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
             Trusted by leading managed service providers
           </p>
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-50 grayscale">
-            <div className="text-xl font-bold font-serif tracking-tighter">AcmeTech</div>
-            <div className="text-xl font-bold tracking-widest">NEXUS<span className="font-light">IT</span></div>
-            <div className="text-xl font-bold italic">SysGuard</div>
-            <div className="text-xl font-black">CloudBridge</div>
-            <div className="text-xl font-medium tracking-tight">Overture <span className="text-primary">Systems</span></div>
+        </div>
+        {/* Marquee track — duplicated logos for seamless loop */}
+        <div
+          className="relative"
+          style={{
+            maskImage: "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+          }}
+        >
+          <div
+            className="marquee-track flex items-center gap-16 w-max opacity-50 grayscale"
+            style={{ animation: "marquee 22s linear infinite" }}
+            onMouseEnter={(e) => (e.currentTarget.style.animationPlayState = "paused")}
+            onMouseLeave={(e) => (e.currentTarget.style.animationPlayState = "running")}
+          >
+            {[...Array(2)].map((_, setIdx) => (
+              <React.Fragment key={setIdx}>
+                <div className="text-xl font-bold font-serif tracking-tighter px-8">AcmeTech</div>
+                <div className="text-xl font-bold tracking-widest px-8">NEXUS<span className="font-light">IT</span></div>
+                <div className="text-xl font-bold italic px-8">SysGuard</div>
+                <div className="text-xl font-black px-8">CloudBridge</div>
+                <div className="text-xl font-medium tracking-tight px-8">Overture <span className="text-primary">Systems</span></div>
+              </React.Fragment>
+            ))}
           </div>
         </div>
       </section>
