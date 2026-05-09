@@ -143,10 +143,6 @@ export default function Home() {
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-8 leading-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700">
               Quotes that <span className="text-primary">close.</span>
             </h1>
-            <p className="text-xl md:text-2xl text-white/70 mb-10 max-w-2xl leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
-              Professional service quotations — created in minutes, sent with a
-              link, paid with a click. The quoting engine your MSP deserves.
-            </p>
             <div className="flex flex-col sm:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 w-full sm:w-auto">
               <a href="/sign-up" className="w-full sm:w-auto">
                 <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-base rounded-full" data-testid="hero-cta">
