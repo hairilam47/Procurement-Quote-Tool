@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { Button } from "@/components/ui/button";
+import { FadeIn } from "@/components/fade-in";
 import {
   ArrowRight, CheckCircle2, FileText, Settings, CreditCard, Users, Zap,
   Shield, Loader2, BarChart, Clock, PenTool, Globe, Layers, Send,
@@ -313,7 +314,7 @@ export default function Home() {
           USER JOURNEY — 4 STEPS
       ═══════════════════════════════════════ */}
       <section id="how-it-works" className="py-24 px-4 md:px-6 max-w-7xl mx-auto">
-        <div className="text-center mb-16 max-w-3xl mx-auto">
+        <FadeIn className="text-center mb-16 max-w-3xl mx-auto">
           <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-3">The Journey</p>
           <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
             From blank page to<br className="hidden md:block" /> paid invoice.
@@ -321,7 +322,7 @@ export default function Home() {
           <p className="text-lg text-muted-foreground">
             Four effortless steps. No spreadsheets, no back-and-forth, no chasing.
           </p>
-        </div>
+        </FadeIn>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
@@ -358,7 +359,7 @@ export default function Home() {
               bg: "bg-emerald-50",
             },
           ].map((item, i) => (
-            <div key={i} className="relative group">
+            <FadeIn key={i} delay={i * 100} className="relative group">
               {/* Connector line between steps */}
               {i < 3 && (
                 <div className="hidden lg:block absolute top-10 left-[calc(100%_-_12px)] w-6 z-10">
@@ -375,7 +376,7 @@ export default function Home() {
                 <h3 className="text-lg font-bold mb-2">{item.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
               </div>
-            </div>
+            </FadeIn>
           ))}
         </div>
       </section>
@@ -387,7 +388,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             {/* Left: text */}
-            <div>
+            <FadeIn direction="left">
               <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-4">Ease of Use</p>
               <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6 leading-[1.1]">
                 Professional quotes.<br />
@@ -400,10 +401,10 @@ export default function Home() {
                 <Zap className="w-4 h-4" />
                 Faster than any spreadsheet
               </div>
-            </div>
+            </FadeIn>
 
             {/* Right: step-through visual */}
-            <div className="bg-background border border-border/50 rounded-2xl p-8 shadow-sm space-y-0 divide-y divide-border/40">
+            <FadeIn direction="right" delay={150} className="bg-background border border-border/50 rounded-2xl p-8 shadow-sm space-y-0 divide-y divide-border/40">
               {[
                 {
                   n: "1",
@@ -436,7 +437,7 @@ export default function Home() {
                   </div>
                 </div>
               ))}
-            </div>
+            </FadeIn>
           </div>
         </div>
       </section>
@@ -447,7 +448,7 @@ export default function Home() {
       <section className="py-24 px-4 md:px-6 max-w-7xl mx-auto">
         <div className="grid md:grid-cols-2 gap-16 items-center">
           {/* Left: currency mockup */}
-          <div className="order-2 md:order-1">
+          <FadeIn direction="left" className="order-2 md:order-1">
             <div className="bg-background border border-border/50 rounded-2xl shadow-sm overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 bg-muted/30 border-b border-border/40">
@@ -489,10 +490,10 @@ export default function Home() {
                 </span>
               ))}
             </div>
-          </div>
+          </FadeIn>
 
           {/* Right: text */}
-          <div className="order-1 md:order-2">
+          <FadeIn direction="right" delay={150} className="order-1 md:order-2">
             <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-4">Multi-Currency</p>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6 leading-[1.1]">
               Your clients are<br />
@@ -515,7 +516,7 @@ export default function Home() {
                 </li>
               ))}
             </ul>
-          </div>
+          </FadeIn>
         </div>
       </section>
 
@@ -526,7 +527,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             {/* Left: text */}
-            <div>
+            <FadeIn direction="left">
               <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-4">Integrated Payments</p>
               <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6 leading-[1.1]">
                 Don't just send<br />a quote. Send a<br />
@@ -550,10 +551,10 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </FadeIn>
 
             {/* Right: payment card mockup */}
-            <div className="space-y-4">
+            <FadeIn direction="right" delay={150} className="space-y-4">
               {/* Quote card */}
               <div className="bg-background border border-border/50 rounded-2xl p-6 shadow-sm">
                 <div className="flex items-start justify-between mb-4">
@@ -590,7 +591,7 @@ export default function Home() {
                   </p>
                 </div>
               </div>
-            </div>
+            </FadeIn>
           </div>
         </div>
       </section>
@@ -599,7 +600,7 @@ export default function Home() {
           FEATURES GRID
       ═══════════════════════════════════════ */}
       <section id="features" className="py-24 px-4 md:px-6 max-w-7xl mx-auto">
-        <div className="text-center mb-16">
+        <FadeIn className="text-center mb-16">
           <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-3">Features</p>
           <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">
             Everything you need to win the job.
@@ -607,7 +608,7 @@ export default function Home() {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             We've stripped away the bloat of traditional CRMs and focused entirely on the quoting experience.
           </p>
-        </div>
+        </FadeIn>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
@@ -642,8 +643,9 @@ export default function Home() {
               desc: "Keep a centralised record of contacts, quoting history, and billing details — all in one place.",
             },
           ].map((feature, i) => (
-            <div
+            <FadeIn
               key={i}
+              delay={i * 80}
               className="bg-background border border-border/50 rounded-2xl p-8 hover:shadow-lg hover:border-primary/20 transition-all duration-300"
             >
               <div className="bg-primary/10 w-12 h-12 rounded-xl flex items-center justify-center mb-6">
@@ -651,7 +653,7 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
               <p className="text-muted-foreground leading-relaxed">{feature.desc}</p>
-            </div>
+            </FadeIn>
           ))}
         </div>
       </section>
@@ -661,17 +663,17 @@ export default function Home() {
       ═══════════════════════════════════════ */}
       <section className="py-24 bg-muted/30 border-y border-border/40">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
-          <div className="text-center mb-16">
+          <FadeIn className="text-center mb-16">
             <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-3">PDF Templates</p>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Stunning by default.</h2>
             <p className="text-lg text-muted-foreground max-w-xl mx-auto">
               Two beautifully crafted templates. Your brand, your logo, your first impression.
             </p>
-          </div>
+          </FadeIn>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {/* Modern Template */}
-            <div className="bg-background border border-border/50 rounded-2xl overflow-hidden hover:shadow-lg hover:border-primary/20 transition-all duration-300 group">
+            <FadeIn direction="left" className="bg-background border border-border/50 rounded-2xl overflow-hidden hover:shadow-lg hover:border-primary/20 transition-all duration-300 group">
               <div className="p-6 pb-0 bg-gradient-to-b from-primary/5 to-background">
                 <div className="bg-white border border-border/30 rounded-xl p-6 shadow-sm min-h-[260px]">
                   <div className="flex justify-between items-start mb-4">
@@ -703,10 +705,10 @@ export default function Home() {
                 </div>
                 <span className="text-xs font-semibold bg-primary/10 text-primary px-3 py-1 rounded-full">Modern</span>
               </div>
-            </div>
+            </FadeIn>
 
             {/* Classic Template */}
-            <div className="bg-background border border-border/50 rounded-2xl overflow-hidden hover:shadow-lg hover:border-primary/20 transition-all duration-300 group">
+            <FadeIn direction="right" delay={150} className="bg-background border border-border/50 rounded-2xl overflow-hidden hover:shadow-lg hover:border-primary/20 transition-all duration-300 group">
               <div className="p-6 pb-0 bg-gradient-to-b from-muted/30 to-background">
                 <div className="bg-[#fafaf8] border border-border/30 rounded-xl p-6 shadow-sm min-h-[260px]">
                   <div className="flex justify-between items-start mb-4">
@@ -738,7 +740,7 @@ export default function Home() {
                 </div>
                 <span className="text-xs font-semibold bg-muted border border-border/50 text-muted-foreground px-3 py-1 rounded-full">Classic</span>
               </div>
-            </div>
+            </FadeIn>
           </div>
         </div>
       </section>
