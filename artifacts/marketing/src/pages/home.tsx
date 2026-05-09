@@ -141,25 +141,42 @@ export default function Home() {
             Trusted by leading managed service providers
           </p>
         </div>
-        {/* Marquee track — duplicated logos for seamless loop; animation + hover-pause in CSS */}
+
+        {/* Animated marquee — two identical shrink-0 groups so -50% = exactly one group width */}
         <div
-          className="relative"
+          className="marquee-viewport relative"
           style={{
             maskImage: "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
             WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
           }}
         >
-          <div className="marquee-track flex items-center gap-16 w-max opacity-50 grayscale">
-            {[...Array(2)].map((_, setIdx) => (
-              <React.Fragment key={setIdx}>
-                <div className="text-xl font-bold font-serif tracking-tighter px-8">AcmeTech</div>
-                <div className="text-xl font-bold tracking-widest px-8">NEXUS<span className="font-light">IT</span></div>
-                <div className="text-xl font-bold italic px-8">SysGuard</div>
-                <div className="text-xl font-black px-8">CloudBridge</div>
-                <div className="text-xl font-medium tracking-tight px-8">Overture <span className="text-primary">Systems</span></div>
-              </React.Fragment>
-            ))}
+          <div className="marquee-track flex opacity-50 grayscale">
+            {/* Group 1 */}
+            <div className="flex shrink-0 items-center gap-16 px-8">
+              <div className="text-xl font-bold font-serif tracking-tighter">AcmeTech</div>
+              <div className="text-xl font-bold tracking-widest">NEXUS<span className="font-light">IT</span></div>
+              <div className="text-xl font-bold italic">SysGuard</div>
+              <div className="text-xl font-black">CloudBridge</div>
+              <div className="text-xl font-medium tracking-tight">Overture <span className="text-primary">Systems</span></div>
+            </div>
+            {/* Group 2 — exact duplicate for seamless loop */}
+            <div className="flex shrink-0 items-center gap-16 px-8" aria-hidden="true">
+              <div className="text-xl font-bold font-serif tracking-tighter">AcmeTech</div>
+              <div className="text-xl font-bold tracking-widest">NEXUS<span className="font-light">IT</span></div>
+              <div className="text-xl font-bold italic">SysGuard</div>
+              <div className="text-xl font-black">CloudBridge</div>
+              <div className="text-xl font-medium tracking-tight">Overture <span className="text-primary">Systems</span></div>
+            </div>
           </div>
+        </div>
+
+        {/* Static fallback shown only when prefers-reduced-motion: reduce */}
+        <div className="marquee-static hidden items-center justify-center flex-wrap gap-8 md:gap-16 px-4 opacity-50 grayscale">
+          <div className="text-xl font-bold font-serif tracking-tighter">AcmeTech</div>
+          <div className="text-xl font-bold tracking-widest">NEXUS<span className="font-light">IT</span></div>
+          <div className="text-xl font-bold italic">SysGuard</div>
+          <div className="text-xl font-black">CloudBridge</div>
+          <div className="text-xl font-medium tracking-tight">Overture <span className="text-primary">Systems</span></div>
         </div>
       </section>
 

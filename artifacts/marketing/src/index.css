@@ -157,8 +157,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .marquee-track {
-    animation: none !important;
+  .marquee-viewport {
+    display: none;
+  }
+  .marquee-static {
+    display: flex !important;
   }
 }
 
