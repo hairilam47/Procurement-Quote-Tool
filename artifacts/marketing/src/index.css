@@ -50,6 +50,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 
   --animate-marquee: marquee 22s linear infinite;
+  --animate-marquee-bg: marquee 40s linear infinite;
 }
 
 @keyframes marquee {
