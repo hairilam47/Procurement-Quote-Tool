@@ -152,7 +152,7 @@
   animation: marquee 22s linear infinite;
 }
 
-.marquee-track:hover {
+.marquee-viewport:hover .marquee-track {
   animation-play-state: paused;
 }
 
