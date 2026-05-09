@@ -15,6 +15,22 @@ import {
 } from "@/components/ui/accordion";
 
 export default function Home() {
+  const [heroReady] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const seen = sessionStorage.getItem("hero-animated") === "1";
+    if (!seen) sessionStorage.setItem("hero-animated", "1");
+    return seen;
+  });
+
+  const prefersReducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const heroFadeStyle: React.CSSProperties =
+    heroReady || prefersReducedMotion
+      ? {}
+      : { animation: "hero-fade 1s ease-out forwards", opacity: 0 };
+
   return (
     <MarketingLayout>
 
@@ -23,7 +39,7 @@ export default function Home() {
       ═══════════════════════════════════════ */}
       <section className="relative overflow-hidden bg-gray-950 pt-24 md:pt-36 pb-20 md:pb-32 w-full">
         {/* Scrolling background cards */}
-        <div className="absolute inset-0 overflow-hidden motion-safe:[--running:running] motion-reduce:[--running:paused]">
+        <div className="absolute inset-0 overflow-hidden motion-safe:[--running:running] motion-reduce:[--running:paused]" style={heroFadeStyle}>
           <div
             className="flex gap-6 py-12 w-max"
             style={{ animation: "marquee 40s linear infinite", animationPlayState: "var(--running, running)" }}
@@ -216,7 +232,7 @@ export default function Home() {
         </div>
 
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-950/80 via-gray-950/50 to-gray-950/95 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-950/80 via-gray-950/50 to-gray-950/95 pointer-events-none" style={heroFadeStyle} />
 
         {/* Hero content */}
         <div className="relative z-10 px-4 md:px-6 max-w-7xl mx-auto w-full">
