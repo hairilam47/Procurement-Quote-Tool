@@ -144,13 +144,13 @@ export default function Home() {
 
         {/* Animated marquee — two identical shrink-0 groups so -50% = exactly one group width */}
         <div
-          className="marquee-viewport relative"
+          className="group relative motion-reduce:hidden"
           style={{
             maskImage: "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
             WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
           }}
         >
-          <div className="marquee-track flex opacity-50 grayscale">
+          <div className="animate-marquee w-max flex opacity-50 grayscale group-hover:[animation-play-state:paused]">
             {/* Group 1 */}
             <div className="flex shrink-0 items-center gap-16 px-8">
               <div className="text-xl font-bold font-serif tracking-tighter">AcmeTech</div>
@@ -171,7 +171,7 @@ export default function Home() {
         </div>
 
         {/* Static fallback shown only when prefers-reduced-motion: reduce */}
-        <div className="marquee-static hidden items-center justify-center flex-wrap gap-8 md:gap-16 px-4 opacity-50 grayscale">
+        <div className="hidden motion-reduce:flex items-center justify-center flex-wrap gap-8 md:gap-16 px-4 opacity-50 grayscale">
           <div className="text-xl font-bold font-serif tracking-tighter">AcmeTech</div>
           <div className="text-xl font-bold tracking-widest">NEXUS<span className="font-light">IT</span></div>
           <div className="text-xl font-bold italic">SysGuard</div>
