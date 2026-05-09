@@ -136,12 +136,12 @@ export default function Home() {
           SOCIAL PROOF
       ═══════════════════════════════════════ */}
       <section className="py-10 border-y border-border/40 bg-muted/20 overflow-hidden">
-        <div className="text-center mb-6 px-4">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 text-center mb-6">
           <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
             Trusted by leading managed service providers
           </p>
         </div>
-        {/* Marquee track — duplicated logos for seamless loop */}
+        {/* Marquee track — duplicated logos for seamless loop; animation + hover-pause in CSS */}
         <div
           className="relative"
           style={{
@@ -149,12 +149,7 @@ export default function Home() {
             WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
           }}
         >
-          <div
-            className="marquee-track flex items-center gap-16 w-max opacity-50 grayscale"
-            style={{ animation: "marquee 22s linear infinite" }}
-            onMouseEnter={(e) => (e.currentTarget.style.animationPlayState = "paused")}
-            onMouseLeave={(e) => (e.currentTarget.style.animationPlayState = "running")}
-          >
+          <div className="marquee-track flex items-center gap-16 w-max opacity-50 grayscale">
             {[...Array(2)].map((_, setIdx) => (
               <React.Fragment key={setIdx}>
                 <div className="text-xl font-bold font-serif tracking-tighter px-8">AcmeTech</div>
