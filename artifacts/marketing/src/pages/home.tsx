@@ -136,10 +136,6 @@ export default function Home() {
         {/* Hero content */}
         <div className="relative z-10 px-4 md:px-6 max-w-7xl mx-auto w-full">
           <div className="text-center max-w-4xl mx-auto flex flex-col items-center">
-            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white text-sm font-medium px-4 py-1.5 rounded-full mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <Zap className="w-3.5 h-3.5" />
-              Introducing KuotFlow
-            </div>
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-8 leading-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700">
               Quotes that <span className="text-primary">close.</span>
             </h1>
