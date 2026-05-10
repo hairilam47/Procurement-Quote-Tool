@@ -207,7 +207,7 @@ export default function QuotationDetailPage() {
               className="border-emerald-700 text-emerald-400 hover:text-emerald-200 hover:bg-emerald-900/30"
               data-testid="download-receipt-btn"
             >
-              <Receipt size={13} className="mr-1.5" /> Receipt
+              <Receipt size={13} className="mr-1.5" /> Download Receipt
             </Button>
           )}
           {showFollowUpInvoice && (

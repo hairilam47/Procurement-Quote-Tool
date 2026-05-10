@@ -1,4 +1,5 @@
 import React from "react";
+import Decimal from "decimal.js";
 import { renderToBuffer } from "@react-pdf/renderer";
 import type { DocumentProps } from "@react-pdf/renderer";
 import { generateQrDataUrl } from "./qrcode";
@@ -211,10 +212,40 @@ export async function renderReceiptPdf(args: {
   const upfrontItems = quote.lineItems.filter((li) => li.paymentRequired !== false);
   const receiptItems = upfrontItems.length > 0 ? upfrontItems : quote.lineItems;
 
-  // Recalculate subtotal for the receipt items
-  const receiptSubtotal = receiptItems
-    .reduce((sum, li) => sum + Number(li.lineTotal), 0)
-    .toFixed(2);
+  // Compute receipt-specific financial breakdown using the same proportional
+  // logic as computeTotals(), so that subtotal - discount + tax = requiredTotal.
+  const D = (v: string | number | null | undefined) =>
+    new Decimal(v?.toString() ?? "0");
+
+  const receiptSubtotalD = receiptItems.reduce(
+    (acc, li) => acc.add(D(li.lineTotal)),
+    new Decimal(0),
+  );
+  const fullSubtotalD = D(quote.subtotal);
+  const fullDiscountD = D(quote.discountAmount);
+
+  let receiptDiscountD = new Decimal(0);
+  if (quote.discountType === "PERCENTAGE") {
+    receiptDiscountD = receiptSubtotalD
+      .mul(D(quote.discountValue))
+      .div(100)
+      .toDecimalPlaces(2);
+  } else if (quote.discountType === "FIXED") {
+    if (fullSubtotalD.gt(0)) {
+      receiptDiscountD = fullDiscountD
+        .mul(receiptSubtotalD)
+        .div(fullSubtotalD)
+        .toDecimalPlaces(2);
+    }
+  }
+  if (receiptDiscountD.gt(receiptSubtotalD)) receiptDiscountD = receiptSubtotalD;
+  if (receiptDiscountD.lt(0)) receiptDiscountD = new Decimal(0);
+
+  const receiptTaxableBaseD = receiptSubtotalD.sub(receiptDiscountD);
+  const receiptTaxD = receiptTaxableBaseD
+    .mul(D(quote.taxRate))
+    .div(100)
+    .toDecimalPlaces(2);
 
   const receiptNumber = `REC-${quote.number}`;
 
@@ -225,7 +256,9 @@ export async function renderReceiptPdf(args: {
       ...li,
       paymentRequired: true,
     })) as TemplateLineItem[],
-    subtotal: receiptSubtotal,
+    subtotal: receiptSubtotalD.toFixed(2),
+    discountAmount: receiptDiscountD.toFixed(2),
+    taxAmount: receiptTaxD.toFixed(2),
     total: quote.requiredTotal,
     requiredTotal: quote.requiredTotal,
     paymentUrl: null,
