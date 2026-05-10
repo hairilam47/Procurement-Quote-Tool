@@ -90,9 +90,10 @@ function buildReceiptHtml(args: ReceiptEmailArgs): string {
         </tr>
         <tr>
           <td style="background:#f9fafb;padding:20px 40px;border-top:1px solid #e5e7eb;text-align:center;">
-            <p style="margin:0;color:#9ca3af;font-size:12px;">
+            <p style="margin:0 0 6px;color:#9ca3af;font-size:12px;">
               Sent by <strong style="color:#6b7280;">${companyName}</strong>
             </p>
+            <p style="margin:0;color:#d1d5db;font-size:11px;">Powered by KuotFlow</p>
           </td>
         </tr>
       </table>
@@ -109,11 +110,12 @@ async function sendReceiptEmail(args: ReceiptEmailArgs): Promise<void> {
     return;
   }
 
-  const from = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+  const fromAddress = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+  const from = fromAddress.includes("<") ? fromAddress : `KuotFlow <${fromAddress}>`;
   const { error } = await client.emails.send({
     from,
     to: args.to,
-    subject: `Payment Receipt \u2014 ${args.quotationNumber}`,
+    subject: `KuotFlow Receipt \u2014 ${args.quotationNumber}`,
     html: buildReceiptHtml(args),
     attachments: [
       {

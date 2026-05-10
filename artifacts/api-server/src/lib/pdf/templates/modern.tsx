@@ -640,6 +640,7 @@ export function ModernTemplate({
           <Text>
             {company.name} · {invoiceMode?.receiptMode ? `Receipt · Ref: ${invoiceMode.referenceNumber}` : isFollowUp && invoiceMode ? `Follow-up Invoice · Ref: ${invoiceMode.referenceNumber}` : `Quotation ${quote.number}`}
           </Text>
+          <Text style={{ color: C.line }}>KuotFlow</Text>
           <Text
             render={({ pageNumber, totalPages }) =>
               `Page ${pageNumber} of ${totalPages}`
