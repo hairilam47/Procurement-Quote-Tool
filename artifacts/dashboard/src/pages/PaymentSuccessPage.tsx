@@ -12,6 +12,8 @@ type PublicSummary = {
   currency: string;
   paidAt: string | null;
   companyName: string | null;
+  companyEmail: string | null;
+  companyPhone: string | null;
 };
 
 function formatCurrency(amount: string | number, currency = "USD"): string {
@@ -46,10 +48,28 @@ type PageState = "loading" | "paid" | "processing" | "not-found" | "error";
 const MAX_POLLS = 10;
 const POLL_INTERVAL_MS = 3000;
 
+function ContactBlock({ email, phone }: { email: string | null; phone: string | null }) {
+  if (!email && !phone) return null;
+  return (
+    <div className="text-sm text-muted-foreground space-y-1">
+      {email && (
+        <p>
+          Email:{" "}
+          <a href={`mailto:${email}`} className="text-blue-400 hover:underline">
+            {email}
+          </a>
+        </p>
+      )}
+      {phone && <p>Phone: {phone}</p>}
+    </div>
+  );
+}
+
 export default function PaymentSuccessPage() {
   const [state, setState] = useState<PageState>("loading");
   const [summary, setSummary] = useState<PublicSummary | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const pollCountRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -107,6 +127,7 @@ export default function PaymentSuccessPage() {
   async function handleDownloadReceipt() {
     if (!quotationId) return;
     setIsDownloading(true);
+    setDownloadError(null);
     try {
       const res = await fetch(`/api/quotations/${quotationId}/receipt-pdf/public`);
       if (!res.ok) {
@@ -123,7 +144,7 @@ export default function PaymentSuccessPage() {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to download receipt");
+      setDownloadError(err instanceof Error ? err.message : "Failed to download receipt");
     } finally {
       setIsDownloading(false);
     }
@@ -178,7 +199,7 @@ export default function PaymentSuccessPage() {
                 <SummaryRow label="Payment Date" value={formatDate(summary.paidAt)} />
               </div>
 
-              <div className="pt-4 border-t border-border">
+              <div className="pt-4 border-t border-border space-y-2">
                 <Button
                   onClick={handleDownloadReceipt}
                   disabled={isDownloading}
@@ -188,6 +209,9 @@ export default function PaymentSuccessPage() {
                     ? <><Loader2 size={15} className="mr-2 animate-spin" /> Downloading…</>
                     : <><Download size={15} className="mr-2" /> Download Receipt PDF</>}
                 </Button>
+                {downloadError && (
+                  <p className="text-red-400 text-xs text-center">{downloadError}</p>
+                )}
               </div>
             </div>
           </div>
@@ -206,6 +230,7 @@ export default function PaymentSuccessPage() {
                 Ref: {summary.number}
               </p>
             )}
+            <ContactBlock email={summary?.companyEmail ?? null} phone={summary?.companyPhone ?? null} />
           </div>
         )}
 
@@ -216,6 +241,7 @@ export default function PaymentSuccessPage() {
             <p className="text-muted-foreground text-sm">
               We couldn't find your payment record — please contact us and we'll look into it.
             </p>
+            <ContactBlock email={summary?.companyEmail ?? null} phone={summary?.companyPhone ?? null} />
           </div>
         )}
 
@@ -226,6 +252,7 @@ export default function PaymentSuccessPage() {
             <p className="text-muted-foreground text-sm">
               We couldn't load your payment details. Please try refreshing, or contact us for help.
             </p>
+            <ContactBlock email={summary?.companyEmail ?? null} phone={summary?.companyPhone ?? null} />
             <Button variant="outline" onClick={() => window.location.reload()}>
               Try again
             </Button>

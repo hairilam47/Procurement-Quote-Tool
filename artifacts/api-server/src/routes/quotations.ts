@@ -814,8 +814,11 @@ router.get("/quotations/:id/public-summary", async (req, res): Promise<void> => 
       clientCompany = liveClient?.company ?? null;
     }
 
+    type CompanySnap = { name?: string; email?: string; phone?: string | null };
     const companySnap = quote.companySnapshot as CompanySnap | null;
     const companyName: string | null = companySnap?.name ?? null;
+    const companyEmail: string | null = companySnap?.email ?? null;
+    const companyPhone: string | null = companySnap?.phone ?? null;
 
     res.json({
       number: quote.number,
@@ -827,6 +830,8 @@ router.get("/quotations/:id/public-summary", async (req, res): Promise<void> => 
       currency: quote.currency,
       paidAt: quote.paidAt,
       companyName,
+      companyEmail,
+      companyPhone,
     });
   } catch (err) {
     console.error("[public-summary]", err);
