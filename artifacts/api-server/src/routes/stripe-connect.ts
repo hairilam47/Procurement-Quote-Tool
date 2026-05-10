@@ -29,6 +29,15 @@ function consumeNonce(nonce: string): string | null {
   return entry.userId;
 }
 
+/**
+ * Public endpoint — no auth required.
+ * Lets the frontend know whether STRIPE_CONNECT_CLIENT_ID is configured on this
+ * platform so it can show a helpful "not configured" state instead of a broken button.
+ */
+router.get("/stripe/connect/config", async (_req, res): Promise<void> => {
+  res.json({ configured: !!STRIPE_CLIENT_ID });
+});
+
 router.get("/stripe/connect/status", requireAuth, async (req, res): Promise<void> => {
   try {
     const [user] = await db

@@ -33,9 +33,19 @@ interface StripeConnectStatus {
   displayName: string | null;
 }
 
+interface StripeConnectConfig {
+  configured: boolean;
+}
+
 async function fetchSubscription(): Promise<{ subscription: SubscriptionInfo | null }> {
   const res = await fetch("/api/stripe/subscription", { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch subscription");
+  return res.json();
+}
+
+async function fetchStripeConnectConfig(): Promise<StripeConnectConfig> {
+  const res = await fetch("/api/stripe/connect/config");
+  if (!res.ok) throw new Error("Failed to fetch Stripe Connect config");
   return res.json();
 }
 
@@ -61,11 +71,21 @@ export default function SettingsPage() {
     retry: false,
   });
 
-  const { data: connectStatus, isLoading: connectLoading } = useQuery({
-    queryKey: ["stripe-connect-status"],
-    queryFn: fetchStripeConnectStatus,
+  const { data: connectConfig, isLoading: connectConfigLoading } = useQuery({
+    queryKey: ["stripe-connect-config"],
+    queryFn: fetchStripeConnectConfig,
+    staleTime: 60_000,
     retry: false,
   });
+
+  const { data: connectStatus, isLoading: connectStatusLoading } = useQuery({
+    queryKey: ["stripe-connect-status"],
+    queryFn: fetchStripeConnectStatus,
+    enabled: connectConfig?.configured === true,
+    retry: false,
+  });
+
+  const connectLoading = connectConfigLoading || (connectConfig?.configured && connectStatusLoading);
 
   const disconnectMutation = useMutation({
     mutationFn: async () => {
@@ -461,6 +481,15 @@ export default function SettingsPage() {
       <Section title="Stripe Account">
         {connectLoading ? (
           <div className="h-10 bg-muted rounded-lg animate-pulse" />
+        ) : connectConfig?.configured === false ? (
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} className="text-muted-foreground flex-shrink-0" />
+            <p className="text-muted-foreground text-sm">
+              Stripe Connect is not configured for this platform. Set{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">STRIPE_CONNECT_CLIENT_ID</code>{" "}
+              to enable account linking.
+            </p>
+          </div>
         ) : connectStatus?.connected ? (
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-2">
