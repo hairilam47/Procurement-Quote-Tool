@@ -6,6 +6,7 @@ import { computeTotals } from "../lib/calculations";
 import { evaluateFormula } from "../lib/formula";
 import { generateId } from "../lib/id";
 import { renderQuotationPdf, renderFollowUpInvoicePdf, renderReceiptPdf } from "../lib/pdf/render";
+import { sendReceiptForQuotation } from "../lib/email/resend";
 import { requireAuth } from "./auth";
 import { getZodErrors } from "../lib/zodError";
 import { getUncachableStripeClient } from "../stripeClient";
@@ -429,6 +430,11 @@ router.patch("/quotations/:id/status", requireAuth, async (req, res): Promise<vo
       .where(eq(quotationsTable.id, String(req.params.id)))
       .returning();
 
+    if (status === "PAID") {
+      sendReceiptForQuotation(String(req.params.id))
+        .catch((err) => console.error("[email] receipt send failed:", err));
+    }
+
     res.json(updated);
   } catch (err: unknown) {
     const zodErrors = getZodErrors(err);
@@ -608,6 +614,29 @@ router.delete("/quotations/:id", requireAuth, async (req, res): Promise<void> =>
     res.status(204).send();
   } catch {
     res.status(500).json({ error: "Failed to delete quotation" });
+  }
+});
+
+// Manually resend receipt email (PAID quotations only)
+router.post("/quotations/:id/resend-receipt", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const [quote] = await db
+      .select({ id: quotationsTable.id, status: quotationsTable.status })
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, String(req.params.id)));
+    if (!quote) {
+      res.status(404).json({ error: "Quotation not found" });
+      return;
+    }
+    if (quote.status !== "PAID") {
+      res.status(400).json({ error: "Receipt emails can only be sent for PAID quotations" });
+      return;
+    }
+    await sendReceiptForQuotation(quote.id);
+    res.json({ sent: true });
+  } catch (err) {
+    console.error("[resend-receipt]", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to send receipt email" });
   }
 });
 

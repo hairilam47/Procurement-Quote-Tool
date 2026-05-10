@@ -22,6 +22,7 @@ import {
   Link2,
   ClipboardCheck,
   Loader2,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +58,7 @@ export default function QuotationDetailPage() {
   const duplicate = useDuplicateQuotation();
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
 
   async function handleDelete() {
     if (!confirm("Delete this quotation? This cannot be undone.")) return;
@@ -159,6 +161,25 @@ export default function QuotationDetailPage() {
       await openPdfBlob(url, `REC-${quotation?.number ?? id}.pdf`);
     } catch (err) {
       toast({ title: err instanceof Error ? err.message : "Failed to generate receipt", variant: "destructive" });
+    }
+  }
+
+  async function handleResendEmail() {
+    setIsResendingEmail(true);
+    try {
+      const res = await fetch(`/api/quotations/${id}/resend-receipt`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Failed to send email");
+      }
+      toast({ title: "Receipt email sent to client" });
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Failed to send email", variant: "destructive" });
+    } finally {
+      setIsResendingEmail(false);
     }
   }
 
@@ -299,6 +320,21 @@ export default function QuotationDetailPage() {
               data-testid="download-receipt-btn"
             >
               <Receipt size={13} className="mr-1.5" /> Download Receipt
+            </Button>
+          )}
+          {quotation.status === "PAID" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResendEmail}
+              disabled={isResendingEmail}
+              className="border-emerald-700 text-emerald-400 hover:text-emerald-200 hover:bg-emerald-900/30"
+              data-testid="resend-email-btn"
+            >
+              {isResendingEmail
+                ? <Loader2 size={13} className="mr-1.5 animate-spin" />
+                : <Mail size={13} className="mr-1.5" />}
+              Resend Email
             </Button>
           )}
           {showFollowUpInvoice && (

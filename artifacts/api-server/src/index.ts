@@ -46,6 +46,10 @@ async function initStripe() {
 
 await initStripe();
 
+if (!process.env.RESEND_API_KEY) {
+  logger.warn("RESEND_API_KEY is not set — receipt emails will be silently skipped");
+}
+
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");

@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db, quotationsTable } from '@workspace/db';
 import { getStripeSync } from './stripeClient';
+import { sendReceiptForQuotation } from './lib/email/resend';
 
 export class WebhookHandlers {
   static async processWebhook(payload: Buffer, signature: string): Promise<void> {
@@ -37,6 +38,8 @@ export class WebhookHandlers {
               .set({ status: 'PAID', paidAt: new Date(), updatedAt: new Date() })
               .where(eq(quotationsTable.id, quotationId));
             console.log(`[webhook] Quotation ${quotationId} auto-transitioned to PAID`);
+            sendReceiptForQuotation(quotationId)
+              .catch((err) => console.error('[email] receipt send failed (webhook):', err));
           }
         }
       }
