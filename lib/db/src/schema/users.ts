@@ -8,6 +8,7 @@ export const usersTable = pgTable("users", {
   role: text("role").notNull().default("ADMIN"),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  stripeAccountId: text("stripe_account_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

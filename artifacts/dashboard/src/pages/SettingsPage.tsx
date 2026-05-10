@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useGetSettings, useUpdateSettings } from "@workspace/api-client-react";
 import { BeamCard } from "@/components/ui/beam-card";
 import type { SettingsInput, SettingsInputDefaultTemplate } from "@workspace/api-client-react";
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Settings, Upload, Loader2, CreditCard, ExternalLink } from "lucide-react";
+import { Settings, Upload, Loader2, CreditCard, ExternalLink, CheckCircle2, AlertCircle, Link2 } from "lucide-react";
 
 interface SubscriptionInfo {
   id: string;
@@ -27,9 +27,21 @@ interface SubscriptionInfo {
   cancelAtPeriodEnd: boolean;
 }
 
+interface StripeConnectStatus {
+  connected: boolean;
+  accountId: string | null;
+  displayName: string | null;
+}
+
 async function fetchSubscription(): Promise<{ subscription: SubscriptionInfo | null }> {
   const res = await fetch("/api/stripe/subscription", { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch subscription");
+  return res.json();
+}
+
+async function fetchStripeConnectStatus(): Promise<StripeConnectStatus> {
+  const res = await fetch("/api/stripe/connect/status", { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch Stripe Connect status");
   return res.json();
 }
 
@@ -41,12 +53,57 @@ export default function SettingsPage() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: subscriptionData, isLoading: subscriptionLoading } = useQuery({
     queryKey: ["stripe-subscription"],
     queryFn: fetchSubscription,
     retry: false,
   });
+
+  const { data: connectStatus, isLoading: connectLoading } = useQuery({
+    queryKey: ["stripe-connect-status"],
+    queryFn: fetchStripeConnectStatus,
+    retry: false,
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/stripe/connect", {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error((json as { error?: string }).error ?? "Failed to disconnect");
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Stripe account disconnected" });
+      queryClient.invalidateQueries({ queryKey: ["stripe-connect-status"] });
+    },
+    onError: (err) => {
+      toast({
+        title: err instanceof Error ? err.message : "Failed to disconnect",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle redirect back from Stripe OAuth
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stripeConnect = params.get("stripe_connect");
+    if (stripeConnect === "success") {
+      toast({ title: "Stripe account connected successfully" });
+      queryClient.invalidateQueries({ queryKey: ["stripe-connect-status"] });
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (stripeConnect === "error") {
+      const reason = params.get("reason") ?? "Unknown error";
+      toast({ title: `Stripe Connect failed: ${reason}`, variant: "destructive" });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   const [form, setForm] = useState<SettingsInput>({
     name: "",
@@ -399,6 +456,63 @@ export default function SettingsPage() {
           </Button>
         </div>
       </form>
+
+      {/* Stripe Account */}
+      <Section title="Stripe Account">
+        {connectLoading ? (
+          <div className="h-10 bg-muted rounded-lg animate-pulse" />
+        ) : connectStatus?.connected ? (
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-green-400 flex-shrink-0" />
+              <div>
+                <p className="text-foreground text-sm font-medium">Stripe Connected</p>
+                {connectStatus.displayName && (
+                  <p className="text-muted-foreground text-xs mt-0.5">{connectStatus.displayName}</p>
+                )}
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-red-800 text-red-400 hover:text-red-200 hover:bg-red-900/20"
+              onClick={() => {
+                if (confirm("Disconnect your Stripe account? You will no longer be able to generate payment links until you reconnect.")) {
+                  disconnectMutation.mutate();
+                }
+              }}
+              disabled={disconnectMutation.isPending}
+            >
+              {disconnectMutation.isPending ? (
+                <><Loader2 size={13} className="animate-spin mr-1.5" />Disconnecting...</>
+              ) : (
+                "Disconnect"
+              )}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={16} className="text-muted-foreground flex-shrink-0" />
+              <p className="text-muted-foreground text-sm">
+                Connect your Stripe account to accept payments directly on quotations.
+              </p>
+            </div>
+            <a href="/api/stripe/connect">
+              <Button
+                type="button"
+                size="sm"
+                className="bg-violet-600 hover:bg-violet-500 text-white"
+                data-testid="connect-stripe-btn"
+              >
+                <Link2 size={13} className="mr-1.5" />
+                Connect Stripe
+              </Button>
+            </a>
+          </div>
+        )}
+      </Section>
 
       {/* Billing */}
       <Section title="Billing">

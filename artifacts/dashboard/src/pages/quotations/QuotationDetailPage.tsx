@@ -23,6 +23,7 @@ import {
   ClipboardCheck,
   Loader2,
   Mail,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+interface StripeConnectStatus {
+  connected: boolean;
+  accountId: string | null;
+  displayName: string | null;
+}
+
+async function fetchStripeConnectStatus(): Promise<StripeConnectStatus> {
+  const res = await fetch("/api/stripe/connect/status", { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch connect status");
+  return res.json();
+}
 
 const STATUS_TRANSITIONS: Record<string, ChangeQuotationStatusBodyStatus[]> = {
   DRAFT: ["SENT"],
@@ -59,6 +73,13 @@ export default function QuotationDetailPage() {
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [isResendingEmail, setIsResendingEmail] = useState(false);
+
+  const { data: connectStatus } = useQuery({
+    queryKey: ["stripe-connect-status"],
+    queryFn: fetchStripeConnectStatus,
+    retry: false,
+    staleTime: 60_000,
+  });
 
   async function handleDelete() {
     if (!confirm("Delete this quotation? This cannot be undone.")) return;
@@ -99,8 +120,8 @@ export default function QuotationDetailPage() {
         credentials: "include",
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body as { error?: string }).error ?? "Failed to generate payment link");
+        const body = await res.json().catch(() => ({})) as { error?: string; message?: string };
+        throw new Error(body.message ?? body.error ?? "Failed to generate payment link");
       }
       toast({ title: "Payment link generated" });
       refetch();
@@ -202,9 +223,13 @@ export default function QuotationDetailPage() {
     }
   }
 
-  const showGenerateLink =
+  const needsPaymentLink =
     (quotation?.status === "SENT" || quotation?.status === "ACCEPTED") &&
     !quotation?.paymentUrl;
+
+  const showStripeConnectPrompt = needsPaymentLink && connectStatus?.connected === false;
+
+  const showGenerateLink = needsPaymentLink && connectStatus?.connected === true;
   const showCopyLink =
     (quotation?.status === "SENT" || quotation?.status === "ACCEPTED") &&
     !!quotation?.paymentUrl;
@@ -268,6 +293,19 @@ export default function QuotationDetailPage() {
           >
             <Download size={13} className="mr-1.5" /> PDF
           </Button>
+          {showStripeConnectPrompt && (
+            <a href="/settings">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-amber-700 text-amber-400 hover:text-amber-200 hover:bg-amber-900/30"
+                data-testid="stripe-connect-prompt-btn"
+              >
+                <Link2 size={13} className="mr-1.5" />
+                Connect Stripe to Add Payment Link
+              </Button>
+            </a>
+          )}
           {showGenerateLink && (
             <Button
               variant="outline"

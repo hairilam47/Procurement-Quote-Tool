@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, and, desc, sql } from "drizzle-orm";
-import { db, quotationsTable, lineItemsTable, clientsTable, companySettingsTable } from "@workspace/db";
+import { db, quotationsTable, lineItemsTable, clientsTable, companySettingsTable, usersTable } from "@workspace/db";
 import { quotationSchema, changeStatusSchema } from "../lib/validation";
 import { computeTotals } from "../lib/calculations";
 import { evaluateFormula } from "../lib/formula";
@@ -562,6 +562,21 @@ router.post("/quotations/:id/payment-link", requireAuth, async (req, res): Promi
       return;
     }
 
+    // Check if the user has a connected Stripe account
+    const [user] = await db
+      .select({ stripeAccountId: usersTable.stripeAccountId })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.clerkUserId));
+
+    if (!user?.stripeAccountId) {
+      res.status(402).json({
+        error: "connect_required",
+        message: "You must connect your Stripe account before generating payment links. Go to Settings to connect.",
+      });
+      return;
+    }
+
+    const connectedAccountId = user.stripeAccountId;
     const currency = quote.currency.toLowerCase();
     const rawAmount = parseFloat(quote.requiredTotal);
     const unitAmount = ZERO_DECIMAL_CURRENCIES.has(quote.currency.toUpperCase())
@@ -571,20 +586,27 @@ router.post("/quotations/:id/payment-link", requireAuth, async (req, res): Promi
     const stripe = await getUncachableStripeClient();
     const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
 
-    const price = await stripe.prices.create({
-      currency,
-      unit_amount: unitAmount,
-      product_data: { name: `Payment for Quotation ${quote.number}` },
-    });
-
-    const paymentLink = await stripe.paymentLinks.create({
-      line_items: [{ price: price.id, quantity: 1 }],
-      metadata: { quotationId: quote.id },
-      after_completion: {
-        type: "redirect",
-        redirect: { url: `${baseUrl}/pay/success?quotationId=${quote.id}` },
+    const price = await stripe.prices.create(
+      {
+        currency,
+        unit_amount: unitAmount,
+        product_data: { name: `Payment for Quotation ${quote.number}` },
       },
-    });
+      { stripeAccount: connectedAccountId },
+    );
+
+    const paymentLink = await stripe.paymentLinks.create(
+      {
+        line_items: [{ price: price.id, quantity: 1 }],
+        metadata: { quotationId: quote.id },
+        payment_intent_data: { metadata: { quotationId: quote.id } },
+        after_completion: {
+          type: "redirect",
+          redirect: { url: `${baseUrl}/pay/success?quotationId=${quote.id}` },
+        },
+      },
+      { stripeAccount: connectedAccountId },
+    );
 
     const [updated] = await db
       .update(quotationsTable)
