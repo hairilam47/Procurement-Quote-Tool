@@ -6,11 +6,11 @@ async function createProducts() {
     console.log('Checking for existing KuotFlow products...');
 
     const existing = await stripe.products.search({
-      query: "name:'KuotFlow' AND active:'true'",
+      query: "name:'KuotFlow Pro' AND active:'true'",
     });
 
     if (existing.data.length > 0) {
-      console.log('KuotFlow product already exists — listing existing prices:');
+      console.log('KuotFlow Pro product already exists — listing existing prices:');
       const prices = await stripe.prices.list({ product: existing.data[0].id, active: true });
       for (const p of prices.data) {
         const rec = p.recurring;
@@ -19,9 +19,9 @@ async function createProducts() {
       return;
     }
 
-    console.log('Creating KuotFlow product...');
+    console.log('Creating KuotFlow Pro product...');
     const product = await stripe.products.create({
-      name: 'KuotFlow',
+      name: 'KuotFlow Pro',
       description: 'Professional IT quotation management platform',
       metadata: { app: 'kuotflow' },
     });

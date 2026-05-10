@@ -112,23 +112,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
             collapsed ? "px-0 justify-center" : "gap-2.5 px-4"
           )}
         >
-          <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-black text-sm leading-none select-none">K</span>
-          </div>
-          {!collapsed && (
-            <span className="font-bold tracking-tight text-sm truncate">
-              <span className="text-foreground">Kuot</span><span className="text-blue-500">Flow</span>
-            </span>
-          )}
-          {/* Mobile close button */}
-          {!collapsed && (
-            <button
-              className="ml-auto text-muted-foreground hover:text-foreground md:hidden"
-              onClick={() => setMobileOpen(false)}
-              aria-label="Close menu"
-            >
-              <X size={16} />
-            </button>
+          {collapsed ? (
+            <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
+              <span className="text-white font-black text-sm leading-none select-none">K</span>
+            </div>
+          ) : (
+            <>
+              <img
+                src={`${import.meta.env.BASE_URL}kuotflow-logo-dark.svg`}
+                alt="KuotFlow"
+                className="h-8 w-auto flex-1 min-w-0 object-left object-contain"
+              />
+              {/* Mobile close button */}
+              <button
+                className="ml-auto text-muted-foreground hover:text-foreground md:hidden flex-shrink-0"
+                onClick={() => setMobileOpen(false)}
+                aria-label="Close menu"
+              >
+                <X size={16} />
+              </button>
+            </>
           )}
         </div>
 
