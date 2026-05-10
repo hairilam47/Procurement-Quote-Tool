@@ -273,7 +273,7 @@ export async function renderReceiptPdf(args: {
     invoiceMode: {
       documentTitle: "PAYMENT RECEIPT",
       referenceNumber: quote.number,
-      paidAt: quote.paidAt ?? new Date(),
+      paidAt: quote.paidAt ?? quote.issueDate,
       receiptMode: true,
     },
   };

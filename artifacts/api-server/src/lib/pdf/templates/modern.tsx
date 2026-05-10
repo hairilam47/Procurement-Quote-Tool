@@ -315,7 +315,7 @@ export function ModernTemplate({
         <View style={s.titleRow}>
           <View>
             <Text style={s.title}>{docTitle}</Text>
-            {isFollowUp && invoiceMode && (
+            {isFollowUp && invoiceMode && !invoiceMode.receiptMode && (
               <Text style={{ fontSize: 9, color: C.muted, marginTop: 3 }}>
                 Re: Quotation {invoiceMode.referenceNumber}
               </Text>

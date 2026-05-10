@@ -288,7 +288,7 @@ export function ClassicTemplate({
         <View style={s.titleSection}>
           <Text style={s.title}>{docTitle}</Text>
           <Text style={s.numberText}>{quote.number}</Text>
-          {isFollowUp && invoiceMode && (
+          {isFollowUp && invoiceMode && !invoiceMode.receiptMode && (
             <Text style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>
               Re: Quotation {invoiceMode.referenceNumber}
             </Text>
