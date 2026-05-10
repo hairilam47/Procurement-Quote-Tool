@@ -236,6 +236,7 @@ export function ClassicTemplate({
   logoDataUrl,
   qrDataUrl,
   invoiceMode,
+  bankDetails,
 }: TemplateProps) {
   const cur = quote.currency;
   const sec = quote.secondaryCurrency ?? null;
@@ -572,28 +573,49 @@ export function ClassicTemplate({
           </View>
         </View>
 
-        {/* Pay Now */}
-        {quote.paymentUrl ? (
-          <View style={s.payWrap} wrap={false}>
-            <View style={s.payTextWrap}>
-              <Text style={s.payHeading}>Payment Instructions</Text>
-              <Text style={s.payBlurb}>
-                Please proceed with payment via the secure link below.
-                {qrDataUrl ? " You may also scan the QR code." : ""}
-              </Text>
-              <Link src={quote.paymentUrl}>
-                <View style={s.payButton}>
-                  <Text style={s.payButtonText}>Pay Now →</Text>
-                </View>
-              </Link>
+        {/* Pay Now — conditional on paymentMethod */}
+        {(() => {
+          const method = quote.paymentMethod ?? "none";
+          const showStripe = (method === "stripe" || method === "both") && quote.paymentUrl;
+          const showBank = (method === "bank_transfer" || method === "both") && bankDetails && (bankDetails.bankName || bankDetails.bankAccountNumber || bankDetails.bankRecipientName);
+          if (!showStripe && !showBank) return null;
+          return (
+            <View style={s.payWrap} wrap={false}>
+              <View style={s.payTextWrap}>
+                <Text style={s.payHeading}>Payment Instructions</Text>
+                {showStripe && (
+                  <>
+                    <Text style={s.payBlurb}>
+                      Please proceed with payment via the secure link below.
+                      {qrDataUrl ? " You may also scan the QR code." : ""}
+                    </Text>
+                    <Link src={quote.paymentUrl!}>
+                      <View style={s.payButton}>
+                        <Text style={s.payButtonText}>Pay Now →</Text>
+                      </View>
+                    </Link>
+                  </>
+                )}
+                {showBank && (
+                  <View style={{ marginTop: showStripe ? 8 : 0 }}>
+                    <Text style={[s.payBlurb, { marginBottom: 4, fontWeight: "bold" }]}>Bank Transfer Details</Text>
+                    {bankDetails!.bankRecipientName ? <Text style={s.payBlurb}>Recipient: {bankDetails!.bankRecipientName}</Text> : null}
+                    {bankDetails!.bankName ? <Text style={s.payBlurb}>Bank: {bankDetails!.bankName}</Text> : null}
+                    {bankDetails!.bankAccountNumber ? <Text style={s.payBlurb}>Account: {bankDetails!.bankAccountNumber}</Text> : null}
+                  </View>
+                )}
+              </View>
+              {showStripe && qrDataUrl && (
+                <Link src={quote.paymentUrl!}>
+                  <Image src={qrDataUrl} style={s.qr} />
+                </Link>
+              )}
+              {showBank && bankDetails!.bankQrCodeDataUrl && (
+                <Image src={bankDetails!.bankQrCodeDataUrl} style={s.qr} />
+              )}
             </View>
-            {qrDataUrl && (
-              <Link src={quote.paymentUrl}>
-                <Image src={qrDataUrl} style={s.qr} />
-              </Link>
-            )}
-          </View>
-        ) : null}
+          );
+        })()}
 
         {/* Notes */}
         {quote.notes && (

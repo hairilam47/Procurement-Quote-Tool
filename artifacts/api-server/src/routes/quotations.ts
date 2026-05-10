@@ -222,6 +222,7 @@ router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
         terms: data.terms ?? null,
         paymentUrl: data.paymentUrl ?? null,
         showQrCode: data.showQrCode,
+        paymentMethod: data.paymentMethod,
         template: data.template,
       });
 
@@ -344,6 +345,7 @@ router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
           terms: data.terms ?? null,
           paymentUrl: data.paymentUrl ?? null,
           showQrCode: data.showQrCode,
+          paymentMethod: data.paymentMethod,
           template: data.template,
           updatedAt: new Date(),
         })
@@ -500,6 +502,7 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
         terms: src.terms,
         paymentUrl: src.paymentUrl,
         showQrCode: src.showQrCode,
+        paymentMethod: src.paymentMethod,
         template: src.template,
       });
 

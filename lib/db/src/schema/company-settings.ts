@@ -23,6 +23,10 @@ export const companySettingsTable = pgTable("company_settings", {
   defaultNotes: text("default_notes"),
   defaultTemplate: text("default_template").notNull().default("MODERN"),
   defaultPaymentUrl: text("default_payment_url"),
+  bankName: text("bank_name"),
+  bankAccountNumber: text("bank_account_number"),
+  bankRecipientName: text("bank_recipient_name"),
+  bankQrCodeUrl: text("bank_qr_code_url"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 

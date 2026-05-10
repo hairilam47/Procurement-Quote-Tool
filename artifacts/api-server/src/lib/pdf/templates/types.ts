@@ -17,6 +17,13 @@ export type InvoiceMode = {
   receiptMode?: boolean;
 };
 
+export type BankDetails = {
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  bankRecipientName?: string | null;
+  bankQrCodeDataUrl?: string | null;
+};
+
 export type TemplateProps = {
   invoiceMode?: InvoiceMode;
   quote: {
@@ -40,6 +47,7 @@ export type TemplateProps = {
     terms: string | null | undefined;
     paymentUrl: string | null | undefined;
     showQrCode: boolean;
+    paymentMethod: string;
     template: string;
     lineItems: TemplateLineItem[];
   };
@@ -72,4 +80,5 @@ export type TemplateProps = {
   };
   logoDataUrl?: string;
   qrDataUrl?: string;
+  bankDetails?: BankDetails | null;
 };

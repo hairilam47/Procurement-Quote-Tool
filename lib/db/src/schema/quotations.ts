@@ -49,6 +49,7 @@ export const quotationsTable = pgTable(
     terms: text("terms"),
     paymentUrl: text("payment_url"),
     showQrCode: boolean("show_qr_code").notNull().default(true),
+    paymentMethod: text("payment_method").notNull().default("none"),
     template: text("template").notNull().default("MODERN"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

@@ -2,6 +2,8 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { runMigrations } from "stripe-replit-sync";
 import { getStripeSync } from "./stripeClient";
+import { db, quotationsTable } from "@workspace/db";
+import { sql, and, isNotNull, eq } from "drizzle-orm";
 
 const rawPort = process.env["PORT"];
 
@@ -45,6 +47,29 @@ async function initStripe() {
 }
 
 await initStripe();
+
+// Backfill: existing quotations that have a paymentUrl but still carry the default
+// paymentMethod of "none" (created before this feature was added) should be treated
+// as stripe so their PDFs continue to render the payment block correctly.
+async function backfillPaymentMethod() {
+  if (!process.env.DATABASE_URL) return;
+  try {
+    await db
+      .update(quotationsTable)
+      .set({ paymentMethod: "stripe" })
+      .where(
+        and(
+          eq(quotationsTable.paymentMethod, "none"),
+          isNotNull(quotationsTable.paymentUrl),
+        ),
+      );
+    logger.info("Payment method backfill complete");
+  } catch (err) {
+    logger.error({ err }, "Payment method backfill failed — continuing");
+  }
+}
+
+await backfillPaymentMethod();
 
 if (!process.env.RESEND_API_KEY) {
   logger.warn("RESEND_API_KEY is not set — receipt emails will be silently skipped");

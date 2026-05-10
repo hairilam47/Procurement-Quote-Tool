@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   useCreateQuotation,
   useUpdateQuotation,
@@ -261,6 +262,18 @@ const LineItemRow = memo(function LineItemRow({
   );
 });
 
+interface StripeConnectStatus {
+  connected: boolean;
+  accountId: string | null;
+  displayName: string | null;
+}
+
+async function fetchStripeConnectStatus(): Promise<StripeConnectStatus> {
+  const res = await fetch("/api/stripe/connect/status", { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch connect status");
+  return res.json();
+}
+
 export default function QuotationFormPage() {
   const params = useParams<{ id?: string }>();
   const id = params.id;
@@ -272,6 +285,12 @@ export default function QuotationFormPage() {
   const { data: clients = [] } = useListClients();
   const { data: existing } = useGetQuotation(id ?? "", {
     query: { enabled: isEdit && !!id, queryKey: getGetQuotationQueryKey(id ?? "") },
+  });
+  const { data: connectStatus } = useQuery({
+    queryKey: ["stripe-connect-status"],
+    queryFn: fetchStripeConnectStatus,
+    retry: false,
+    staleTime: 60_000,
   });
 
   const createQuotation = useCreateQuotation();
@@ -289,6 +308,7 @@ export default function QuotationFormPage() {
   const [terms, setTerms] = useState("");
   const [paymentUrl, setPaymentUrl] = useState("");
   const [showQrCode, setShowQrCode] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "bank_transfer" | "both" | "none">("none");
   const [template, setTemplate] = useState<"MODERN" | "CLASSIC">("MODERN");
   const [lineItems, setLineItems] = useState<LineItemInput[]>([emptyLineItem()]);
 
@@ -318,6 +338,12 @@ export default function QuotationFormPage() {
     setTerms(existing.terms ?? "");
     setPaymentUrl(existing.paymentUrl ?? "");
     setShowQrCode(existing.showQrCode ?? false);
+    // Legacy compatibility: if the quotation was created before paymentMethod
+    // existed, infer "stripe" from the presence of a paymentUrl.
+    const resolvedMethod = (existing.paymentMethod as "stripe" | "bank_transfer" | "both" | "none") ?? "none";
+    const inferredMethod =
+      resolvedMethod === "none" && existing.paymentUrl ? "stripe" : resolvedMethod;
+    setPaymentMethod(inferredMethod);
     setTemplate((existing.template as "MODERN" | "CLASSIC") ?? "MODERN");
     if (existing.lineItems && existing.lineItems.length > 0) {
       setLineItems(
@@ -417,6 +443,7 @@ export default function QuotationFormPage() {
       terms: terms || null,
       paymentUrl: paymentUrl || null,
       showQrCode,
+      paymentMethod,
       template,
       lineItems: lineItems.map((li, i) => ({ ...li, position: i })),
     };
@@ -678,24 +705,61 @@ export default function QuotationFormPage() {
 
         {/* Payment */}
         <Section title="Payment">
-          <Field label="Payment URL">
-            <Input
-              value={paymentUrl}
-              onChange={(e) => setPaymentUrl(e.target.value)}
-              className={inputCls}
-              placeholder="https://..."
-            />
+          <Field label="Payment Method">
+            <div className="flex gap-2 flex-wrap">
+              {([
+                { value: "none", label: "None" },
+                { value: "bank_transfer", label: "Bank Transfer" },
+                { value: "stripe", label: "Stripe" },
+                { value: "both", label: "Both" },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setPaymentMethod(opt.value)}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
+                    paymentMethod === opt.value
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "bg-transparent border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {(paymentMethod === "stripe" || paymentMethod === "both") && connectStatus?.connected === false && (
+              <p className="text-amber-400 text-xs mt-1">
+                No Stripe account connected. Connect Stripe in Settings or enter a payment URL below.
+              </p>
+            )}
           </Field>
-          <div className="flex items-center gap-3">
-            <Switch
-              checked={showQrCode}
-              onCheckedChange={setShowQrCode}
-              id="qr-code"
-            />
-            <Label htmlFor="qr-code" className="text-slate-300 text-sm cursor-pointer">
-              Show QR code on PDF
-            </Label>
-          </div>
+          {(paymentMethod === "stripe" || paymentMethod === "both") && (
+            <>
+              <Field label="Payment URL">
+                <Input
+                  value={paymentUrl}
+                  onChange={(e) => setPaymentUrl(e.target.value)}
+                  className={inputCls}
+                  placeholder="https://..."
+                />
+              </Field>
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={showQrCode}
+                  onCheckedChange={setShowQrCode}
+                  id="qr-code"
+                />
+                <Label htmlFor="qr-code" className="text-slate-300 text-sm cursor-pointer">
+                  Show QR code on PDF
+                </Label>
+              </div>
+            </>
+          )}
+          {(paymentMethod === "bank_transfer" || paymentMethod === "both") && (
+            <p className="text-muted-foreground text-xs">
+              Bank details will be pulled from your company settings and shown on the PDF.
+            </p>
+          )}
         </Section>
 
         {/* Submit */}

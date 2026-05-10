@@ -36,6 +36,7 @@ export const quotationSchema = z
       .nullable()
       .or(z.literal("").transform(() => null)),
     showQrCode: z.boolean().default(true),
+    paymentMethod: z.enum(["stripe", "bank_transfer", "both", "none"]).default("none"),
     template: z.enum(["MODERN", "CLASSIC"]).default("MODERN"),
     lineItems: z.array(lineItemSchema).min(1, "At least one line item"),
   })
@@ -95,6 +96,15 @@ export const settingsSchema = z.object({
   defaultPaymentUrl: z
     .string()
     .url()
+    .optional()
+    .nullable()
+    .or(z.literal("").transform(() => null)),
+  bankName: z.string().max(200).optional().nullable(),
+  bankAccountNumber: z.string().max(100).optional().nullable(),
+  bankRecipientName: z.string().max(200).optional().nullable(),
+  bankQrCodeUrl: z
+    .string()
+    .max(1000)
     .optional()
     .nullable()
     .or(z.literal("").transform(() => null)),

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Settings, Upload, Loader2, CreditCard, ExternalLink, CheckCircle2, AlertCircle, Link2 } from "lucide-react";
+import { Settings, Upload, Loader2, CreditCard, ExternalLink, CheckCircle2, AlertCircle, Link2, Building2 } from "lucide-react";
 
 interface SubscriptionInfo {
   id: string;
@@ -60,8 +60,11 @@ export default function SettingsPage() {
   const updateSettings = useUpdateSettings();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
+  const bankQrRef = useRef<HTMLInputElement>(null);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [bankQrUploading, setBankQrUploading] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [bankQrPreview, setBankQrPreview] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const queryClient = useQueryClient();
 
@@ -145,6 +148,10 @@ export default function SettingsPage() {
     defaultNotes: null,
     defaultTemplate: "MODERN",
     defaultPaymentUrl: null,
+    bankName: null,
+    bankAccountNumber: null,
+    bankRecipientName: null,
+    bankQrCodeUrl: null,
   });
 
   useEffect(() => {
@@ -169,8 +176,13 @@ export default function SettingsPage() {
       defaultNotes: settings.defaultNotes ?? null,
       defaultTemplate: settings.defaultTemplate as SettingsInputDefaultTemplate,
       defaultPaymentUrl: settings.defaultPaymentUrl ?? null,
+      bankName: settings.bankName ?? null,
+      bankAccountNumber: settings.bankAccountNumber ?? null,
+      bankRecipientName: settings.bankRecipientName ?? null,
+      bankQrCodeUrl: settings.bankQrCodeUrl ?? null,
     });
     setLogoPreview(settings.logoUrl ?? null);
+    setBankQrPreview(settings.bankQrCodeUrl ?? null);
   }, [settings]);
 
   function set(key: keyof SettingsInput, value: unknown) {
@@ -197,6 +209,29 @@ export default function SettingsPage() {
       toast({ title: "Logo upload failed", variant: "destructive" });
     } finally {
       setLogoUploading(false);
+    }
+  }
+
+  async function handleBankQrUpload(file: File) {
+    setBankQrUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("logo", file);
+      const res = await fetch("/api/settings/logo", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const json = await res.json();
+      const url = json.url ?? json.objectPath;
+      setBankQrPreview(url);
+      set("bankQrCodeUrl", url);
+      toast({ title: "Bank QR code uploaded" });
+    } catch {
+      toast({ title: "Bank QR code upload failed", variant: "destructive" });
+    } finally {
+      setBankQrUploading(false);
     }
   }
 
@@ -457,6 +492,77 @@ export default function SettingsPage() {
                 onChange={(e) => set("defaultNotes", e.target.value || null)}
                 className={`${inputCls} min-h-[80px]`}
               />
+            </Field>
+          </div>
+        </Section>
+
+        {/* Bank Transfer Details */}
+        <Section title="Bank Transfer Details">
+          <p className="text-muted-foreground text-xs mb-2">
+            These details will appear on PDFs when the "Bank Transfer" payment method is selected for a quotation.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Recipient Name" className="col-span-2">
+              <Input
+                value={form.bankRecipientName ?? ""}
+                onChange={(e) => set("bankRecipientName", e.target.value || null)}
+                className={inputCls}
+                placeholder="e.g. Acme Corp Ltd"
+              />
+            </Field>
+            <Field label="Bank Name">
+              <Input
+                value={form.bankName ?? ""}
+                onChange={(e) => set("bankName", e.target.value || null)}
+                className={inputCls}
+                placeholder="e.g. First National Bank"
+              />
+            </Field>
+            <Field label="Account Number">
+              <Input
+                value={form.bankAccountNumber ?? ""}
+                onChange={(e) => set("bankAccountNumber", e.target.value || null)}
+                className={inputCls}
+                placeholder="e.g. 0123456789"
+              />
+            </Field>
+            <Field label="Bank QR Code (optional)" className="col-span-2">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-muted border border-border rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {bankQrPreview ? (
+                    <img src={bankQrPreview} alt="Bank QR" className="w-full h-full object-contain" />
+                  ) : (
+                    <Building2 size={18} className="text-muted-foreground" />
+                  )}
+                </div>
+                <div>
+                  <input
+                    ref={bankQrRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleBankQrUpload(f);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                    onClick={() => bankQrRef.current?.click()}
+                    disabled={bankQrUploading}
+                  >
+                    {bankQrUploading ? (
+                      <><Loader2 size={13} className="animate-spin mr-1.5" />Uploading...</>
+                    ) : (
+                      "Upload QR Image"
+                    )}
+                  </Button>
+                  <p className="text-muted-foreground text-xs mt-1">PNG, JPG up to 2MB</p>
+                </div>
+              </div>
             </Field>
           </div>
         </Section>

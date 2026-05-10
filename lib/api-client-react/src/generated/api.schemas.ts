@@ -100,6 +100,16 @@ export const QuotationInputTemplate = {
   CLASSIC: "CLASSIC",
 } as const;
 
+export type QuotationInputPaymentMethod =
+  (typeof QuotationInputPaymentMethod)[keyof typeof QuotationInputPaymentMethod];
+
+export const QuotationInputPaymentMethod = {
+  stripe: "stripe",
+  bank_transfer: "bank_transfer",
+  both: "both",
+  none: "none",
+} as const;
+
 export interface QuotationInput {
   clientId: string;
   issueDate: string;
@@ -113,6 +123,7 @@ export interface QuotationInput {
   terms?: string | null;
   paymentUrl?: string | null;
   showQrCode?: boolean;
+  paymentMethod?: QuotationInputPaymentMethod;
   template?: QuotationInputTemplate;
   lineItems: LineItemInput[];
 }
@@ -146,6 +157,7 @@ export type QuotationDetail = QuotationSummary & {
   terms?: string | null;
   paymentUrl?: string | null;
   showQrCode?: boolean;
+  paymentMethod?: string;
   sentAt?: string | null;
   acceptedAt?: string | null;
   paidAt?: string | null;
@@ -176,6 +188,10 @@ export interface CompanySettings {
   defaultNotes?: string | null;
   defaultTemplate: string;
   defaultPaymentUrl?: string | null;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  bankRecipientName?: string | null;
+  bankQrCodeUrl?: string | null;
   updatedAt: string;
 }
 
@@ -207,6 +223,10 @@ export interface SettingsInput {
   defaultNotes?: string | null;
   defaultTemplate: SettingsInputDefaultTemplate;
   defaultPaymentUrl?: string | null;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  bankRecipientName?: string | null;
+  bankQrCodeUrl?: string | null;
 }
 
 export type DashboardDataStatusCounts = { [key: string]: number };

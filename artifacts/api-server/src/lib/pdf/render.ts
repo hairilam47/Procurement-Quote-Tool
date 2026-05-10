@@ -43,6 +43,7 @@ type QuoteData = {
   terms: string | null;
   paymentUrl: string | null;
   showQrCode: boolean;
+  paymentMethod: string;
   template: string;
   lineItems: LineItem[];
   clientSnapshot: unknown;
@@ -76,6 +77,10 @@ type CompanyData = {
   taxNumber?: string | null;
   registrationNumber?: string | null;
   logoUrl?: string | null;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  bankRecipientName?: string | null;
+  bankQrCodeUrl?: string | null;
 };
 
 /**
@@ -173,6 +178,7 @@ export async function renderFollowUpInvoicePdf(args: {
     requiredTotal: deferredSubtotal,
     paymentUrl: null,
     showQrCode: false,
+    paymentMethod: "none",
   };
 
   const props: TemplateProps = {
@@ -263,6 +269,7 @@ export async function renderReceiptPdf(args: {
     requiredTotal: quote.requiredTotal,
     paymentUrl: null,
     showQrCode: false,
+    paymentMethod: "none",
   };
 
   const props: TemplateProps = {
@@ -299,22 +306,41 @@ export async function renderQuotationPdf(args: {
   const effectiveCompany =
     (quote.companySnapshot as CompanyData | null) ?? company;
 
-  const [logoDataUrl, qrDataUrl] = await Promise.all([
+  // Legacy compatibility: if paymentMethod is unset/none but a paymentUrl exists,
+  // treat as "stripe" so pre-migration quotes still render their payment block.
+  const method =
+    (!quote.paymentMethod || quote.paymentMethod === "none") && quote.paymentUrl
+      ? "stripe"
+      : (quote.paymentMethod ?? "none");
+  const needsStripeQr = (method === "stripe" || method === "both") && quote.showQrCode && quote.paymentUrl;
+  const needsBankQr = (method === "bank_transfer" || method === "both") && effectiveCompany.bankQrCodeUrl;
+
+  const [logoDataUrl, qrDataUrl, bankQrCodeDataUrl] = await Promise.all([
     fetchLogoDataUrl(effectiveCompany.logoUrl),
-    quote.showQrCode && quote.paymentUrl
-      ? generateQrDataUrl(quote.paymentUrl)
-      : Promise.resolve(undefined),
+    needsStripeQr ? generateQrDataUrl(quote.paymentUrl!) : Promise.resolve(undefined),
+    needsBankQr ? fetchLogoDataUrl(effectiveCompany.bankQrCodeUrl) : Promise.resolve(undefined),
   ]);
+
+  const bankDetails = (method === "bank_transfer" || method === "both") ? {
+    bankName: effectiveCompany.bankName,
+    bankAccountNumber: effectiveCompany.bankAccountNumber,
+    bankRecipientName: effectiveCompany.bankRecipientName,
+    bankQrCodeDataUrl: bankQrCodeDataUrl ?? null,
+  } : null;
 
   const props: TemplateProps = {
     quote: {
       ...quote,
       lineItems: quote.lineItems as TemplateLineItem[],
+      // Use the resolved method (which handles legacy paymentUrl-only rows)
+      // so templates don't need to replicate the fallback logic.
+      paymentMethod: method,
     },
     client: effectiveClient,
     company: effectiveCompany,
     logoDataUrl,
     qrDataUrl,
+    bankDetails,
   };
 
   const Component =
