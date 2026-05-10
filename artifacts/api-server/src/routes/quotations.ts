@@ -776,4 +776,115 @@ router.get("/quotations/:id/pdf", requireAuth, async (req, res): Promise<void> =
   }
 });
 
+// Public summary — no auth, safe fields only for customer-facing pages
+router.get("/quotations/:id/public-summary", async (req, res): Promise<void> => {
+  try {
+    const [quote] = await db
+      .select({
+        number: quotationsTable.number,
+        status: quotationsTable.status,
+        total: quotationsTable.total,
+        requiredTotal: quotationsTable.requiredTotal,
+        currency: quotationsTable.currency,
+        paidAt: quotationsTable.paidAt,
+        clientId: quotationsTable.clientId,
+        clientSnapshot: quotationsTable.clientSnapshot,
+        companySnapshot: quotationsTable.companySnapshot,
+      })
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, String(req.params.id)));
+
+    if (!quote) {
+      res.status(404).json({ error: "Quotation not found" });
+      return;
+    }
+
+    // Extract client name from snapshot (set at SENT time) or live client table
+    type ClientSnap = { name?: string; company?: string | null };
+    type CompanySnap = { name?: string };
+    const snap = quote.clientSnapshot as ClientSnap | null;
+    let clientName: string | null = snap?.name ?? null;
+    let clientCompany: string | null = snap?.company ?? null;
+    if (!clientName) {
+      const [liveClient] = await db
+        .select({ name: clientsTable.name, company: clientsTable.company })
+        .from(clientsTable)
+        .where(eq(clientsTable.id, quote.clientId));
+      clientName = liveClient?.name ?? null;
+      clientCompany = liveClient?.company ?? null;
+    }
+
+    const companySnap = quote.companySnapshot as CompanySnap | null;
+    const companyName: string | null = companySnap?.name ?? null;
+
+    res.json({
+      number: quote.number,
+      status: quote.status,
+      clientName,
+      clientCompany,
+      total: quote.total,
+      requiredTotal: quote.requiredTotal,
+      currency: quote.currency,
+      paidAt: quote.paidAt,
+      companyName,
+    });
+  } catch (err) {
+    console.error("[public-summary]", err);
+    res.status(500).json({ error: "Failed to load payment summary" });
+  }
+});
+
+// Public receipt PDF — no auth, PAID quotations only
+router.get("/quotations/:id/receipt-pdf/public", async (req, res): Promise<void> => {
+  try {
+    const [quote] = await db
+      .select()
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, String(req.params.id)));
+    if (!quote) {
+      res.status(404).json({ error: "Quotation not found" });
+      return;
+    }
+    if (quote.status !== "PAID") {
+      res.status(400).json({ error: "Receipt is only available for PAID quotations" });
+      return;
+    }
+
+    const [client] = await db
+      .select()
+      .from(clientsTable)
+      .where(eq(clientsTable.id, quote.clientId));
+
+    const lineItems = await db
+      .select()
+      .from(lineItemsTable)
+      .where(eq(lineItemsTable.quotationId, quote.id))
+      .orderBy(lineItemsTable.position);
+
+    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    if (!settings) {
+      res.status(400).json({ error: "Company not configured" });
+      return;
+    }
+
+    const buffer = await renderReceiptPdf({
+      quote: { ...quote, lineItems },
+      client,
+      company: settings,
+    });
+
+    const receiptNumber = `REC-${quote.number}`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${receiptNumber}.pdf"`,
+    );
+    res.setHeader("Cache-Control", "private, no-store");
+    res.send(buffer);
+  } catch (err) {
+    console.error("[receipt-pdf-public]", err);
+    res.status(500).json({ error: "PDF render failed" });
+  }
+});
+
 export default router;

@@ -16,6 +16,7 @@ import ClientDetailPage from "@/pages/clients/ClientDetailPage";
 import SettingsPage from "@/pages/SettingsPage";
 import SignInPage from "@/pages/SignInPage";
 import SignUpPage from "@/pages/SignUpPage";
+import PaymentSuccessPage from "@/pages/PaymentSuccessPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -103,6 +104,9 @@ function AppRoutes() {
       {/* Auth routes — always accessible */}
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />
+
+      {/* Public customer-facing routes — no auth required */}
+      <Route path="/pay/success" component={PaymentSuccessPage} />
 
       {/* All other routes — protected */}
       <Route>
