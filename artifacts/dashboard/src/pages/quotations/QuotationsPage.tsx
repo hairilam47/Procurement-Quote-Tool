@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useListQuotations } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
 import { formatCurrency, formatDate, statusBadge, STATUS_LABELS } from "@/lib/format";
 import { Plus, Search, Filter, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -16,12 +15,6 @@ import {
 
 const STATUSES = ["ALL", "DRAFT", "SENT", "ACCEPTED", "REJECTED", "PAID", "EXPIRED"];
 const DEFERRED_FILTER = "DEFERRED";
-
-const container = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.04 } },
-};
-const row = { hidden: { opacity: 0, x: -8 }, show: { opacity: 1, x: 0 } };
 
 type SortOption = "DEFAULT" | "AMOUNT_ASC" | "AMOUNT_DESC";
 
@@ -149,9 +142,13 @@ export default function QuotationsPage() {
             </Link>
           </div>
         ) : (
-          <motion.div variants={container} initial="hidden" animate="show">
-            {sorted.map((q) => (
-              <motion.div key={q.id} variants={row}>
+          <div>
+            {sorted.map((q, idx) => (
+              <div
+                key={q.id}
+                className="animate-fade-slide-in"
+                style={{ animationDelay: `${Math.min(idx * 35, 400)}ms` }}
+              >
                 <Link href={`/quotations/${q.id}`}>
                   <div className="grid grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] gap-0 items-center px-4 py-3.5 border-b border-border/50 hover:bg-muted/50 transition-colors cursor-pointer group">
                     <span className="text-foreground text-sm font-mono font-medium">{q.number}</span>
@@ -186,9 +183,9 @@ export default function QuotationsPage() {
                     </span>
                   </div>
                 </Link>
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         )}
       </BeamCard>
     </div>

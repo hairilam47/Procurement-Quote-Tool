@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   useCreateQuotation,
   useUpdateQuotation,
@@ -153,6 +153,114 @@ const emptyLineItem = (): LineItemInput => ({
   position: 0,
 });
 
+const LineItemRow = memo(function LineItemRow({
+  li,
+  idx,
+  currency,
+  isOnly,
+  onUpdate,
+  onFormulaChange,
+  onRemove,
+}: {
+  li: LineItemInput;
+  idx: number;
+  currency: string;
+  isOnly: boolean;
+  onUpdate: (index: number, key: keyof LineItemInput, value: unknown) => void;
+  onFormulaChange: (index: number, formula: string) => void;
+  onRemove: (index: number) => void;
+}) {
+  const rowTotal = (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0);
+  const isDeferred = li.paymentRequired === false;
+  return (
+    <div className={`grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2.5 border-b border-border/30 last:border-0 items-center transition-opacity ${isDeferred ? "opacity-60" : ""}`}>
+      <div className="flex flex-col gap-1">
+        <Input
+          value={li.description}
+          onChange={(e) => onUpdate(idx, "description", e.target.value)}
+          placeholder="Description..."
+          className={`${inputCls} h-8 text-sm`}
+          data-testid={`line-item-description-${idx}`}
+        />
+        <Input
+          value={li.sku ?? ""}
+          onChange={(e) => onUpdate(idx, "sku", e.target.value || null)}
+          placeholder="SKU (optional)"
+          className={`${inputCls} h-6 text-xs`}
+          data-testid={`line-item-sku-${idx}`}
+        />
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <Switch
+            checked={!isDeferred}
+            onCheckedChange={(v) => onUpdate(idx, "paymentRequired", v)}
+            className="scale-75 origin-left"
+            data-testid={`line-item-required-${idx}`}
+          />
+          <span className="text-xs text-muted-foreground">
+            {isDeferred ? "Deferred" : "Required now"}
+          </span>
+        </div>
+      </div>
+      <Input
+        type="number"
+        min={0}
+        step={0.01}
+        value={li.quantity}
+        onChange={(e) => onUpdate(idx, "quantity", parseFloat(e.target.value) || 0)}
+        className={`${inputCls} h-8 text-sm`}
+        data-testid={`line-item-qty-${idx}`}
+      />
+      <Select
+        value={li.unit ?? "hours"}
+        onValueChange={(v) => onUpdate(idx, "unit", v)}
+      >
+        <SelectTrigger className={`${inputCls} h-8 text-sm`}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="bg-popover border-border">
+          <SelectItem value="hours" className="text-foreground text-sm">hrs</SelectItem>
+          <SelectItem value="days" className="text-foreground text-sm">days</SelectItem>
+          <SelectItem value="fixed" className="text-foreground text-sm">fixed</SelectItem>
+        </SelectContent>
+      </Select>
+      <div className="flex flex-col gap-1">
+        <div className="relative">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+          <Input
+            type="number"
+            min={0}
+            step={0.01}
+            value={li.unitPrice}
+            onChange={(e) => onUpdate(idx, "unitPrice", parseFloat(e.target.value) || 0)}
+            className={`${inputCls} h-8 text-sm pl-6 ${li.rateFormula ? "opacity-60" : ""}`}
+            readOnly={!!li.rateFormula}
+            data-testid={`line-item-price-${idx}`}
+          />
+        </div>
+        <Input
+          value={li.rateFormula ?? ""}
+          onChange={(e) => onFormulaChange(idx, e.target.value)}
+          placeholder="e.g. 30*0.0032"
+          className={`${inputCls} h-6 text-xs font-mono`}
+          data-testid={`line-item-formula-${idx}`}
+        />
+      </div>
+      <span className="text-foreground/90 text-sm font-medium tabular-nums">
+        {formatCurrency(rowTotal, currency)}
+      </span>
+      <button
+        type="button"
+        onClick={() => onRemove(idx)}
+        className="text-muted-foreground/40 hover:text-red-400 transition-colors p-1"
+        disabled={isOnly}
+        data-testid={`remove-line-item-${idx}`}
+      >
+        <Trash2 size={13} />
+      </button>
+    </div>
+  );
+});
+
 export default function QuotationFormPage() {
   const params = useParams<{ id?: string }>();
   const id = params.id;
@@ -227,13 +335,13 @@ export default function QuotationFormPage() {
     }
   }, [existing]);
 
-  function updateLineItem(index: number, key: keyof LineItemInput, value: unknown) {
+  const updateLineItem = useCallback((index: number, key: keyof LineItemInput, value: unknown) => {
     setLineItems((prev) =>
       prev.map((li, i) => (i === index ? { ...li, [key]: value } : li))
     );
-  }
+  }, []);
 
-  function handleFormulaChange(index: number, formula: string) {
+  const handleFormulaChange = useCallback((index: number, formula: string) => {
     const evaluated = formula.trim() ? evaluateFormulaClient(formula) : null;
     setLineItems((prev) =>
       prev.map((li, i) => {
@@ -245,43 +353,45 @@ export default function QuotationFormPage() {
         };
       })
     );
-  }
+  }, []);
 
-  function addLineItem() {
+  const addLineItem = useCallback(() => {
     setLineItems((prev) => [...prev, { ...emptyLineItem(), position: prev.length }]);
-  }
+  }, []);
 
-  function removeLineItem(index: number) {
+  const removeLineItem = useCallback((index: number) => {
     setLineItems((prev) => prev.filter((_, i) => i !== index).map((li, i) => ({ ...li, position: i })));
-  }
+  }, []);
 
-  // Computed totals
-  const subtotal = lineItems.reduce(
-    (sum, li) => sum + (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0),
-    0
-  );
-  const discountAmount =
-    discountType === "PERCENTAGE"
-      ? subtotal * (discountValue / 100)
-      : discountType === "FIXED"
-      ? discountValue
-      : 0;
-  const taxableAmount = subtotal - discountAmount;
-  const taxAmount = taxableAmount * (taxRate / 100);
-  const total = taxableAmount + taxAmount;
-
-  const hasDeferred = lineItems.some((li) => li.paymentRequired === false);
-  const requiredSubtotal = lineItems
-    .filter((li) => li.paymentRequired !== false)
-    .reduce((sum, li) => sum + (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0), 0);
-  const requiredDiscountAmount =
-    discountType === "PERCENTAGE"
-      ? requiredSubtotal * (discountValue / 100)
-      : discountType === "FIXED" && subtotal > 0
-      ? discountAmount * (requiredSubtotal / subtotal)
-      : 0;
-  const requiredTaxableAmount = requiredSubtotal - requiredDiscountAmount;
-  const requiredTotal = requiredTaxableAmount + requiredTaxableAmount * (taxRate / 100);
+  // Computed totals — memoised so they only recalculate when inputs change
+  const { subtotal, discountAmount, taxAmount, total, hasDeferred, requiredTotal } = useMemo(() => {
+    const subtotal = lineItems.reduce(
+      (sum, li) => sum + (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0),
+      0
+    );
+    const discountAmount =
+      discountType === "PERCENTAGE"
+        ? subtotal * (discountValue / 100)
+        : discountType === "FIXED"
+        ? discountValue
+        : 0;
+    const taxableAmount = subtotal - discountAmount;
+    const taxAmount = taxableAmount * (taxRate / 100);
+    const total = taxableAmount + taxAmount;
+    const hasDeferred = lineItems.some((li) => li.paymentRequired === false);
+    const requiredSubtotal = lineItems
+      .filter((li) => li.paymentRequired !== false)
+      .reduce((sum, li) => sum + (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0), 0);
+    const requiredDiscountAmount =
+      discountType === "PERCENTAGE"
+        ? requiredSubtotal * (discountValue / 100)
+        : discountType === "FIXED" && subtotal > 0
+        ? discountAmount * (requiredSubtotal / subtotal)
+        : 0;
+    const requiredTaxableAmount = requiredSubtotal - requiredDiscountAmount;
+    const requiredTotal = requiredTaxableAmount + requiredTaxableAmount * (taxRate / 100);
+    return { subtotal, discountAmount, taxAmount, total, hasDeferred, requiredTotal };
+  }, [lineItems, discountType, discountValue, taxRate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -451,97 +561,18 @@ export default function QuotationFormPage() {
             ))}
           </div>
 
-          {lineItems.map((li, idx) => {
-            const rowTotal = (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0);
-            const isDeferred = li.paymentRequired === false;
-            return (
-              <div key={idx} className={`grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2.5 border-b border-border/30 last:border-0 items-center transition-opacity ${isDeferred ? "opacity-60" : ""}`}>
-                <div className="flex flex-col gap-1">
-                  <Input
-                    value={li.description}
-                    onChange={(e) => updateLineItem(idx, "description", e.target.value)}
-                    placeholder="Description..."
-                    className={`${inputCls} h-8 text-sm`}
-                    data-testid={`line-item-description-${idx}`}
-                  />
-                  <Input
-                    value={li.sku ?? ""}
-                    onChange={(e) => updateLineItem(idx, "sku", e.target.value || null)}
-                    placeholder="SKU (optional)"
-                    className={`${inputCls} h-6 text-xs`}
-                    data-testid={`line-item-sku-${idx}`}
-                  />
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <Switch
-                      checked={!isDeferred}
-                      onCheckedChange={(v) => updateLineItem(idx, "paymentRequired", v)}
-                      className="scale-75 origin-left"
-                      data-testid={`line-item-required-${idx}`}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {isDeferred ? "Deferred" : "Required now"}
-                    </span>
-                  </div>
-                </div>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={li.quantity}
-                  onChange={(e) => updateLineItem(idx, "quantity", parseFloat(e.target.value) || 0)}
-                  className={`${inputCls} h-8 text-sm`}
-                  data-testid={`line-item-qty-${idx}`}
-                />
-                <Select
-                  value={li.unit ?? "hours"}
-                  onValueChange={(v) => updateLineItem(idx, "unit", v)}
-                >
-                  <SelectTrigger className={`${inputCls} h-8 text-sm`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border">
-                    <SelectItem value="hours" className="text-foreground text-sm">hrs</SelectItem>
-                    <SelectItem value="days" className="text-foreground text-sm">days</SelectItem>
-                    <SelectItem value="fixed" className="text-foreground text-sm">fixed</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className="flex flex-col gap-1">
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={li.unitPrice}
-                      onChange={(e) => updateLineItem(idx, "unitPrice", parseFloat(e.target.value) || 0)}
-                      className={`${inputCls} h-8 text-sm pl-6 ${li.rateFormula ? "opacity-60" : ""}`}
-                      readOnly={!!li.rateFormula}
-                      data-testid={`line-item-price-${idx}`}
-                    />
-                  </div>
-                  <Input
-                    value={li.rateFormula ?? ""}
-                    onChange={(e) => handleFormulaChange(idx, e.target.value)}
-                    placeholder="e.g. 30*0.0032"
-                    className={`${inputCls} h-6 text-xs font-mono`}
-                    data-testid={`line-item-formula-${idx}`}
-                  />
-                </div>
-                <span className="text-foreground/90 text-sm font-medium tabular-nums">
-                  {formatCurrency(rowTotal, currency)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeLineItem(idx)}
-                  className="text-muted-foreground/40 hover:text-red-400 transition-colors p-1"
-                  disabled={lineItems.length === 1}
-                  data-testid={`remove-line-item-${idx}`}
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            );
-          })}
+          {lineItems.map((li, idx) => (
+            <LineItemRow
+              key={idx}
+              li={li}
+              idx={idx}
+              currency={currency}
+              isOnly={lineItems.length === 1}
+              onUpdate={updateLineItem}
+              onFormulaChange={handleFormulaChange}
+              onRemove={removeLineItem}
+            />
+          ))}
 
           {/* Totals */}
           <div className="px-5 py-4 border-t border-border bg-muted/30">
