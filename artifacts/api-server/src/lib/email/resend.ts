@@ -127,24 +127,34 @@ async function sendReceiptEmail(args: ReceiptEmailArgs): Promise<void> {
   }
 }
 
+export type SendReceiptResult =
+  | { sent: true }
+  | { sent: false; reason: string };
+
 /**
  * High-level helper: load all required data, generate the receipt PDF, and
- * send the receipt email to the client. Safe to call fire-and-forget — all
- * errors are thrown so the caller can .catch() them.
+ * send the receipt email to the client.
  *
- * Silently skips (with a console.warn) when:
- *  - The quotation is not PAID
- *  - The client has no email address on record
- *  - Company settings have not been configured
- *  - RESEND_API_KEY is absent
+ * Returns { sent: true } on success.
+ * Returns { sent: false, reason } when the send is gracefully skipped (missing
+ * API key, no client email, unconfigured company). Does NOT throw in those cases.
+ * Throws on unexpected errors (DB failure, PDF render failure, Resend API error)
+ * so callers can .catch() them for logging.
  */
-export async function sendReceiptForQuotation(quotationId: string): Promise<void> {
+export async function sendReceiptForQuotation(quotationId: string): Promise<SendReceiptResult> {
   const [quote] = await db
     .select()
     .from(quotationsTable)
     .where(eq(quotationsTable.id, quotationId));
 
-  if (!quote || quote.status !== "PAID") return;
+  if (!quote || quote.status !== "PAID") {
+    return { sent: false, reason: "Quotation is not PAID" };
+  }
+
+  if (!getResendClient()) {
+    console.warn(`[email] Skipping receipt for ${quotationId}: RESEND_API_KEY not set`);
+    return { sent: false, reason: "Email delivery is not configured (RESEND_API_KEY missing)" };
+  }
 
   type ClientSnap = { email?: string | null; name?: string };
   type CompanySnap = { name?: string };
@@ -164,10 +174,10 @@ export async function sendReceiptForQuotation(quotationId: string): Promise<void
 
   if (!clientEmail) {
     console.warn(`[email] Skipping receipt for ${quotationId}: no client email on record`);
-    return;
+    return { sent: false, reason: "Client has no email address on record" };
   }
 
-  const [[...lineItems], settingsRows] = await Promise.all([
+  const [lineItems, settingsRows] = await Promise.all([
     db
       .select()
       .from(lineItemsTable)
@@ -179,7 +189,7 @@ export async function sendReceiptForQuotation(quotationId: string): Promise<void
   const settings = settingsRows[0] ?? null;
   if (!settings) {
     console.warn(`[email] Skipping receipt for ${quotationId}: company settings not configured`);
-    return;
+    return { sent: false, reason: "Company settings have not been configured" };
   }
 
   const [liveClient] = await db
@@ -208,4 +218,5 @@ export async function sendReceiptForQuotation(quotationId: string): Promise<void
   });
 
   console.log(`[email] Receipt sent for ${quotationId} to ${clientEmail}`);
+  return { sent: true };
 }

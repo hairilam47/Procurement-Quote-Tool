@@ -632,8 +632,8 @@ router.post("/quotations/:id/resend-receipt", requireAuth, async (req, res): Pro
       res.status(400).json({ error: "Receipt emails can only be sent for PAID quotations" });
       return;
     }
-    await sendReceiptForQuotation(quote.id);
-    res.json({ sent: true });
+    const result = await sendReceiptForQuotation(quote.id);
+    res.json(result);
   } catch (err) {
     console.error("[resend-receipt]", err);
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to send receipt email" });

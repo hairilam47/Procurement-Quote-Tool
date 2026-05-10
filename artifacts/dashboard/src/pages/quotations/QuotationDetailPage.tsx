@@ -171,11 +171,15 @@ export default function QuotationDetailPage() {
         method: "POST",
         credentials: "include",
       });
+      const body = await res.json().catch(() => ({})) as { sent?: boolean; reason?: string; error?: string };
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body as { error?: string }).error ?? "Failed to send email");
+        throw new Error(body.error ?? "Failed to send email");
       }
-      toast({ title: "Receipt email sent to client" });
+      if (body.sent) {
+        toast({ title: "Receipt email sent to client" });
+      } else {
+        toast({ title: `Email not sent: ${body.reason ?? "unknown reason"}`, variant: "destructive" });
+      }
     } catch (err) {
       toast({ title: err instanceof Error ? err.message : "Failed to send email", variant: "destructive" });
     } finally {
