@@ -1,6 +1,5 @@
 import React from "react";
 import { Link } from "wouter";
-import { FileText, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface MarketingLayoutProps {
@@ -12,13 +11,14 @@ export function MarketingLayout({ children }: MarketingLayoutProps) {
     <div className="min-h-[100dvh] flex flex-col font-sans selection:bg-primary/20">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
         <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-bold text-lg tracking-tight">
-            <div className="bg-primary text-primary-foreground p-1.5 rounded-md">
-              <FileText className="w-5 h-5" />
-            </div>
-            QuoteFlow
+          <Link href="/" className="flex items-center">
+            <img
+              src={`${import.meta.env.BASE_URL}kuotflow-logo.svg`}
+              alt="KuotFlow"
+              className="h-10 w-auto"
+            />
           </Link>
-          
+
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-foreground transition-colors">How it works</a>
@@ -46,11 +46,12 @@ export function MarketingLayout({ children }: MarketingLayoutProps) {
         <div className="container mx-auto px-4 md:px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-12">
             <div className="col-span-2 lg:col-span-2">
-              <Link href="/" className="flex items-center gap-2 font-bold text-lg tracking-tight mb-4">
-                <div className="bg-primary text-primary-foreground p-1 rounded-md">
-                  <FileText className="w-4 h-4" />
-                </div>
-                QuoteFlow
+              <Link href="/" className="flex items-center mb-4">
+                <img
+                  src={`${import.meta.env.BASE_URL}kuotflow-logo.svg`}
+                  alt="KuotFlow"
+                  className="h-9 w-auto"
+                />
               </Link>
               <p className="text-muted-foreground text-sm max-w-xs">
                 Professional quotation management for IT service providers. Win more work with better quotes.
@@ -83,8 +84,9 @@ export function MarketingLayout({ children }: MarketingLayoutProps) {
           </div>
           <div className="border-t border-border/40 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} QuoteFlow. All rights reserved.
+              © {new Date().getFullYear()} KuotFlow. All rights reserved.
             </p>
+            <p className="text-xs text-muted-foreground italic">Quote That Close</p>
           </div>
         </div>
       </footer>

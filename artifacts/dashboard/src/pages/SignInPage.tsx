@@ -6,15 +6,14 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4">
       <div className="mb-8 text-center">
-        <div className="inline-flex items-center gap-2.5 mb-3">
-          <div className="w-9 h-9 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M2 12L6 4L10 10L12 7L14 12H2Z" fill="white" />
-            </svg>
-          </div>
-          <span className="text-2xl font-bold text-white tracking-tight">QuoteFlow</span>
+        <div className="flex items-center justify-center mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 56" className="h-12 w-auto">
+            <text x="4" y="48" fontFamily="Inter,system-ui,sans-serif" fontSize="48" fontWeight="800" letterSpacing="-2.5">
+              <tspan fill="#ffffff">Kuot</tspan><tspan fill="#3b82f6">Flow</tspan>
+            </text>
+          </svg>
         </div>
-        <p className="text-muted-foreground text-sm">Professional IT services quotation management</p>
+        <p className="text-slate-400 text-sm">Quote That Close</p>
       </div>
       <SignIn
         routing="path"

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 68">
+  <title>KuotFlow</title>
+  <text x="4" y="50" font-family="Inter,system-ui,sans-serif" font-size="50" font-weight="800" letter-spacing="-2.5">
+    <tspan fill="#0f172a">Kuot</tspan><tspan fill="#2563eb">Flow</tspan>
+  </text>
+  <text x="5" y="65" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="400" fill="#94a3b8">Quote That Close</text>
+</svg>

@@ -3,14 +3,14 @@ import { getUncachableStripeClient } from './stripeClient';
 async function createProducts() {
   try {
     const stripe = await getUncachableStripeClient();
-    console.log('Checking for existing QuoteFlow products...');
+    console.log('Checking for existing KuotFlow products...');
 
     const existing = await stripe.products.search({
-      query: "name:'QuoteFlow' AND active:'true'",
+      query: "name:'KuotFlow' AND active:'true'",
     });
 
     if (existing.data.length > 0) {
-      console.log('QuoteFlow product already exists — listing existing prices:');
+      console.log('KuotFlow product already exists — listing existing prices:');
       const prices = await stripe.prices.list({ product: existing.data[0].id, active: true });
       for (const p of prices.data) {
         const rec = p.recurring;
@@ -19,11 +19,11 @@ async function createProducts() {
       return;
     }
 
-    console.log('Creating QuoteFlow product...');
+    console.log('Creating KuotFlow product...');
     const product = await stripe.products.create({
-      name: 'QuoteFlow',
+      name: 'KuotFlow',
       description: 'Professional IT quotation management platform',
-      metadata: { app: 'quoteflow' },
+      metadata: { app: 'kuotflow' },
     });
     console.log(`Created product: ${product.id}`);
 

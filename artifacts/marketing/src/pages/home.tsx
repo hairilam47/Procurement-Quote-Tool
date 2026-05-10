@@ -60,7 +60,7 @@ export default function Home() {
                       <div className="w-3 h-3 rounded-full bg-green-400/60" />
                     </div>
                     <div className="flex-1 mx-3 bg-white/5 border border-white/10 rounded-md px-3 py-1">
-                      <span className="text-xs text-white/40">app.quoteflow.io/quotations/new</span>
+                      <span className="text-xs text-white/40">app.kuotflow.io/quotations/new</span>
                     </div>
                   </div>
                   <img src={heroQuotationBuilder} alt="Quotation Builder" className="w-full object-cover object-top" style={{ height: 380 }} />
@@ -75,7 +75,7 @@ export default function Home() {
                       <div className="w-3 h-3 rounded-full bg-green-400/60" />
                     </div>
                     <div className="flex-1 mx-3 bg-white/5 border border-white/10 rounded-md px-3 py-1">
-                      <span className="text-xs text-white/40">app.quoteflow.io/dashboard</span>
+                      <span className="text-xs text-white/40">app.kuotflow.io/dashboard</span>
                     </div>
                   </div>
                   <img src={heroDashboardOverview} alt="Dashboard Overview" className="w-full object-cover object-top" style={{ height: 340 }} />
@@ -90,7 +90,7 @@ export default function Home() {
                       <div className="w-3 h-3 rounded-full bg-green-400/60" />
                     </div>
                     <div className="flex-1 mx-3 bg-white/5 border border-white/10 rounded-md px-3 py-1">
-                      <span className="text-xs text-white/40">app.quoteflow.io/quotations/Q-2026-0008</span>
+                      <span className="text-xs text-white/40">app.kuotflow.io/quotations/Q-2026-0008</span>
                     </div>
                   </div>
                   <img src={heroClientAccept} alt="Quotation Detail" className="w-full object-cover object-top" style={{ height: 360 }} />
@@ -105,7 +105,7 @@ export default function Home() {
                       <div className="w-3 h-3 rounded-full bg-green-400/60" />
                     </div>
                     <div className="flex-1 mx-3 bg-white/5 border border-white/10 rounded-md px-3 py-1">
-                      <span className="text-xs text-white/40">app.quoteflow.io/clients</span>
+                      <span className="text-xs text-white/40">app.kuotflow.io/clients</span>
                     </div>
                   </div>
                   <img src={heroClientsList} alt="Clients List" className="w-full object-cover object-top" style={{ height: 360 }} />
@@ -120,7 +120,7 @@ export default function Home() {
                       <div className="w-3 h-3 rounded-full bg-green-400/60" />
                     </div>
                     <div className="flex-1 mx-3 bg-white/5 border border-white/10 rounded-md px-3 py-1">
-                      <span className="text-xs text-white/40">app.quoteflow.io/quotations/Q-2026-0008/pdf</span>
+                      <span className="text-xs text-white/40">app.kuotflow.io/quotations/Q-2026-0008/pdf</span>
                     </div>
                   </div>
                   <img src={heroPdfPreview} alt="PDF Preview" className="w-full object-cover object-top" style={{ height: 370 }} />
@@ -138,7 +138,7 @@ export default function Home() {
           <div className="text-center max-w-4xl mx-auto flex flex-col items-center">
             <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white text-sm font-medium px-4 py-1.5 rounded-full mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <Zap className="w-3.5 h-3.5" />
-              Introducing QuoteFlow
+              Introducing KuotFlow
             </div>
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-8 leading-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700">
               Quotes that <span className="text-primary">close.</span>
@@ -306,7 +306,7 @@ export default function Home() {
                 <span className="text-primary">Under 2 minutes.</span>
               </h2>
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                No training needed. No clunky UI. QuoteFlow is so intuitive your first quote is ready before your coffee cools down.
+                No training needed. No clunky UI. KuotFlow is so intuitive your first quote is ready before your coffee cools down.
               </p>
               <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-semibold px-4 py-2 rounded-full">
                 <Zap className="w-4 h-4" />
@@ -672,20 +672,20 @@ export default function Home() {
         <Accordion type="single" collapsible className="space-y-3">
           {[
             {
-              q: "Can I try QuoteFlow before paying?",
+              q: "Can I try KuotFlow before paying?",
               a: "Yes — you can sign up and explore the app completely free before adding a payment method. Create quotes, manage clients, and test every feature at your own pace.",
             },
             {
               q: "Which currencies are supported?",
-              a: "QuoteFlow supports all major currencies including USD, EUR, GBP, AUD, SGD, MYR and many more. You can set a default currency per client and switch on any individual quote.",
+              a: "KuotFlow supports all major currencies including USD, EUR, GBP, AUD, SGD, MYR and many more. You can set a default currency per client and switch on any individual quote.",
             },
             {
               q: "How does the Stripe payment link work?",
-              a: "When your client accepts a quote, you can attach a Stripe-powered payment link directly to it. They click, enter card details, and pay — QuoteFlow automatically marks the quote as PAID and updates your dashboard.",
+              a: "When your client accepts a quote, you can attach a Stripe-powered payment link directly to it. They click, enter card details, and pay — KuotFlow automatically marks the quote as PAID and updates your dashboard.",
             },
             {
               q: "What PDF templates are available?",
-              a: "QuoteFlow includes two professionally designed templates: Modern (clean lines, blue accents, contemporary layout) and Classic (elegant serif typography, formal structure). Both are fully branded with your company logo.",
+              a: "KuotFlow includes two professionally designed templates: Modern (clean lines, blue accents, contemporary layout) and Classic (elegant serif typography, formal structure). Both are fully branded with your company logo.",
             },
             {
               q: "Can I cancel at any time?",
@@ -819,7 +819,7 @@ function PricingSection() {
       <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
         <div className="bg-background border border-border rounded-3xl p-8 shadow-sm flex flex-col relative overflow-hidden">
           <div className="mb-8">
-            <h3 className="text-2xl font-bold mb-2">QuoteFlow Pro</h3>
+            <h3 className="text-2xl font-bold mb-2">KuotFlow Pro</h3>
             <p className="text-muted-foreground">{pricing[period].desc}</p>
           </div>
           <div className="mb-8">
@@ -835,7 +835,7 @@ function PricingSection() {
               "Multi-currency support",
               "Payment link integration",
               "Modern & Classic PDF templates",
-              "Remove QuoteFlow branding",
+              "Remove KuotFlow branding",
             ].map((f, i) => (
               <li key={i} className="flex items-center gap-3">
                 <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />

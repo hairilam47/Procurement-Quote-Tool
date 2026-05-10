@@ -112,14 +112,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
             collapsed ? "px-0 justify-center" : "gap-2.5 px-4"
           )}
         >
-          <div className="w-7 h-7 bg-blue-500 rounded-md flex items-center justify-center flex-shrink-0">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M2 12L6 4L10 10L12 7L14 12H2Z" fill="white" />
-            </svg>
+          <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-black text-sm leading-none select-none">K</span>
           </div>
           {!collapsed && (
-            <span className="font-bold text-foreground tracking-tight text-sm truncate">
-              QuoteFlow
+            <span className="font-bold tracking-tight text-sm truncate">
+              <span className="text-foreground">Kuot</span><span className="text-blue-500">Flow</span>
             </span>
           )}
           {/* Mobile close button */}
