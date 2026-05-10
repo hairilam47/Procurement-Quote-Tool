@@ -74,34 +74,16 @@ export default function DashboardPage() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={DollarSign}
-          label="Outstanding"
-          value={formatCurrency(outstanding)}
-          color="text-blue-400"
-          bg="bg-blue-500/10"
-        />
-        <StatCard
-          icon={FileText}
-          label="Total Quotes"
-          value={String(total)}
-          color="text-muted-foreground"
-          bg="bg-muted"
-        />
-        <StatCard
-          icon={CheckCircle}
-          label="Accepted"
-          value={String(counts["ACCEPTED"] ?? 0)}
-          color="text-emerald-400"
-          bg="bg-emerald-500/10"
-        />
-        <StatCard
-          icon={Clock}
-          label="Pending (Sent)"
-          value={String(counts["SENT"] ?? 0)}
-          color="text-amber-400"
-          bg="bg-amber-500/10"
-        />
+        {([
+          { icon: DollarSign, label: "Outstanding", value: formatCurrency(outstanding), color: "text-blue-400", bg: "bg-blue-500/10" },
+          { icon: FileText, label: "Total Quotes", value: String(total), color: "text-muted-foreground", bg: "bg-muted" },
+          { icon: CheckCircle, label: "Accepted", value: String(counts["ACCEPTED"] ?? 0), color: "text-emerald-400", bg: "bg-emerald-500/10" },
+          { icon: Clock, label: "Pending (Sent)", value: String(counts["SENT"] ?? 0), color: "text-amber-400", bg: "bg-amber-500/10" },
+        ] as const).map((card, i) => (
+          <div key={card.label} className="animate-fade-slide-in" style={{ animationDelay: `${i * 55}ms` }}>
+            <StatCard icon={card.icon} label={card.label} value={card.value} color={card.color} bg={card.bg} />
+          </div>
+        ))}
       </div>
 
       {/* Chart + recent */}
@@ -168,8 +150,9 @@ export default function DashboardPage() {
               {recent.length === 0 && (
                 <p className="text-muted-foreground text-sm py-8 text-center">No quotations yet</p>
               )}
-              {recent.map((q) => (
-                <Link key={q.id} href={`/quotations/${q.id}`}>
+              {recent.map((q, i) => (
+                <div key={q.id} className="animate-fade-slide-in" style={{ animationDelay: `${i * 50}ms` }}>
+                <Link href={`/quotations/${q.id}`}>
                   <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors cursor-pointer group">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -193,6 +176,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </Link>
+                </div>
               ))}
             </div>
           </BeamCard>
