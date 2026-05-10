@@ -10,7 +10,7 @@ export function BeamCard({
   return (
     <div
       className={cn(
-        "bg-card border border-border rounded-xl overflow-hidden",
+        "bg-card border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200",
         className
       )}
     >

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useListQuotations } from "@workspace/api-client-react";
 import { Link } from "wouter";
+import { motion } from "framer-motion";
 import { formatCurrency, formatDate, statusBadge, STATUS_LABELS } from "@/lib/format";
 import { Plus, Search, Filter, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -64,7 +65,7 @@ export default function QuotationsPage() {
   });
 
   return (
-    <div className="space-y-5">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -188,6 +189,6 @@ export default function QuotationsPage() {
           </div>
         )}
       </BeamCard>
-    </div>
+    </motion.div>
   );
 }

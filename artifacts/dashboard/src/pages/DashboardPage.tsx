@@ -31,11 +31,6 @@ const STATUS_CHART_COLORS: Record<string, string> = {
   EXPIRED: "#f59e0b",
 };
 
-const container = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.07 } },
-};
-const item = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } };
 
 export default function DashboardPage() {
   const { data, isLoading } = useGetDashboard();
@@ -62,9 +57,9 @@ export default function DashboardPage() {
   const recent = data?.recentQuotations ?? [];
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
-      <motion.div variants={item} className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Overview of your quotation pipeline</p>
@@ -75,10 +70,10 @@ export default function DashboardPage() {
             New Quotation
           </span>
         </Link>
-      </motion.div>
+      </div>
 
       {/* Stat cards */}
-      <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={DollarSign}
           label="Outstanding"
@@ -107,12 +102,12 @@ export default function DashboardPage() {
           color="text-amber-400"
           bg="bg-amber-500/10"
         />
-      </motion.div>
+      </div>
 
       {/* Chart + recent */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* Chart */}
-        <motion.div variants={item} className="lg:col-span-2">
+        <div className="lg:col-span-2">
           <BeamCard className="p-5 h-full">
             <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
               <TrendingUp size={14} className="text-blue-400" />
@@ -156,10 +151,10 @@ export default function DashboardPage() {
               </div>
             )}
           </BeamCard>
-        </motion.div>
+        </div>
 
         {/* Recent quotations */}
-        <motion.div variants={item} className="lg:col-span-3">
+        <div className="lg:col-span-3">
           <BeamCard className="p-5 h-full">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-foreground">Recent Quotations</h2>
@@ -201,7 +196,7 @@ export default function DashboardPage() {
               ))}
             </div>
           </BeamCard>
-        </motion.div>
+        </div>
       </div>
     </motion.div>
   );
