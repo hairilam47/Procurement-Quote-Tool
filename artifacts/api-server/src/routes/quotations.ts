@@ -8,6 +8,13 @@ import { generateId } from "../lib/id";
 import { renderQuotationPdf, renderFollowUpInvoicePdf, renderReceiptPdf } from "../lib/pdf/render";
 import { requireAuth } from "./auth";
 import { getZodErrors } from "../lib/zodError";
+import { getUncachableStripeClient } from "../stripeClient";
+
+/** Currencies where Stripe expects the amount in whole units (no cents). */
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA",
+  "PYG", "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF",
+]);
 
 /**
  * Fetch the live exchange rate from frankfurter.app.
@@ -522,6 +529,69 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
     res.status(201).json({ ...dup, lineItems });
   } catch {
     res.status(500).json({ error: "Failed to duplicate quotation" });
+  }
+});
+
+// Generate Stripe Payment Link for a quotation
+router.post("/quotations/:id/payment-link", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const [quote] = await db
+      .select()
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, String(req.params.id)));
+    if (!quote) {
+      res.status(404).json({ error: "Quotation not found" });
+      return;
+    }
+    if (quote.status !== "SENT" && quote.status !== "ACCEPTED") {
+      res.status(400).json({ error: "Payment links can only be generated for SENT or ACCEPTED quotations" });
+      return;
+    }
+    if (!quote.requiredTotal || parseFloat(quote.requiredTotal) <= 0) {
+      res.status(400).json({ error: "Quotation has no payable amount" });
+      return;
+    }
+
+    const currency = quote.currency.toLowerCase();
+    const rawAmount = parseFloat(quote.requiredTotal);
+    const unitAmount = ZERO_DECIMAL_CURRENCIES.has(quote.currency.toUpperCase())
+      ? Math.round(rawAmount)
+      : Math.round(rawAmount * 100);
+
+    const stripe = await getUncachableStripeClient();
+    const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+
+    const price = await stripe.prices.create({
+      currency,
+      unit_amount: unitAmount,
+      product_data: { name: `Payment for Quotation ${quote.number}` },
+    });
+
+    const paymentLink = await stripe.paymentLinks.create({
+      line_items: [{ price: price.id, quantity: 1 }],
+      metadata: { quotationId: quote.id },
+      after_completion: {
+        type: "redirect",
+        redirect: { url: `${baseUrl}/pay/success?quotationId=${quote.id}` },
+      },
+    });
+
+    const [updated] = await db
+      .update(quotationsTable)
+      .set({ paymentUrl: paymentLink.url, updatedAt: new Date() })
+      .where(eq(quotationsTable.id, quote.id))
+      .returning();
+
+    const lineItems = await db
+      .select()
+      .from(lineItemsTable)
+      .where(eq(lineItemsTable.quotationId, quote.id))
+      .orderBy(lineItemsTable.position);
+
+    res.json({ ...updated, lineItems });
+  } catch (err) {
+    console.error("[payment-link]", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to generate payment link" });
   }
 });
 

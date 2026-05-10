@@ -19,6 +19,9 @@ import {
   ChevronDown,
   FileText,
   Receipt,
+  Link2,
+  ClipboardCheck,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +32,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 const STATUS_TRANSITIONS: Record<string, ChangeQuotationStatusBodyStatus[]> = {
   DRAFT: ["SENT"],
@@ -51,6 +55,8 @@ export default function QuotationDetailPage() {
   const deleteQuotation = useDeleteQuotation();
   const changeStatus = useChangeQuotationStatus();
   const duplicate = useDuplicateQuotation();
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   async function handleDelete() {
     if (!confirm("Delete this quotation? This cannot be undone.")) return;
@@ -80,6 +86,37 @@ export default function QuotationDetailPage() {
       navigate(`/quotations/${newQ.id}`);
     } catch {
       toast({ title: "Failed to duplicate", variant: "destructive" });
+    }
+  }
+
+  async function handleGeneratePaymentLink() {
+    setIsGeneratingLink(true);
+    try {
+      const res = await fetch(`/api/quotations/${id}/payment-link`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Failed to generate payment link");
+      }
+      toast({ title: "Payment link generated" });
+      refetch();
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Failed to generate payment link", variant: "destructive" });
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  }
+
+  async function handleCopyLink() {
+    if (!quotation?.paymentUrl) return;
+    try {
+      await navigator.clipboard.writeText(quotation.paymentUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      toast({ title: "Could not copy to clipboard", variant: "destructive" });
     }
   }
 
@@ -140,6 +177,13 @@ export default function QuotationDetailPage() {
     }
   }
 
+  const showGenerateLink =
+    (quotation?.status === "SENT" || quotation?.status === "ACCEPTED") &&
+    !quotation?.paymentUrl;
+  const showCopyLink =
+    (quotation?.status === "SENT" || quotation?.status === "ACCEPTED") &&
+    !!quotation?.paymentUrl;
+
   if (isLoading) {
     return (
       <div className="space-y-4 max-w-3xl">
@@ -199,6 +243,39 @@ export default function QuotationDetailPage() {
           >
             <Download size={13} className="mr-1.5" /> PDF
           </Button>
+          {showGenerateLink && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGeneratePaymentLink}
+              disabled={isGeneratingLink}
+              className="border-violet-700 text-violet-400 hover:text-violet-200 hover:bg-violet-900/30"
+              data-testid="generate-payment-link-btn"
+            >
+              {isGeneratingLink
+                ? <Loader2 size={13} className="mr-1.5 animate-spin" />
+                : <Link2 size={13} className="mr-1.5" />}
+              Generate Payment Link
+            </Button>
+          )}
+          {showCopyLink && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-violet-400 font-medium px-2 py-1 rounded-full bg-violet-900/30 border border-violet-700/50">
+                Payment link active
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyLink}
+                className="border-violet-700 text-violet-400 hover:text-violet-200 hover:bg-violet-900/30"
+                data-testid="copy-payment-link-btn"
+              >
+                {linkCopied
+                  ? <><ClipboardCheck size={13} className="mr-1.5" /> Copied!</>
+                  : <><Copy size={13} className="mr-1.5" /> Copy Link</>}
+              </Button>
+            </div>
+          )}
           {quotation.status === "PAID" && (
             <Button
               variant="outline"
