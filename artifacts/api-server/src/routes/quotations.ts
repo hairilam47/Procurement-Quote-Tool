@@ -551,6 +551,10 @@ router.post("/quotations/:id/payment-link", requireAuth, async (req, res): Promi
       res.status(400).json({ error: "Quotation has no payable amount" });
       return;
     }
+    if (quote.paymentUrl) {
+      res.status(409).json({ error: "A payment link already exists for this quotation" });
+      return;
+    }
 
     const currency = quote.currency.toLowerCase();
     const rawAmount = parseFloat(quote.requiredTotal);

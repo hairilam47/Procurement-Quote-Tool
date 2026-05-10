@@ -274,6 +274,20 @@ export default function QuotationDetailPage() {
                   ? <><ClipboardCheck size={13} className="mr-1.5" /> Copied!</>
                   : <><Copy size={13} className="mr-1.5" /> Copy Link</>}
               </Button>
+              <a
+                href={quotation.paymentUrl ?? ""}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="view-payment-link-btn"
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-violet-700 text-violet-400 hover:text-violet-200 hover:bg-violet-900/30"
+                >
+                  <Link2 size={13} className="mr-1.5" /> View Link
+                </Button>
+              </a>
             </div>
           )}
           {quotation.status === "PAID" && (
