@@ -13,6 +13,8 @@ export type TemplateLineItem = {
 export type InvoiceMode = {
   documentTitle: string;
   referenceNumber: string;
+  paidAt?: Date | string | null;
+  receiptMode?: boolean;
 };
 
 export type TemplateProps = {

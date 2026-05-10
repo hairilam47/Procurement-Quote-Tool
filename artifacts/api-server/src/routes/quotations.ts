@@ -5,7 +5,7 @@ import { quotationSchema, changeStatusSchema } from "../lib/validation";
 import { computeTotals } from "../lib/calculations";
 import { evaluateFormula } from "../lib/formula";
 import { generateId } from "../lib/id";
-import { renderQuotationPdf, renderFollowUpInvoicePdf } from "../lib/pdf/render";
+import { renderQuotationPdf, renderFollowUpInvoicePdf, renderReceiptPdf } from "../lib/pdf/render";
 import { requireAuth } from "./auth";
 import { getZodErrors } from "../lib/zodError";
 
@@ -534,6 +534,60 @@ router.delete("/quotations/:id", requireAuth, async (req, res): Promise<void> =>
     res.status(204).send();
   } catch {
     res.status(500).json({ error: "Failed to delete quotation" });
+  }
+});
+
+// Receipt PDF endpoint (PAID quotations only)
+router.get("/quotations/:id/receipt-pdf", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const [quote] = await db
+      .select()
+      .from(quotationsTable)
+      .where(eq(quotationsTable.id, String(req.params.id)));
+    if (!quote) {
+      res.status(404).json({ error: "Quotation not found" });
+      return;
+    }
+
+    if (quote.status !== "PAID") {
+      res.status(400).json({ error: "Receipt is only available for PAID quotations" });
+      return;
+    }
+
+    const [client] = await db
+      .select()
+      .from(clientsTable)
+      .where(eq(clientsTable.id, quote.clientId));
+
+    const lineItems = await db
+      .select()
+      .from(lineItemsTable)
+      .where(eq(lineItemsTable.quotationId, quote.id))
+      .orderBy(lineItemsTable.position);
+
+    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    if (!settings) {
+      res.status(400).json({ error: "Configure company settings first" });
+      return;
+    }
+
+    const buffer = await renderReceiptPdf({
+      quote: { ...quote, lineItems },
+      client,
+      company: settings,
+    });
+
+    const receiptNumber = `REC-${quote.number}`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${receiptNumber}.pdf"`,
+    );
+    res.setHeader("Cache-Control", "private, no-store");
+    res.send(buffer);
+  } catch (err) {
+    console.error("[receipt-pdf]", err);
+    res.status(500).json({ error: "PDF render failed" });
   }
 });
 

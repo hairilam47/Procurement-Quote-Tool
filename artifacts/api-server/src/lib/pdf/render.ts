@@ -26,6 +26,7 @@ type QuoteData = {
   status: string;
   issueDate: Date;
   validUntil: Date;
+  paidAt?: Date | null;
   currency: string;
   secondaryCurrency?: string | null;
   secondaryExchangeRate?: string | null;
@@ -181,6 +182,66 @@ export async function renderFollowUpInvoicePdf(args: {
     invoiceMode: {
       documentTitle: "FOLLOW-UP INVOICE",
       referenceNumber: quote.number,
+    },
+  };
+
+  const Component =
+    quote.template === "CLASSIC" ? ClassicTemplate : ModernTemplate;
+
+  return (await renderToBuffer(
+    React.createElement(Component, props) as React.ReactElement<DocumentProps>,
+  )) as Buffer;
+}
+
+export async function renderReceiptPdf(args: {
+  quote: QuoteData;
+  client: ClientData;
+  company: CompanyData;
+}): Promise<Buffer> {
+  const { quote, client, company } = args;
+
+  const effectiveClient =
+    (quote.clientSnapshot as ClientData | null) ?? client;
+  const effectiveCompany =
+    (quote.companySnapshot as CompanyData | null) ?? company;
+
+  const logoDataUrl = await fetchLogoDataUrl(effectiveCompany.logoUrl);
+
+  // Include only upfront (paymentRequired=true) items; fall back to all if none are flagged
+  const upfrontItems = quote.lineItems.filter((li) => li.paymentRequired !== false);
+  const receiptItems = upfrontItems.length > 0 ? upfrontItems : quote.lineItems;
+
+  // Recalculate subtotal for the receipt items
+  const receiptSubtotal = receiptItems
+    .reduce((sum, li) => sum + Number(li.lineTotal), 0)
+    .toFixed(2);
+
+  const receiptNumber = `REC-${quote.number}`;
+
+  const receiptQuote = {
+    ...quote,
+    number: receiptNumber,
+    lineItems: receiptItems.map((li) => ({
+      ...li,
+      paymentRequired: true,
+    })) as TemplateLineItem[],
+    subtotal: receiptSubtotal,
+    total: quote.requiredTotal,
+    requiredTotal: quote.requiredTotal,
+    paymentUrl: null,
+    showQrCode: false,
+  };
+
+  const props: TemplateProps = {
+    quote: receiptQuote,
+    client: effectiveClient,
+    company: effectiveCompany,
+    logoDataUrl,
+    invoiceMode: {
+      documentTitle: "PAYMENT RECEIPT",
+      referenceNumber: quote.number,
+      paidAt: quote.paidAt ?? new Date(),
+      receiptMode: true,
     },
   };
 

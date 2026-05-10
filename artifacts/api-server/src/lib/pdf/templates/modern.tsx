@@ -366,8 +366,17 @@ export function ModernTemplate({
             <Text style={s.bold}>{fmtDate(quote.issueDate)}</Text>
           </View>
           <View style={s.dateBlock}>
-            <Text style={s.colLabel}>Valid until</Text>
-            <Text style={s.bold}>{fmtDate(quote.validUntil)}</Text>
+            {invoiceMode?.receiptMode && invoiceMode.paidAt ? (
+              <>
+                <Text style={s.colLabel}>Payment date</Text>
+                <Text style={s.bold}>{fmtDate(invoiceMode.paidAt)}</Text>
+              </>
+            ) : (
+              <>
+                <Text style={s.colLabel}>Valid until</Text>
+                <Text style={s.bold}>{fmtDate(quote.validUntil)}</Text>
+              </>
+            )}
           </View>
         </View>
 
@@ -574,7 +583,7 @@ export function ModernTemplate({
               </View>
             )}
             <View style={s.grandRow}>
-              <Text style={{ flex: 1 }}>{hasDeferred ? "Full quotation total" : "Total"}</Text>
+              <Text style={{ flex: 1 }}>{invoiceMode?.receiptMode ? "Total Paid" : hasDeferred ? "Full quotation total" : "Total"}</Text>
               <Text style={{ width: hasSec ? "30%" : undefined, textAlign: hasSec ? "right" : undefined }}>
                 {fmtMoney(quote.total, cur)}
               </Text>
@@ -629,7 +638,7 @@ export function ModernTemplate({
         {/* Fixed footer */}
         <View style={s.footer} fixed>
           <Text>
-            {company.name} · {isFollowUp && invoiceMode ? `Follow-up Invoice · Ref: ${invoiceMode.referenceNumber}` : `Quotation ${quote.number}`}
+            {company.name} · {invoiceMode?.receiptMode ? `Receipt · Ref: ${invoiceMode.referenceNumber}` : isFollowUp && invoiceMode ? `Follow-up Invoice · Ref: ${invoiceMode.referenceNumber}` : `Quotation ${quote.number}`}
           </Text>
           <Text
             render={({ pageNumber, totalPages }) =>
