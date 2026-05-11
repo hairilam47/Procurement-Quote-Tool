@@ -719,7 +719,18 @@ router.post("/quotations/:id/payment-link", requireAuth, async (req, res): Promi
       ? Math.round(rawAmount)
       : Math.round(rawAmount * 100);
 
-    const stripe = await getUncachableStripeClient();
+    let stripe;
+    try {
+      stripe = await getUncachableStripeClient();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Stripe is not configured";
+      res.status(503).json({
+        error: "stripe_misconfigured",
+        message: `Payment links unavailable: ${msg}. Go to Settings → Billing to resolve.`,
+      });
+      return;
+    }
+
     const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
 
     const price = await stripe.prices.create(
@@ -759,7 +770,7 @@ router.post("/quotations/:id/payment-link", requireAuth, async (req, res): Promi
     res.json({ ...updated, lineItems });
   } catch (err) {
     console.error("[payment-link]", err);
-    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to generate payment link" });
+    res.status(500).json({ error: "Failed to generate payment link" });
   }
 });
 

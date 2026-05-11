@@ -692,7 +692,25 @@ export default function SettingsPage() {
 }
 
 function StripeModeBar({ mode }: { mode?: "live" | "test" | "unknown" }) {
-  if (!mode || mode === "unknown") return null;
+  if (!mode) return null;
+  if (mode === "unknown") {
+    return (
+      <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-xs font-medium bg-red-950/60 border border-red-800 text-red-300 flex-wrap">
+        <div className="flex items-center gap-2">
+          <AlertCircle size={13} className="flex-shrink-0" />
+          <span>Stripe is not configured — payment links and subscriptions are unavailable.</span>
+        </div>
+        <a
+          href="https://replit.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-red-100 whitespace-nowrap"
+        >
+          Fix in Integrations →
+        </a>
+      </div>
+    );
+  }
   const isLive = mode === "live";
   return (
     <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${isLive ? "bg-green-950/60 border border-green-800 text-green-300" : "bg-amber-950/60 border border-amber-800 text-amber-300"}`}>

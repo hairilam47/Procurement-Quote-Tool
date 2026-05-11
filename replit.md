@@ -97,6 +97,22 @@ All under `/api/`:
 - `initStripe()` runs on startup: migrations → StripeSync → webhook → syncBackfill
 - 4 pricing tiers: Daily $2.99/day, Weekly $9.99/week, Monthly $29.99/mo, Yearly $199.99/yr
 - Seed script: `artifacts/api-server/src/seed-products.ts`
+- `GET /api/stripe/mode` returns `{ mode: "live" | "test" | "unknown" }` (no auth required)
+
+## Connecting Live Stripe in Production
+
+To switch from test mode to live mode in the deployed app:
+
+1. Open the **Integrations** tab in the Replit workspace sidebar
+2. Click the **Stripe** integration → **Manage connection**
+3. Add a **production** connection (alongside the existing development one) using your live Stripe secret and publishable keys (`sk_live_…` / `pk_live_…`)
+4. Redeploy the app — `REPLIT_DEPLOYMENT=1` causes `stripeClient.ts` to request the `production` environment credentials automatically
+5. After deployment, visit **Settings → Billing** in the dashboard — the mode badge should show green **"Live mode"**
+
+If the badge shows red **"Stripe is not configured"** after deploying:
+- Verify the production Stripe connection exists in the Integrations tab
+- Check deployment logs for `Failed to fetch Stripe credentials` errors
+- Ensure the Stripe webhook is re-registered for the production domain (handled automatically by `initStripe()` on startup)
 
 ## Marketing Page Notes
 
