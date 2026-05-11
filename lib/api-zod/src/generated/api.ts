@@ -1090,6 +1090,12 @@ export const GetDashboardResponse = zod.object({
       requiredTotal: zod.string().nullish(),
     }),
   ),
+  invoiceStats: zod.object({
+    outstanding: zod.string(),
+    paidThisMonth: zod.string(),
+    totalInvoiced: zod.string(),
+    draftCount: zod.number(),
+  }),
 });
 
 /**

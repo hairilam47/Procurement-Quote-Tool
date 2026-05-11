@@ -227,12 +227,20 @@ export interface SettingsInput {
   bankQrCodeUrl?: string | null;
 }
 
+export interface InvoiceStats {
+  outstanding: string;
+  paidThisMonth: string;
+  totalInvoiced: string;
+  draftCount: number;
+}
+
 export type DashboardDataStatusCounts = { [key: string]: number };
 
 export interface DashboardData {
   statusCounts: DashboardDataStatusCounts;
   outstandingTotal: string;
   recentQuotations: QuotationSummary[];
+  invoiceStats: InvoiceStats;
 }
 
 export interface InvoiceLineItem {

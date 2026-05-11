@@ -742,6 +742,15 @@ components:
         bankQrCodeUrl: { type: string, nullable: true }
       required: [name, addressLine1, city, postalCode, country, email, currency, defaultTaxRate, defaultTemplate]
 
+    InvoiceStats:
+      type: object
+      properties:
+        outstanding: { type: string }
+        paidThisMonth: { type: string }
+        totalInvoiced: { type: string }
+        draftCount: { type: integer }
+      required: [outstanding, paidThisMonth, totalInvoiced, draftCount]
+
     DashboardData:
       type: object
       properties:
@@ -753,7 +762,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/QuotationSummary"
-      required: [statusCounts, outstandingTotal, recentQuotations]
+        invoiceStats:
+          $ref: "#/components/schemas/InvoiceStats"
+      required: [statusCounts, outstandingTotal, recentQuotations, invoiceStats]
 
     InvoiceLineItem:
       type: object

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
-import { eq, inArray, sql, desc } from "drizzle-orm";
-import { db, quotationsTable, clientsTable } from "@workspace/db";
+import { eq, inArray, sql, desc, and, gte, lt } from "drizzle-orm";
+import { db, quotationsTable, clientsTable, invoicesTable } from "@workspace/db";
 import { requireAuth } from "./auth";
 
 const router = Router();
@@ -60,10 +60,46 @@ router.get("/dashboard", requireAuth, async (_req: Request, res: Response): Prom
       .orderBy(desc(quotationsTable.createdAt))
       .limit(10);
 
+    // Invoice stats
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    const [invoiceOutstanding] = await db
+      .select({ total: sql<string>`coalesce(sum(${invoicesTable.total}), 0)::text` })
+      .from(invoicesTable)
+      .where(eq(invoicesTable.status, "SENT"));
+
+    const [invoicePaidThisMonth] = await db
+      .select({ total: sql<string>`coalesce(sum(${invoicesTable.total}), 0)::text` })
+      .from(invoicesTable)
+      .where(
+        and(
+          eq(invoicesTable.status, "PAID"),
+          gte(invoicesTable.paidAt, monthStart),
+          lt(invoicesTable.paidAt, monthEnd),
+        ),
+      );
+
+    const [invoiceTotalInvoiced] = await db
+      .select({ total: sql<string>`coalesce(sum(${invoicesTable.total}), 0)::text` })
+      .from(invoicesTable);
+
+    const [invoiceDraftCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(invoicesTable)
+      .where(eq(invoicesTable.status, "DRAFT"));
+
     res.json({
       statusCounts: countsMap,
       outstandingTotal: outstanding[0]?.total ?? "0",
       recentQuotations: recent,
+      invoiceStats: {
+        outstanding: invoiceOutstanding?.total ?? "0",
+        paidThisMonth: invoicePaidThisMonth?.total ?? "0",
+        totalInvoiced: invoiceTotalInvoiced?.total ?? "0",
+        draftCount: invoiceDraftCount?.count ?? 0,
+      },
     });
   } catch {
     res.status(500).json({ error: "Failed to load dashboard" });

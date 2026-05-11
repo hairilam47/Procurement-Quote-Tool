@@ -11,6 +11,10 @@ import {
   Clock,
   Plus,
   ArrowRight,
+  Receipt,
+  BadgeDollarSign,
+  CalendarCheck,
+  FilePen,
 } from "lucide-react";
 import {
   BarChart,
@@ -55,6 +59,7 @@ export default function DashboardPage() {
 
   const outstanding = data?.outstandingTotal ?? "0";
   const recent = data?.recentQuotations ?? [];
+  const invoiceStats = data?.invoiceStats;
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -92,6 +97,55 @@ export default function DashboardPage() {
             <StatCard icon={card.icon} label={card.label} value={card.value} color={card.color} bg={card.bg} />
           </div>
         ))}
+      </div>
+
+      {/* Invoice stat cards */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Receipt size={14} className="text-violet-400" />
+          <h2 className="text-sm font-semibold text-foreground">Invoice Overview</h2>
+          <Link href="/invoices">
+            <span className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1 cursor-pointer transition-colors ml-auto">
+              View all <ArrowRight size={11} />
+            </span>
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {([
+            {
+              icon: DollarSign,
+              label: "Outstanding",
+              value: formatCurrency(invoiceStats?.outstanding ?? "0"),
+              color: "text-blue-400",
+              bg: "bg-blue-500/10",
+            },
+            {
+              icon: CalendarCheck,
+              label: "Paid This Month",
+              value: formatCurrency(invoiceStats?.paidThisMonth ?? "0"),
+              color: "text-emerald-400",
+              bg: "bg-emerald-500/10",
+            },
+            {
+              icon: BadgeDollarSign,
+              label: "Total Invoiced",
+              value: formatCurrency(invoiceStats?.totalInvoiced ?? "0"),
+              color: "text-violet-400",
+              bg: "bg-violet-500/10",
+            },
+            {
+              icon: FilePen,
+              label: "Draft Invoices",
+              value: String(invoiceStats?.draftCount ?? 0),
+              color: "text-muted-foreground",
+              bg: "bg-muted",
+            },
+          ] as const).map((card, i) => (
+            <div key={card.label} className="animate-fade-slide-in" style={{ animationDelay: `${i * 55}ms` }}>
+              <StatCard icon={card.icon} label={card.label} value={card.value} color={card.color} bg={card.bg} />
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Chart + recent */}
