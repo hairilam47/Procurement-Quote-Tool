@@ -27,6 +27,22 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
 
+function useNoIndex() {
+  useEffect(() => {
+    let tag = document.querySelector('meta[name="robots"][data-app-layout]') as HTMLMetaElement | null;
+    if (!tag) {
+      tag = document.createElement("meta");
+      tag.setAttribute("name", "robots");
+      tag.setAttribute("data-app-layout", "true");
+      document.head.appendChild(tag);
+    }
+    tag.setAttribute("content", "noindex, nofollow");
+    return () => {
+      tag?.parentNode?.removeChild(tag!);
+    };
+  }, []);
+}
+
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/quotations", icon: FileText, label: "Quotations" },
@@ -134,6 +150,7 @@ function UserAvatar() {
 }
 
 export default function AppLayout({ children }: AppLayoutProps) {
+  useNoIndex();
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
