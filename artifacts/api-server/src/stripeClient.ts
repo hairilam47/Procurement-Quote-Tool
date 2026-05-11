@@ -1,7 +1,15 @@
 import Stripe from 'stripe';
 import { StripeSync } from 'stripe-replit-sync';
 
-async function getCredentials(): Promise<{ publishableKey: string; secretKey: string }> {
+interface Credentials { publishableKey: string; secretKey: string }
+
+// In-memory credential cache keyed by environment.
+// Stripe API keys never rotate mid-session, so a 60-second TTL eliminates
+// the external HTTP round-trip on every Stripe API call (~500-1000ms saved).
+const credentialCache: Record<string, { value: Credentials; expiresAt: number }> = {};
+const CACHE_TTL_MS = 60_000;
+
+async function getCredentials(): Promise<Credentials> {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? 'repl ' + process.env.REPL_IDENTITY
@@ -18,6 +26,12 @@ async function getCredentials(): Promise<{ publishableKey: string; secretKey: st
 
   const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
   const targetEnvironment = isProduction ? 'production' : 'development';
+
+  // Return cached credentials if still fresh
+  const cached = credentialCache[targetEnvironment];
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.value;
+  }
 
   const url = new URL(`https://${hostname}/api/v2/connection`);
   url.searchParams.set('include_secrets', 'true');
@@ -49,16 +63,26 @@ async function getCredentials(): Promise<{ publishableKey: string; secretKey: st
     );
   }
 
-  return {
+  const credentials: Credentials = {
     publishableKey: settings.publishable,
     secretKey: settings.secret,
   };
+
+  credentialCache[targetEnvironment] = {
+    value: credentials,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  };
+
+  return credentials;
 }
 
-export async function getUncachableStripeClient(): Promise<Stripe> {
+export async function getStripeClient(): Promise<Stripe> {
   const { secretKey } = await getCredentials();
   return new Stripe(secretKey);
 }
+
+// Keep legacy name as alias so any external callers aren't broken
+export const getUncachableStripeClient = getStripeClient;
 
 export async function getStripePublishableKey(): Promise<string> {
   const { publishableKey } = await getCredentials();

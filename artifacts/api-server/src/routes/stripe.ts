@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import Stripe from "stripe";
-import { getUncachableStripeClient, getStripePublishableKey } from "../stripeClient";
+import { getStripeClient, getStripePublishableKey } from "../stripeClient";
 import { requireAuth } from "./auth";
 
 const router: IRouter = Router();
@@ -42,52 +42,68 @@ router.get("/stripe/mode", async (_req, res): Promise<void> => {
 
 router.get("/stripe/prices", async (_req, res) => {
   try {
-    // Build an ordered list of exactly the 4 canonical plan prices.
-    // Priority: explicit STRIPE_PRICE_* env var → cheapest active price for that interval.
+    // Canonical plan order for display
     const plans = [
-      { plan: "daily",   interval: "day" },
-      { plan: "weekly",  interval: "week" },
-      { plan: "monthly", interval: "month" },
-      { plan: "yearly",  interval: "year" },
-    ] as const;
+      { plan: "daily"   as const, interval: "day"   },
+      { plan: "weekly"  as const, interval: "week"  },
+      { plan: "monthly" as const, interval: "month" },
+      { plan: "yearly"  as const, interval: "year"  },
+    ];
 
-    const rows: object[] = [];
+    // Collect the plans that have an explicit price ID configured
+    const explicitIds = plans
+      .map(({ plan }) => PLAN_PRICE_IDS[plan])
+      .filter((id): id is string => Boolean(id));
 
+    interface PriceRow {
+      price_id: string;
+      unit_amount: number;
+      currency: string;
+      recurring: { interval: string; interval_count: number } | null;
+      active: boolean;
+    }
+
+    let fetchedRows: PriceRow[] = [];
+
+    if (explicitIds.length > 0) {
+      // Single query for all configured price IDs — no sequential round trips
+      const result = await db.execute(sql`
+        SELECT
+          p.id as price_id,
+          p.unit_amount,
+          p.currency,
+          p.recurring,
+          p.active
+        FROM stripe.prices p
+        WHERE p.id = ANY(${sql.raw(`ARRAY[${explicitIds.map(id => `'${id.replace(/'/g, "''")}'`).join(",")}]`)})
+      `);
+      fetchedRows = result.rows as unknown as PriceRow[];
+    }
+
+    // Re-order to canonical plan order; fall back to per-interval DB query for any missing plan
+    const rows: PriceRow[] = [];
     for (const { plan, interval } of plans) {
       const explicitId = PLAN_PRICE_IDS[plan];
-
       if (explicitId) {
-        // Fetch the exact configured price
-        const result = await db.execute(sql`
-          SELECT
-            p.id as price_id,
-            p.unit_amount,
-            p.currency,
-            p.recurring,
-            p.active
-          FROM stripe.prices p
-          WHERE p.id = ${explicitId}
-          LIMIT 1
-        `);
-        if (result.rows.length) rows.push(result.rows[0] as object);
-      } else {
-        // Fallback: cheapest active price for this interval
-        const result = await db.execute(sql`
-          SELECT
-            p.id as price_id,
-            p.unit_amount,
-            p.currency,
-            p.recurring,
-            p.active
-          FROM stripe.prices p
-          WHERE p.active = true
-            AND (p.recurring->>'interval') = ${interval}
-            AND (p.recurring->>'interval_count')::int = 1
-          ORDER BY p.unit_amount ASC
-          LIMIT 1
-        `);
-        if (result.rows.length) rows.push(result.rows[0] as object);
+        const found = fetchedRows.find((r) => r.price_id === explicitId);
+        if (found) { rows.push(found); continue; }
       }
+      // Fallback: cheapest active price for this interval (covers missing env var or missing DB row)
+      const result = await db.execute(sql`
+        SELECT
+          p.id as price_id,
+          p.unit_amount,
+          p.currency,
+          p.recurring,
+          p.active
+        FROM stripe.prices p
+        WHERE p.active = true
+          AND (p.recurring->>'interval') = ${interval}
+          AND (p.recurring->>'interval_count')::int = 1
+        ORDER BY p.unit_amount ASC
+        LIMIT 1
+      `);
+      if (result.rows.length) rows.push(result.rows[0] as unknown as PriceRow);
     }
 
     res.json({ data: rows });
@@ -135,7 +151,7 @@ router.post("/stripe/create-checkout-session", requireAuth, async (req, res): Pr
 
     let stripe: Stripe;
     try {
-      stripe = await getUncachableStripeClient();
+      stripe = await getStripeClient();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Stripe is not configured";
       res.status(503).json({ error: `Payment unavailable: ${msg}` });
@@ -240,7 +256,7 @@ router.get("/stripe/subscription", requireAuth, async (req, res): Promise<void> 
 
     let stripe;
     try {
-      stripe = await getUncachableStripeClient();
+      stripe = await getStripeClient();
     } catch {
       res.json({ subscription: null });
       return;
@@ -283,7 +299,7 @@ router.post("/stripe/customer-portal", requireAuth, async (req, res): Promise<vo
 
     let stripe;
     try {
-      stripe = await getUncachableStripeClient();
+      stripe = await getStripeClient();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Stripe is not configured";
       res.status(503).json({ error: `Billing portal unavailable: ${msg}` });
