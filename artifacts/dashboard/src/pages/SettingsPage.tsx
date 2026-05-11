@@ -701,12 +701,12 @@ function StripeModeBar({ mode }: { mode?: "live" | "test" | "unknown" }) {
           <span>Stripe is not configured — payment links and subscriptions are unavailable.</span>
         </div>
         <a
-          href="https://replit.com"
+          href="https://docs.replit.com/cloud-services/integrations/stripe"
           target="_blank"
           rel="noopener noreferrer"
           className="underline underline-offset-2 hover:text-red-100 whitespace-nowrap"
         >
-          Fix in Integrations →
+          Setup guide →
         </a>
       </div>
     );
