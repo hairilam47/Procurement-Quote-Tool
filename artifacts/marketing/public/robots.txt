@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://kuotflow.app/marketing/sitemap.xml
+Sitemap: https://kuotflow.com/sitemap.xml
