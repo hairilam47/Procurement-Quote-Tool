@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { eq, sql } from "drizzle-orm";
-import { db, usersTable, companySettingsTable } from "@workspace/db";
+import { eq, sql, count } from "drizzle-orm";
+import { db, usersTable, clientsTable, quotationsTable, invoicesTable, companySettingsTable } from "@workspace/db";
 import { auth } from "../lib/auth";
 import { fromNodeHeaders } from "better-auth/node";
 import { getUncachableStripeClient } from "../stripeClient";
@@ -23,12 +23,18 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
 }
 
+const FREE_TRIAL_LIMIT = 1;
+
 /**
- * Require an active or trialing Stripe subscription.
+ * Require an active or trialing Stripe subscription, OR within free-trial limits.
  *
  * Resolution order:
  *  1. Short-circuit on req.subscriptionActive (already verified by an earlier middleware in the chain)
- *  2. Check users.stripeSubscriptionId — if missing, reject immediately
+ *  2. Check users.stripeSubscriptionId — if missing, check free-trial eligibility
+ *     a. If trialDismissedAt is null → user hasn't seen the modal yet → block (modal will show)
+ *     b. If trialDismissedAt is set → user is in free-trial mode → check record counts
+ *        - ≤1 client, ≤1 quotation, ≤1 invoice → allow
+ *        - Any limit exceeded → return 402 with trial-limit message
  *  3. Query the synced stripe.subscriptions table for the subscription status
  *  4. If the DB row is present and status is active/trialing → allow
  *  5. If the DB row is present but status is something else → reject
@@ -36,7 +42,6 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
  *  7. If Stripe API also fails → reject (fail-closed)
  */
 export async function requireSubscription(req: Request, res: Response, next: NextFunction): Promise<void> {
-  // Per-request cache: if a previous middleware already verified this request, skip the check
   if (req.subscriptionActive === true) {
     next();
     return;
@@ -44,15 +49,45 @@ export async function requireSubscription(req: Request, res: Response, next: Nex
 
   try {
     const [user] = await db
-      .select({ stripeSubscriptionId: usersTable.stripeSubscriptionId })
+      .select({
+        stripeSubscriptionId: usersTable.stripeSubscriptionId,
+        trialDismissedAt: usersTable.trialDismissedAt,
+      })
       .from(usersTable)
       .where(eq(usersTable.id, req.userId));
 
     if (!user?.stripeSubscriptionId) {
-      res.status(402).json({
-        error: "subscription_required",
-        message: "An active subscription is required. Please subscribe to continue.",
-      });
+      // No subscription — check free-trial mode
+      if (!user?.trialDismissedAt) {
+        // User hasn't dismissed the modal yet — block so the frontend can show the modal
+        res.status(402).json({
+          error: "subscription_required",
+          message: "An active subscription is required. Please subscribe to continue.",
+        });
+        return;
+      }
+
+      // User is in free-trial mode — check record counts
+      const [[clientCount], [quotationCount], [invoiceCount]] = await Promise.all([
+        db.select({ n: count() }).from(clientsTable).where(eq(clientsTable.userId, req.userId)),
+        db.select({ n: count() }).from(quotationsTable).where(eq(quotationsTable.userId, req.userId)),
+        db.select({ n: count() }).from(invoicesTable).where(eq(invoicesTable.userId, req.userId)),
+      ]);
+
+      const clients = clientCount?.n ?? 0;
+      const quotations = quotationCount?.n ?? 0;
+      const invoices = invoiceCount?.n ?? 0;
+
+      if (clients > FREE_TRIAL_LIMIT || quotations > FREE_TRIAL_LIMIT || invoices > FREE_TRIAL_LIMIT) {
+        res.status(402).json({
+          error: "trial_limit_reached",
+          message: "Free trial limit reached. Subscribe to continue.",
+        });
+        return;
+      }
+
+      // Within free-trial limits — allow the request
+      next();
       return;
     }
 
@@ -61,7 +96,6 @@ export async function requireSubscription(req: Request, res: Response, next: Nex
     let dbQueryFailed = false;
     let dbRowMissing = false;
 
-    // Step 3: Try the synced stripe.subscriptions table first
     try {
       const result = await db.execute(sql`
         SELECT status FROM stripe.subscriptions
@@ -78,7 +112,6 @@ export async function requireSubscription(req: Request, res: Response, next: Nex
       dbQueryFailed = true;
     }
 
-    // Step 4–5: If the DB gave us a status, use it — no need to call Stripe
     if (resolvedStatus !== null) {
       if (resolvedStatus === "active" || resolvedStatus === "trialing") {
         req.subscriptionActive = true;
@@ -92,7 +125,6 @@ export async function requireSubscription(req: Request, res: Response, next: Nex
       return;
     }
 
-    // Step 6: DB row missing or query failed — fall back to Stripe API (fail-closed)
     if (dbQueryFailed || dbRowMissing) {
       try {
         const stripe = await getUncachableStripeClient();
@@ -107,7 +139,6 @@ export async function requireSubscription(req: Request, res: Response, next: Nex
           });
         }
       } catch {
-        // Step 7: Stripe API also failed — fail-closed, reject the request
         res.status(402).json({
           error: "subscription_required",
           message: "Unable to verify your subscription. Please try again or contact support.",
@@ -116,7 +147,6 @@ export async function requireSubscription(req: Request, res: Response, next: Nex
       return;
     }
 
-    // Unreachable — but fail-closed as a safety net
     res.status(402).json({
       error: "subscription_required",
       message: "An active subscription is required. Please subscribe to continue.",
@@ -135,8 +165,6 @@ router.get("/capabilities", (_req: Request, res: Response): void => {
 });
 
 // Mobile OAuth callback — called by better-auth after social sign-in.
-// Reads the cookie session, extracts the bearer token, and redirects
-// to the mobile app's deep link with the token so the app can persist it.
 router.get("/mobile-callback", async (req: Request, res: Response): Promise<void> => {
   try {
     const session = await auth.api.getSession({
@@ -156,7 +184,6 @@ router.get("/mobile-callback", async (req: Request, res: Response): Promise<void
 });
 
 // First-run seed: upsert user record + ensure company_settings row exists
-// Note: uses /user/seed prefix to avoid conflict with better-auth's /auth/* handler
 router.post("/user/seed", requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.userId;
@@ -182,7 +209,6 @@ router.post("/user/seed", requireAuth, async (req: Request, res: Response): Prom
       user = created;
     }
 
-    // Ensure a company_settings row exists for this user (first-run seed)
     const [settings] = await db
       .select()
       .from(companySettingsTable)
@@ -222,6 +248,19 @@ router.get("/user/me", requireAuth, async (req: Request, res: Response): Promise
     res.json(user);
   } catch {
     res.status(500).json({ error: "Failed to get user" });
+  }
+});
+
+// Dismiss the subscription modal — enters free-trial mode
+router.post("/user/dismiss-trial", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    await db
+      .update(usersTable)
+      .set({ trialDismissedAt: new Date(), updatedAt: new Date() })
+      .where(eq(usersTable.id, req.userId));
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Failed to dismiss trial" });
   }
 });
 

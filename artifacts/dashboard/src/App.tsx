@@ -1,7 +1,6 @@
-import { useEffect, useRef } from "react";
-import { useToast } from "@/hooks/use-toast";
+import React, { useEffect, useRef, useState } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
-import { QueryClient, QueryClientProvider, QueryCache, MutationCache, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "@/components/layout/AppLayout";
@@ -19,28 +18,31 @@ import SettingsPage from "@/pages/SettingsPage";
 import SignInPage from "@/pages/SignInPage";
 import SignUpPage from "@/pages/SignUpPage";
 import PaymentSuccessPage from "@/pages/PaymentSuccessPage";
+import SubscriptionModal from "@/components/SubscriptionModal";
 import { authClient } from "@/lib/auth-client";
 import { ApiError } from "@workspace/api-client-react";
+import { Zap } from "lucide-react";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-function redirectToPaywall() {
-  sessionStorage.setItem("paywall_toast", "1");
-  window.location.href = `${basePath}/settings#billing`;
+const SHOW_MODAL_EVENT = "kuotflow:show-modal";
+
+function triggerShowModal() {
+  window.dispatchEvent(new Event(SHOW_MODAL_EVENT));
 }
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (err) => {
       if (err instanceof ApiError && err.status === 402) {
-        redirectToPaywall();
+        triggerShowModal();
       }
     },
   }),
   mutationCache: new MutationCache({
     onError: (err) => {
       if (err instanceof ApiError && err.status === 402) {
-        redirectToPaywall();
+        triggerShowModal();
       }
     },
   }),
@@ -49,21 +51,27 @@ const queryClient = new QueryClient({
   },
 });
 
-function PaywallToastDetector() {
-  const { toast } = useToast();
+interface UserMe {
+  id: string;
+  stripeSubscriptionId: string | null;
+  trialDismissedAt: string | null;
+  [key: string]: unknown;
+}
 
-  useEffect(() => {
-    if (sessionStorage.getItem("paywall_toast") === "1") {
-      sessionStorage.removeItem("paywall_toast");
-      toast({
-        title: "Active subscription required",
-        description: "Subscribe below to create and manage quotations, invoices, and clients.",
-        variant: "destructive",
-      });
-    }
-  }, []);
+interface SubscriptionData {
+  subscription: { status: string } | null;
+}
 
-  return null;
+async function fetchUserMe(): Promise<UserMe> {
+  const res = await fetch(`${basePath}/api/user/me`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch user");
+  return res.json();
+}
+
+async function fetchSubscription(): Promise<SubscriptionData> {
+  const res = await fetch(`${basePath}/api/stripe/subscription`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch subscription");
+  return res.json();
 }
 
 function CheckoutSuccessBanner() {
@@ -71,6 +79,7 @@ function CheckoutSuccessBanner() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") {
       queryClient.invalidateQueries({ queryKey: ["stripe-subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["user-me"] });
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
@@ -88,7 +97,7 @@ function SyncUser() {
     async function seed(retries = 3) {
       for (let i = 0; i < retries; i++) {
         try {
-          const res = await fetch("/api/user/seed", { method: "POST", credentials: "include" });
+          const res = await fetch(`${basePath}/api/user/seed`, { method: "POST", credentials: "include" });
           if (res.ok || cancelled) return;
         } catch {
           // network error — wait briefly before retrying
@@ -119,9 +128,9 @@ function CacheInvalidator() {
   return null;
 }
 
-function ProtectedRoutes() {
+function ProtectedRoutes({ topBanner }: { topBanner?: React.ReactNode }) {
   return (
-    <AppLayout>
+    <AppLayout topBanner={topBanner}>
       <Switch>
         <Route path="/" component={DashboardPage} />
         <Route path="/quotations" component={QuotationsPage} />
@@ -139,6 +148,83 @@ function ProtectedRoutes() {
         <Route path="/settings" component={SettingsPage} />
       </Switch>
     </AppLayout>
+  );
+}
+
+function TrialBanner({ onOpenModal }: { onOpenModal: () => void }) {
+  return (
+    <div className="w-full bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between gap-4 flex-wrap">
+      <p className="text-xs text-amber-300 flex items-center gap-1.5">
+        <Zap size={12} className="flex-shrink-0" />
+        You're on a free trial — 1 quotation, 1 invoice, and 1 client allowed.
+      </p>
+      <button
+        onClick={onOpenModal}
+        className="text-xs font-semibold text-amber-300 hover:text-amber-200 border border-amber-500/40 hover:border-amber-400 rounded px-3 py-1 transition flex-shrink-0"
+      >
+        Subscribe to unlock everything
+      </button>
+    </div>
+  );
+}
+
+function AuthenticatedApp() {
+  const qc = useQueryClient();
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const { data: userMe } = useQuery({
+    queryKey: ["user-me"],
+    queryFn: fetchUserMe,
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  const { data: subscriptionData } = useQuery({
+    queryKey: ["stripe-subscription"],
+    queryFn: fetchSubscription,
+    staleTime: 60_000,
+    retry: false,
+    enabled: !!userMe?.stripeSubscriptionId,
+  });
+
+  const hasActiveSubscription = !!userMe?.stripeSubscriptionId &&
+    (!subscriptionData || subscriptionData.subscription?.status === "active" || subscriptionData.subscription?.status === "trialing");
+
+  const trialDismissed = !!userMe?.trialDismissedAt;
+  const isTrialMode = !hasActiveSubscription && trialDismissed;
+
+  // Auto-open modal on login when user has no subscription and hasn't dismissed
+  useEffect(() => {
+    if (userMe && !hasActiveSubscription && !trialDismissed) {
+      setModalOpen(true);
+    }
+  }, [userMe, hasActiveSubscription, trialDismissed]);
+
+  // Listen for 402 events from QueryClient error handlers
+  useEffect(() => {
+    function handleShowModal() {
+      setModalOpen(true);
+    }
+    window.addEventListener(SHOW_MODAL_EVENT, handleShowModal);
+    return () => window.removeEventListener(SHOW_MODAL_EVENT, handleShowModal);
+  }, []);
+
+  function handleModalClose() {
+    setModalOpen(false);
+    qc.invalidateQueries({ queryKey: ["user-me"] });
+  }
+
+  const banner = isTrialMode
+    ? <TrialBanner onOpenModal={() => setModalOpen(true)} />
+    : undefined;
+
+  return (
+    <>
+      <SyncUser />
+      <CheckoutSuccessBanner />
+      <ProtectedRoutes topBanner={banner} />
+      {modalOpen && <SubscriptionModal onClose={handleModalClose} />}
+    </>
   );
 }
 
@@ -160,11 +246,7 @@ function AppRoutes() {
       <Route path="/pay/success" component={PaymentSuccessPage} />
       <Route>
         {session?.user ? (
-          <>
-            <SyncUser />
-            <CheckoutSuccessBanner />
-            <ProtectedRoutes />
-          </>
+          <AuthenticatedApp />
         ) : (
           <Redirect to="/sign-in" />
         )}
@@ -179,7 +261,6 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <CacheInvalidator />
-          <PaywallToastDetector />
           <AppRoutes />
           <Toaster />
         </TooltipProvider>

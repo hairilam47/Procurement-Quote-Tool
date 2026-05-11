@@ -53,6 +53,7 @@ const navItems = [
 
 interface AppLayoutProps {
   children: ReactNode;
+  topBanner?: ReactNode;
 }
 
 function NavLinks({
@@ -149,7 +150,7 @@ function UserAvatar() {
   );
 }
 
-export default function AppLayout({ children }: AppLayoutProps) {
+export default function AppLayout({ children, topBanner }: AppLayoutProps) {
   useNoIndex();
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -264,6 +265,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden bg-background min-w-0">
+        {topBanner}
         {/* Top bar */}
         <header className="h-14 flex items-center px-4 md:px-6 border-b border-border flex-shrink-0 gap-3">
           <button

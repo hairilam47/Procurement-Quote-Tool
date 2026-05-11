@@ -9,6 +9,7 @@ export const usersTable = pgTable("users", {
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   stripeAccountId: text("stripe_account_id"),
+  trialDismissedAt: timestamp("trial_dismissed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
