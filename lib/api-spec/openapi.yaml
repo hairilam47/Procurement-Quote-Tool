@@ -57,28 +57,6 @@ paths:
                   seeded: { type: boolean }
                 required: [user, seeded]
 
-  /user/sync:
-    post:
-      operationId: syncUser
-      tags: [auth]
-      summary: Sync user into DB
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                email: { type: string }
-                name: { type: string }
-      responses:
-        "200":
-          description: User synced
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-
   /user/me:
     get:
       operationId: getMe

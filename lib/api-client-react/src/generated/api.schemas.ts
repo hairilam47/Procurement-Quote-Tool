@@ -365,10 +365,6 @@ export type SeedUser200 = {
   seeded: boolean;
 };
 
-export type SyncUserBody = {
-  email?: string;
-  name?: string;
-};
 
 export type ListClientsParams = {
   search?: string;

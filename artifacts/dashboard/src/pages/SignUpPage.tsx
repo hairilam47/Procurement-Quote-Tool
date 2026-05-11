@@ -13,6 +13,7 @@ export default function SignUpPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [verifyPending, setVerifyPending] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +26,7 @@ export default function SignUpPage() {
       password,
       fetchOptions: {
         onError: (ctx) => setError(ctx.error.message ?? "Sign up failed"),
-        onSuccess: () => setLocation("/"),
+        onSuccess: () => setVerifyPending(true),
       },
     });
 
@@ -49,6 +50,36 @@ export default function SignUpPage() {
       },
     });
   };
+
+  if (verifyPending) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4">
+        <div className="w-full max-w-sm">
+          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-8 shadow-xl backdrop-blur-sm text-center">
+            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-blue-600/10 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-white mb-2">Check your email</h2>
+            <p className="text-sm text-slate-400 mb-1">
+              We sent a verification link to
+            </p>
+            <p className="text-sm font-medium text-white mb-4">{email}</p>
+            <p className="text-xs text-slate-500 mb-6">
+              Click the link in the email to verify your account. You can continue to the app in the meantime.
+            </p>
+            <button
+              onClick={() => setLocation("/")}
+              className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition"
+            >
+              Continue to app
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4">

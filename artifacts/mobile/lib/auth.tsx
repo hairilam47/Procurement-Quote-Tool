@@ -27,7 +27,7 @@ type AuthContextType = {
   isSignedIn: boolean;
   user: AuthUser | null;
   getToken: () => Promise<string | null>;
-  signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  signIn: (email: string, password: string, bearerToken?: string) => Promise<{ error?: string }>;
   signUp: (
     email: string,
     password: string,
@@ -77,7 +77,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = useCallback(
-    async (email: string, password: string): Promise<{ error?: string }> => {
+    async (email: string, password: string, bearerToken?: string): Promise<{ error?: string }> => {
+      // If a bearer token is supplied directly (e.g. from Google OAuth callback),
+      // validate it and persist it without calling the sign-in endpoint.
+      if (bearerToken) {
+        try {
+          const sessionUser = await fetchSession(bearerToken);
+          if (!sessionUser) {
+            return { error: "Invalid token from social login. Please try again." };
+          }
+          await SecureStore.setItemAsync(TOKEN_KEY, bearerToken);
+          setToken(bearerToken);
+          setUser(sessionUser);
+          return {};
+        } catch {
+          return { error: "Network error. Check your connection and try again." };
+        }
+      }
+
       try {
         const res = await fetch(`${getBaseURL()}/api/auth/sign-in/email`, {
           method: "POST",

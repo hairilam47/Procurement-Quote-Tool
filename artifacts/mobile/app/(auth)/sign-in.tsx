@@ -13,8 +13,17 @@ import { Link, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as WebBrowser from "expo-web-browser";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/lib/auth";
+
+WebBrowser.maybeCompleteAuthSession();
+
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+  : "http://localhost:8080";
+
+const HAS_GOOGLE = !!(process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID);
 
 export default function SignInScreen() {
   const colors = useColors();
@@ -27,6 +36,7 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const canSubmit = !!email && !!password && !loading;
 
@@ -42,6 +52,32 @@ export default function SignInScreen() {
       return;
     }
     router.replace("/(home)");
+  };
+
+  const handleGoogleSignIn = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setError("");
+    setGoogleLoading(true);
+    try {
+      const callbackURL = `${API_BASE}/api/auth/callback/google`;
+      const authURL = `${API_BASE}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
+      const result = await WebBrowser.openAuthSessionAsync(authURL, API_BASE + "/auth-mobile-callback");
+      if (result.type === "success" && result.url) {
+        const url = new URL(result.url);
+        const token = url.searchParams.get("token");
+        if (token) {
+          const signInResult = await signIn("", "", token);
+          if (!signInResult.error) {
+            router.replace("/(home)");
+            return;
+          }
+        }
+      }
+    } catch {
+      setError("Google sign-in failed. Please try again.");
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const styles = makeStyles(colors, insets);
@@ -124,6 +160,36 @@ export default function SignInScreen() {
             <Text style={styles.primaryButtonText}>Sign in</Text>
           )}
         </Pressable>
+
+        {HAS_GOOGLE && (
+          <>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.googleButton,
+                pressed && styles.pressed,
+                googleLoading && styles.primaryButtonDisabled,
+              ]}
+              onPress={handleGoogleSignIn}
+              disabled={googleLoading}
+              testID="google-sign-in-button"
+            >
+              {googleLoading ? (
+                <ActivityIndicator size="small" color={colors.foreground} />
+              ) : (
+                <>
+                  <GoogleIcon />
+                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                </>
+              )}
+            </Pressable>
+          </>
+        )}
       </View>
 
       <View style={styles.footer}>
@@ -135,6 +201,14 @@ export default function SignInScreen() {
         </Link>
       </View>
     </ScrollView>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <View style={{ width: 18, height: 18, marginRight: 8 }}>
+      <Text style={{ fontSize: 16 }}>G</Text>
+    </View>
   );
 }
 
@@ -240,6 +314,37 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
     },
     pressed: {
       opacity: 0.8,
+    },
+    dividerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: colors.border,
+    },
+    dividerText: {
+      fontSize: 12,
+      fontFamily: "Inter_400Regular",
+      color: colors.mutedForeground,
+    },
+    googleButton: {
+      height: 48,
+      borderRadius: colors.radius,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.card,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    googleButtonText: {
+      fontSize: 15,
+      fontFamily: "Inter_500Medium",
+      color: colors.foreground,
     },
     footer: {
       flexDirection: "row",

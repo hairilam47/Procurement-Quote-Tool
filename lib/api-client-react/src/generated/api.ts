@@ -38,7 +38,6 @@ import type {
   SeedUser200,
   SeedUserBody,
   SettingsInput,
-  SyncUserBody,
   UploadLogo200,
   UploadLogoBody,
   User,
@@ -212,92 +211,6 @@ export const useSeedUser = <
   TContext
 > => {
   return useMutation(getSeedUserMutationOptions(options));
-};
-
-/**
- * @summary Sync Clerk user into DB
- */
-export const getSyncUserUrl = () => {
-  return `/api/user/sync`;
-};
-
-export const syncUser = async (
-  syncUserBody: SyncUserBody,
-  options?: RequestInit,
-): Promise<User> => {
-  return customFetch<User>(getSyncUserUrl(), {
-    ...options,
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(syncUserBody),
-  });
-};
-
-export const getSyncUserMutationOptions = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof syncUser>>,
-    TError,
-    { data: BodyType<SyncUserBody> },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof syncUser>>,
-  TError,
-  { data: BodyType<SyncUserBody> },
-  TContext
-> => {
-  const mutationKey = ["syncUser"];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof syncUser>>,
-    { data: BodyType<SyncUserBody> }
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return syncUser(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type SyncUserMutationResult = NonNullable<
-  Awaited<ReturnType<typeof syncUser>>
->;
-export type SyncUserMutationBody = BodyType<SyncUserBody>;
-export type SyncUserMutationError = ErrorType<unknown>;
-
-/**
- * @summary Sync Clerk user into DB
- */
-export const useSyncUser = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof syncUser>>,
-    TError,
-    { data: BodyType<SyncUserBody> },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationResult<
-  Awaited<ReturnType<typeof syncUser>>,
-  TError,
-  { data: BodyType<SyncUserBody> },
-  TContext
-> => {
-  return useMutation(getSyncUserMutationOptions(options));
 };
 
 /**

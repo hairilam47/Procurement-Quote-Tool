@@ -28,6 +28,7 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [verifyPending, setVerifyPending] = useState(false);
 
   const canSubmit = !!name && !!email && !!password && !loading;
 
@@ -42,10 +43,36 @@ export default function SignUpScreen() {
       setError(result.error);
       return;
     }
-    router.replace("/(home)");
+    setVerifyPending(true);
   };
 
   const styles = makeStyles(colors, insets);
+
+  if (verifyPending) {
+    return (
+      <View style={[styles.container, { flex: 1, backgroundColor: colors.background }]}>
+        <View style={styles.verifyCard}>
+          <View style={styles.verifyIconWrap}>
+            <Ionicons name="mail-outline" size={40} color={colors.primary} />
+          </View>
+          <Text style={styles.verifyTitle}>Check your email</Text>
+          <Text style={styles.verifyBody}>
+            We sent a verification link to{"\n"}
+            <Text style={styles.verifyEmail}>{email}</Text>
+          </Text>
+          <Text style={styles.verifyHint}>
+            Click the link in the email to verify your account. You can continue using the app in the meantime.
+          </Text>
+          <Pressable
+            style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+            onPress={() => router.replace("/(home)")}
+          >
+            <Text style={styles.primaryButtonText}>Continue to app</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -168,6 +195,47 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
       paddingBottom: insets.bottom + webBottomInset + 32,
       paddingHorizontal: 24,
       justifyContent: "center",
+    },
+    verifyCard: {
+      margin: 24,
+      padding: 28,
+      borderRadius: 16,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      gap: 12,
+    },
+    verifyIconWrap: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: `${colors.primary}18`,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 4,
+    },
+    verifyTitle: {
+      fontSize: 22,
+      fontFamily: "Inter_700Bold",
+      color: colors.foreground,
+    },
+    verifyBody: {
+      fontSize: 15,
+      fontFamily: "Inter_400Regular",
+      color: colors.mutedForeground,
+      textAlign: "center",
+    },
+    verifyEmail: {
+      fontFamily: "Inter_600SemiBold",
+      color: colors.foreground,
+    },
+    verifyHint: {
+      fontSize: 13,
+      fontFamily: "Inter_400Regular",
+      color: colors.mutedForeground,
+      textAlign: "center",
+      lineHeight: 20,
     },
     header: {
       alignItems: "center",
