@@ -8,6 +8,7 @@ import {
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import * as WebBrowser from "expo-web-browser";
 import React, { useEffect } from "react";
 import { Alert } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -22,11 +23,23 @@ if (domain) setBaseUrl(`https://${domain}`);
 
 SplashScreen.preventAutoHideAsync();
 
+const PRICING_URL = domain
+  ? `https://${domain}/marketing/#pricing`
+  : "https://kuotflow.replit.app/marketing/#pricing";
+
 function showPaywallAlert() {
   Alert.alert(
     "Subscription Required",
-    "An active subscription is needed to perform this action. Please subscribe via the web dashboard.",
-    [{ text: "OK" }],
+    "An active subscription is needed to perform this action. Subscribe to create and manage quotations, invoices, and clients.",
+    [
+      { text: "Not now", style: "cancel" },
+      {
+        text: "View Pricing",
+        onPress: () => {
+          WebBrowser.openBrowserAsync(PRICING_URL).catch(() => {});
+        },
+      },
+    ],
   );
 }
 

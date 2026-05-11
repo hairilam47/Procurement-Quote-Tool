@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -24,6 +25,7 @@ import { ApiError } from "@workspace/api-client-react";
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 function redirectToPaywall() {
+  sessionStorage.setItem("paywall_toast", "1");
   window.location.href = `${basePath}/settings#billing`;
 }
 
@@ -46,6 +48,23 @@ const queryClient = new QueryClient({
     queries: { retry: 1, staleTime: 30_000 },
   },
 });
+
+function PaywallToastDetector() {
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (sessionStorage.getItem("paywall_toast") === "1") {
+      sessionStorage.removeItem("paywall_toast");
+      toast({
+        title: "Active subscription required",
+        description: "Subscribe below to create and manage quotations, invoices, and clients.",
+        variant: "destructive",
+      });
+    }
+  }, []);
+
+  return null;
+}
 
 function CheckoutSuccessBanner() {
   useEffect(() => {
@@ -160,6 +179,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <CacheInvalidator />
+          <PaywallToastDetector />
           <AppRoutes />
           <Toaster />
         </TooltipProvider>
