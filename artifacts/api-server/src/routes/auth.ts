@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { db, usersTable, companySettingsTable } from "@workspace/db";
 import { auth } from "../lib/auth";
 import { fromNodeHeaders } from "better-auth/node";
+import { getUncachableStripeClient } from "../stripeClient";
 
 const router = Router();
 
@@ -22,7 +23,25 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
 }
 
+/**
+ * Require an active or trialing Stripe subscription.
+ *
+ * Resolution order:
+ *  1. Short-circuit on req.subscriptionActive (already verified by an earlier middleware in the chain)
+ *  2. Check users.stripeSubscriptionId — if missing, reject immediately
+ *  3. Query the synced stripe.subscriptions table for the subscription status
+ *  4. If the DB row is present and status is active/trialing → allow
+ *  5. If the DB row is present but status is something else → reject
+ *  6. If the DB row is missing OR the query fails → fall back to Stripe API (fail-closed)
+ *  7. If Stripe API also fails → reject (fail-closed)
+ */
 export async function requireSubscription(req: Request, res: Response, next: NextFunction): Promise<void> {
+  // Per-request cache: if a previous middleware already verified this request, skip the check
+  if (req.subscriptionActive === true) {
+    next();
+    return;
+  }
+
   try {
     const [user] = await db
       .select({ stripeSubscriptionId: usersTable.stripeSubscriptionId })
@@ -37,25 +56,71 @@ export async function requireSubscription(req: Request, res: Response, next: Nex
       return;
     }
 
+    const subscriptionId = user.stripeSubscriptionId;
+    let resolvedStatus: string | null = null;
+    let dbQueryFailed = false;
+    let dbRowMissing = false;
+
+    // Step 3: Try the synced stripe.subscriptions table first
     try {
       const result = await db.execute(sql`
         SELECT status FROM stripe.subscriptions
-        WHERE id = ${user.stripeSubscriptionId}
+        WHERE id = ${subscriptionId}
         LIMIT 1
       `);
       const row = result.rows[0] as { status?: string } | undefined;
-      if (row && row.status !== "active" && row.status !== "trialing") {
+      if (row?.status) {
+        resolvedStatus = row.status;
+      } else {
+        dbRowMissing = true;
+      }
+    } catch {
+      dbQueryFailed = true;
+    }
+
+    // Step 4–5: If the DB gave us a status, use it — no need to call Stripe
+    if (resolvedStatus !== null) {
+      if (resolvedStatus === "active" || resolvedStatus === "trialing") {
+        req.subscriptionActive = true;
+        next();
+      } else {
         res.status(402).json({
           error: "subscription_required",
           message: "Your subscription is not active. Please renew to continue.",
         });
-        return;
       }
-    } catch {
-      // Stripe schema unavailable — trust the stored subscription ID
+      return;
     }
 
-    next();
+    // Step 6: DB row missing or query failed — fall back to Stripe API (fail-closed)
+    if (dbQueryFailed || dbRowMissing) {
+      try {
+        const stripe = await getUncachableStripeClient();
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        if (subscription.status === "active" || subscription.status === "trialing") {
+          req.subscriptionActive = true;
+          next();
+        } else {
+          res.status(402).json({
+            error: "subscription_required",
+            message: "Your subscription is not active. Please renew to continue.",
+          });
+        }
+      } catch {
+        // Step 7: Stripe API also failed — fail-closed, reject the request
+        res.status(402).json({
+          error: "subscription_required",
+          message: "Unable to verify your subscription. Please try again or contact support.",
+        });
+      }
+      return;
+    }
+
+    // Unreachable — but fail-closed as a safety net
+    res.status(402).json({
+      error: "subscription_required",
+      message: "An active subscription is required. Please subscribe to continue.",
+    });
   } catch {
     res.status(500).json({ error: "Failed to verify subscription" });
   }
