@@ -7,8 +7,10 @@ const router = Router();
 
 const ALL_STATUSES = ["DRAFT", "SENT", "ACCEPTED", "REJECTED", "PAID", "EXPIRED"] as const;
 
-router.get("/dashboard", requireAuth, async (_req: Request, res: Response): Promise<void> => {
+router.get("/dashboard", requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
+    const userId = req.userId;
+
     // Status counts — query then fill zeros for every enum value
     const statusRows = await db
       .select({
@@ -16,6 +18,7 @@ router.get("/dashboard", requireAuth, async (_req: Request, res: Response): Prom
         count: sql<number>`count(*)::int`,
       })
       .from(quotationsTable)
+      .where(eq(quotationsTable.userId, userId))
       .groupBy(quotationsTable.status);
 
     const countsMap: Record<string, number> = Object.fromEntries(
@@ -31,7 +34,7 @@ router.get("/dashboard", requireAuth, async (_req: Request, res: Response): Prom
         total: sql<string>`coalesce(sum(${quotationsTable.total}), 0)::text`,
       })
       .from(quotationsTable)
-      .where(inArray(quotationsTable.status, ["SENT", "ACCEPTED"]));
+      .where(and(eq(quotationsTable.userId, userId), inArray(quotationsTable.status, ["SENT", "ACCEPTED"])));
 
     // Recent 10 quotations — full QuotationSummary shape to match OpenAPI contract
     const recent = await db
@@ -57,6 +60,7 @@ router.get("/dashboard", requireAuth, async (_req: Request, res: Response): Prom
       })
       .from(quotationsTable)
       .leftJoin(clientsTable, eq(quotationsTable.clientId, clientsTable.id))
+      .where(eq(quotationsTable.userId, userId))
       .orderBy(desc(quotationsTable.createdAt))
       .limit(10);
 
@@ -68,13 +72,14 @@ router.get("/dashboard", requireAuth, async (_req: Request, res: Response): Prom
     const [invoiceOutstanding] = await db
       .select({ total: sql<string>`coalesce(sum(${invoicesTable.total}), 0)::text` })
       .from(invoicesTable)
-      .where(eq(invoicesTable.status, "SENT"));
+      .where(and(eq(invoicesTable.userId, userId), eq(invoicesTable.status, "SENT")));
 
     const [invoicePaidThisMonth] = await db
       .select({ total: sql<string>`coalesce(sum(${invoicesTable.total}), 0)::text` })
       .from(invoicesTable)
       .where(
         and(
+          eq(invoicesTable.userId, userId),
           eq(invoicesTable.status, "PAID"),
           gte(invoicesTable.paidAt, monthStart),
           lt(invoicesTable.paidAt, monthEnd),
@@ -83,12 +88,13 @@ router.get("/dashboard", requireAuth, async (_req: Request, res: Response): Prom
 
     const [invoiceTotalInvoiced] = await db
       .select({ total: sql<string>`coalesce(sum(${invoicesTable.total}), 0)::text` })
-      .from(invoicesTable);
+      .from(invoicesTable)
+      .where(eq(invoicesTable.userId, userId));
 
     const [invoiceDraftCount] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(invoicesTable)
-      .where(eq(invoicesTable.status, "DRAFT"));
+      .where(and(eq(invoicesTable.userId, userId), eq(invoicesTable.status, "DRAFT")));
 
     res.json({
       statusCounts: countsMap,

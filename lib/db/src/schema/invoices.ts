@@ -7,6 +7,7 @@ import {
   json,
   integer,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { clientsTable } from "./clients";
@@ -19,7 +20,7 @@ export const invoicesTable = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => usersTable.id, { onDelete: "cascade" }),
-    number: text("number").notNull().unique(),
+    number: text("number").notNull(),
     status: text("status").notNull().default("DRAFT"),
     issueDate: timestamp("issue_date").notNull().defaultNow(),
     dueDate: timestamp("due_date").notNull(),
@@ -65,6 +66,7 @@ export const invoicesTable = pgTable(
     index("invoices_user_id_idx").on(t.userId),
     index("invoices_status_idx").on(t.status),
     index("invoices_number_idx").on(t.number),
+    uniqueIndex("invoices_user_id_number_uidx").on(t.userId, t.number),
   ],
 );
 
