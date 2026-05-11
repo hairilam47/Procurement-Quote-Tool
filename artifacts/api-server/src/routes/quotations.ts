@@ -25,7 +25,7 @@ async function fetchExchangeRate(from: string, to: string): Promise<number | nul
   try {
     if (from.toUpperCase() === to.toUpperCase()) return 1;
     const res = await fetch(
-      `https://api.frankfurter.app/latest?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      `https://api.frankfurter.dev/v1/latest?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
       { signal: AbortSignal.timeout(5000) },
     );
     if (!res.ok) return null;

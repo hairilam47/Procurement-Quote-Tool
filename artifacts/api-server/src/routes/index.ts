@@ -9,6 +9,7 @@ import settingsRouter from "./settings";
 import dashboardRouter from "./dashboard";
 import stripeRouter from "./stripe";
 import stripeConnectRouter from "./stripe-connect";
+import exchangeRateRouter from "./exchange-rate";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(settingsRouter);
 router.use(dashboardRouter);
 router.use(stripeRouter);
 router.use(stripeConnectRouter);
+router.use(exchangeRateRouter);
 
 export default router;

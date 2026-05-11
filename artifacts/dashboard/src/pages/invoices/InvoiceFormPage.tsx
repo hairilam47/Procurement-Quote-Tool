@@ -247,13 +247,13 @@ export default function InvoiceFormPage() {
     const controller = new AbortController();
     const timer = setTimeout(() => {
       fetch(
-        `https://api.frankfurter.app/latest?from=${encodeURIComponent(currency)}&to=${encodeURIComponent(secondaryCurrency)}`,
+        `/api/exchange-rate?from=${encodeURIComponent(currency)}&to=${encodeURIComponent(secondaryCurrency)}`,
         { signal: controller.signal }
       )
         .then(async (res) => {
           if (!res.ok) throw new Error("Rate fetch failed");
-          const json = await res.json() as { rates?: Record<string, number> };
-          const rate = json.rates?.[secondaryCurrency.toUpperCase()];
+          const json = await res.json() as { rate?: number };
+          const rate = json.rate;
           if (!rate) throw new Error("Rate not found");
           return rate;
         })
