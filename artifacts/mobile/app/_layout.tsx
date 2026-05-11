@@ -52,6 +52,24 @@ function RootLayoutNav() {
             headerTransparent: true,
           }}
         />
+        <Stack.Screen
+          name="invoice/[id]"
+          options={{
+            headerShown: true,
+            headerTitle: "",
+            headerBackTitle: "Invoices",
+            headerTransparent: true,
+          }}
+        />
+        <Stack.Screen
+          name="invoice/create"
+          options={{
+            headerShown: true,
+            headerTitle: "New Invoice",
+            headerBackTitle: "Invoices",
+            headerTransparent: true,
+          }}
+        />
       </Stack>
     </>
   );

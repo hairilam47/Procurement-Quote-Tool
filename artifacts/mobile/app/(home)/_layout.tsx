@@ -17,6 +17,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "doc.text", selected: "doc.text.fill" }} />
         <Label>Quotes</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="invoices">
+        <Icon sf={{ default: "doc.plaintext", selected: "doc.plaintext.fill" }} />
+        <Label>Invoices</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person", selected: "person.fill" }} />
         <Label>Profile</Label>
@@ -69,6 +73,18 @@ function ClassicTabLayout() {
               <SymbolView name="doc.text" tintColor={color} size={24} />
             ) : (
               <Feather name="file-text" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="invoices"
+        options={{
+          title: "Invoices",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="doc.plaintext" tintColor={color} size={24} />
+            ) : (
+              <Feather name="file" size={22} color={color} />
             ),
         }}
       />
