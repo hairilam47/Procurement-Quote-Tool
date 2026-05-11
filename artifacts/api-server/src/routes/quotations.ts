@@ -41,14 +41,15 @@ const router = Router();
 /** Generate next invoice number atomically using a pg advisory lock. */
 async function nextInvoiceNumberInTx(
   tx: Parameters<Parameters<(typeof db)["transaction"]>[0]>[0],
+  userId: string,
 ): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `INV-${year}-`;
-  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('invoice_number_gen'))`);
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${"invoice_number_gen_" + userId}))`);
   const [last] = await tx
     .select({ number: invoicesTable.number })
     .from(invoicesTable)
-    .where(sql`${invoicesTable.number} like ${prefix + "%"}`)
+    .where(and(eq(invoicesTable.userId, userId), sql`${invoicesTable.number} like ${prefix + "%"}`))
     .orderBy(desc(invoicesTable.number))
     .limit(1);
   const n = last ? parseInt(last.number.slice(prefix.length), 10) + 1 : 1;
@@ -58,14 +59,15 @@ async function nextInvoiceNumberInTx(
 /** Generate next quote number atomically using a pg advisory lock (held for the duration of the TX). */
 async function nextQuoteNumberInTx(
   tx: Parameters<Parameters<(typeof db)["transaction"]>[0]>[0],
+  userId: string,
 ): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `Q-${year}-`;
-  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('quote_number_gen'))`);
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${"quote_number_gen_" + userId}))`);
   const [last] = await tx
     .select({ number: quotationsTable.number })
     .from(quotationsTable)
-    .where(sql`${quotationsTable.number} like ${prefix + "%"}`)
+    .where(and(eq(quotationsTable.userId, userId), sql`${quotationsTable.number} like ${prefix + "%"}`))
     .orderBy(desc(quotationsTable.number))
     .limit(1);
   const n = last ? parseInt(last.number.slice(prefix.length), 10) + 1 : 1;
@@ -109,10 +111,10 @@ router.get("/quotations", requireAuth, async (req, res): Promise<void> => {
       .leftJoin(clientsTable, eq(quotationsTable.clientId, clientsTable.id))
       .$dynamic();
 
-    const conditions = [];
+    const conditions = [eq(quotationsTable.userId, req.userId)];
     if (status) conditions.push(eq(quotationsTable.status, status));
     if (clientId) conditions.push(eq(quotationsTable.clientId, clientId));
-    if (conditions.length) query = query.where(and(...conditions));
+    query = query.where(and(...conditions));
 
     const quotations = await query.orderBy(desc(quotationsTable.createdAt));
     res.json(quotations);
@@ -127,7 +129,7 @@ router.get("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
     const [quote] = await db
       .select()
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, String(req.params.id)));
+      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
     if (!quote) {
       res.status(404).json({ error: "Quotation not found" });
       return;
@@ -217,9 +219,10 @@ router.post("/quotations", requireAuth, requireSubscription, async (req, res): P
     }
 
     await db.transaction(async (tx) => {
-      const number = await nextQuoteNumberInTx(tx);
+      const number = await nextQuoteNumberInTx(tx, req.userId);
       await tx.insert(quotationsTable).values({
         id,
+        userId: req.userId,
         number,
         clientId: data.clientId,
         issueDate: data.issueDate,
@@ -306,7 +309,7 @@ router.put("/quotations/:id", requireAuth, requireSubscription, async (req, res)
         secondaryExchangeRate: quotationsTable.secondaryExchangeRate,
       })
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, String(req.params.id)));
+      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
 
     if (!existing) {
       res.status(404).json({ error: "Quotation not found" });
@@ -417,7 +420,7 @@ router.patch("/quotations/:id/status", requireAuth, async (req, res): Promise<vo
     const [quote] = await db
       .select()
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, String(req.params.id)));
+      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
     if (!quote) {
       res.status(404).json({ error: "Quotation not found" });
       return;
@@ -438,7 +441,7 @@ router.patch("/quotations/:id/status", requireAuth, async (req, res): Promise<vo
       const [settings] = await db
         .select()
         .from(companySettingsTable)
-        .limit(1);
+        .where(eq(companySettingsTable.userId, quote.userId));
       updates.clientSnapshot = client ?? null;
       updates.companySnapshot = settings ?? null;
     }
@@ -468,7 +471,7 @@ router.post("/quotations/:id/duplicate", requireAuth, requireSubscription, async
     const [src] = await db
       .select()
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, String(req.params.id)));
+      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
     if (!src) {
       res.status(404).json({ error: "Quotation not found" });
       return;
@@ -496,9 +499,10 @@ router.post("/quotations/:id/duplicate", requireAuth, requireSubscription, async
     }
 
     await db.transaction(async (tx) => {
-      const number = await nextQuoteNumberInTx(tx);
+      const number = await nextQuoteNumberInTx(tx, req.userId);
       await tx.insert(quotationsTable).values({
         id: newId,
+        userId: req.userId,
         number,
         status: "DRAFT",
         clientId: src.clientId,
@@ -571,7 +575,7 @@ router.post("/quotations/:id/convert-to-invoice", requireAuth, requireSubscripti
       const [quote] = await tx
         .select()
         .from(quotationsTable)
-        .where(eq(quotationsTable.id, String(req.params.id)))
+        .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)))
         .for("update");
       if (!quote) {
         const err = new Error("NOT_FOUND");
@@ -595,9 +599,10 @@ router.post("/quotations/:id/convert-to-invoice", requireAuth, requireSubscripti
         .where(eq(lineItemsTable.quotationId, quote.id))
         .orderBy(lineItemsTable.position);
 
-      const number = await nextInvoiceNumberInTx(tx);
+      const number = await nextInvoiceNumberInTx(tx, req.userId);
       await tx.insert(invoicesTable).values({
         id: invoiceId,
+        userId: req.userId,
         number,
         clientId: quote.clientId,
         issueDate: today,
@@ -674,7 +679,7 @@ router.post("/quotations/:id/payment-link", requireAuth, async (req, res): Promi
     const [quote] = await db
       .select()
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, String(req.params.id)));
+      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
     if (!quote) {
       res.status(404).json({ error: "Quotation not found" });
       return;
@@ -762,7 +767,7 @@ router.delete("/quotations/:id", requireAuth, async (req, res): Promise<void> =>
   try {
     await db
       .delete(quotationsTable)
-      .where(eq(quotationsTable.id, String(req.params.id)));
+      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
     res.status(204).send();
   } catch {
     res.status(500).json({ error: "Failed to delete quotation" });
@@ -775,7 +780,7 @@ router.post("/quotations/:id/resend-receipt", requireAuth, async (req, res): Pro
     const [quote] = await db
       .select({ id: quotationsTable.id, status: quotationsTable.status })
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, String(req.params.id)));
+      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
     if (!quote) {
       res.status(404).json({ error: "Quotation not found" });
       return;
@@ -798,7 +803,7 @@ router.get("/quotations/:id/receipt-pdf", requireAuth, async (req, res): Promise
     const [quote] = await db
       .select()
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, String(req.params.id)));
+      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
     if (!quote) {
       res.status(404).json({ error: "Quotation not found" });
       return;
@@ -820,7 +825,7 @@ router.get("/quotations/:id/receipt-pdf", requireAuth, async (req, res): Promise
       .where(eq(lineItemsTable.quotationId, quote.id))
       .orderBy(lineItemsTable.position);
 
-    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    const [settings] = await db.select().from(companySettingsTable).where(eq(companySettingsTable.userId, req.userId));
     if (!settings) {
       res.status(400).json({ error: "Configure company settings first" });
       return;
@@ -852,7 +857,7 @@ router.get("/quotations/:id/followup-invoice-pdf", requireAuth, async (req, res)
     const [quote] = await db
       .select()
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, String(req.params.id)));
+      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
     if (!quote) {
       res.status(404).json({ error: "Quotation not found" });
       return;
@@ -880,7 +885,7 @@ router.get("/quotations/:id/followup-invoice-pdf", requireAuth, async (req, res)
       return;
     }
 
-    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    const [settings] = await db.select().from(companySettingsTable).where(eq(companySettingsTable.userId, req.userId));
     if (!settings) {
       res.status(400).json({ error: "Configure company settings first" });
       return;
@@ -915,7 +920,7 @@ router.get("/quotations/:id/pdf", requireAuth, async (req, res): Promise<void> =
     const [quote] = await db
       .select()
       .from(quotationsTable)
-      .where(eq(quotationsTable.id, String(req.params.id)));
+      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
     if (!quote) {
       res.status(404).json({ error: "Quotation not found" });
       return;
@@ -932,7 +937,7 @@ router.get("/quotations/:id/pdf", requireAuth, async (req, res): Promise<void> =
       .where(eq(lineItemsTable.quotationId, quote.id))
       .orderBy(lineItemsTable.position);
 
-    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    const [settings] = await db.select().from(companySettingsTable).where(eq(companySettingsTable.userId, req.userId));
     if (!settings) {
       res.status(400).json({ error: "Configure company settings first" });
       return;
@@ -1046,7 +1051,7 @@ router.get("/quotations/:id/receipt-pdf/public", async (req, res): Promise<void>
       .where(eq(lineItemsTable.quotationId, quote.id))
       .orderBy(lineItemsTable.position);
 
-    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    const [settings] = await db.select().from(companySettingsTable).where(eq(companySettingsTable.userId, quote.userId));
     if (!settings) {
       res.status(400).json({ error: "Company not configured" });
       return;

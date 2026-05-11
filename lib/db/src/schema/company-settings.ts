@@ -1,7 +1,8 @@
 import { pgTable, text, timestamp, numeric } from "drizzle-orm/pg-core";
+import { usersTable } from "./users";
 
 export const companySettingsTable = pgTable("company_settings", {
-  id: text("id").primaryKey().default("singleton"),
+  userId: text("user_id").primaryKey().references(() => usersTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   addressLine1: text("address_line1").notNull(),
   addressLine2: text("address_line2"),

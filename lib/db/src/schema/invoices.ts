@@ -10,11 +10,15 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { clientsTable } from "./clients";
+import { usersTable } from "./users";
 
 export const invoicesTable = pgTable(
   "invoices",
   {
     id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
     number: text("number").notNull().unique(),
     status: text("status").notNull().default("DRAFT"),
     issueDate: timestamp("issue_date").notNull().defaultNow(),
@@ -58,6 +62,7 @@ export const invoicesTable = pgTable(
   },
   (t) => [
     index("invoices_client_id_idx").on(t.clientId),
+    index("invoices_user_id_idx").on(t.userId),
     index("invoices_status_idx").on(t.status),
     index("invoices_number_idx").on(t.number),
   ],

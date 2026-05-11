@@ -22,9 +22,12 @@ const upload = multer({
 });
 
 // Get settings
-router.get("/settings", requireAuth, async (_req, res): Promise<void> => {
+router.get("/settings", requireAuth, async (req, res): Promise<void> => {
   try {
-    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    const [settings] = await db
+      .select()
+      .from(companySettingsTable)
+      .where(eq(companySettingsTable.userId, req.userId));
     if (!settings) {
       res.status(404).json({ error: "Settings not configured" });
       return;
@@ -39,12 +42,15 @@ router.get("/settings", requireAuth, async (_req, res): Promise<void> => {
 router.put("/settings", requireAuth, async (req, res): Promise<void> => {
   try {
     const data = settingsSchema.parse(req.body);
-    const [existing] = await db.select().from(companySettingsTable).limit(1);
+    const [existing] = await db
+      .select()
+      .from(companySettingsTable)
+      .where(eq(companySettingsTable.userId, req.userId));
     if (existing) {
       const [updated] = await db
         .update(companySettingsTable)
         .set({ ...data, defaultTaxRate: String(data.defaultTaxRate), updatedAt: new Date() })
-        .where(eq(companySettingsTable.id, existing.id))
+        .where(eq(companySettingsTable.userId, req.userId))
         .returning();
       res.json(updated);
       return;
@@ -52,7 +58,7 @@ router.put("/settings", requireAuth, async (req, res): Promise<void> => {
     const [created] = await db
       .insert(companySettingsTable)
       .values({
-        id: "singleton",
+        userId: req.userId,
         ...data,
         defaultTaxRate: String(data.defaultTaxRate),
       })

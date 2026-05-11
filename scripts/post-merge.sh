@@ -1,4 +1,5 @@
 #!/bin/bash
 set -e
 pnpm install --frozen-lockfile
-pnpm --filter db push
+node lib/db/scripts/cleanup.cjs
+node lib/db/scripts/apply-migration.cjs

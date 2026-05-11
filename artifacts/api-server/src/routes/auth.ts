@@ -182,10 +182,14 @@ router.post("/user/seed", requireAuth, async (req: Request, res: Response): Prom
       user = created;
     }
 
-    // Ensure at least one company_settings row exists (first-run seed)
-    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    // Ensure a company_settings row exists for this user (first-run seed)
+    const [settings] = await db
+      .select()
+      .from(companySettingsTable)
+      .where(eq(companySettingsTable.userId, userId));
     if (!settings) {
       await db.insert(companySettingsTable).values({
+        userId,
         name: "My Company",
         email: user!.email,
         addressLine1: "",

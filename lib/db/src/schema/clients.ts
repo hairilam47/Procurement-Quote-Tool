@@ -1,9 +1,13 @@
 import { pgTable, text, timestamp, index } from "drizzle-orm/pg-core";
+import { usersTable } from "./users";
 
 export const clientsTable = pgTable(
   "clients",
   {
     id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     company: text("company"),
     email: text("email").notNull(),
@@ -18,7 +22,10 @@ export const clientsTable = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("clients_email_idx").on(t.email)],
+  (t) => [
+    index("clients_email_idx").on(t.email),
+    index("clients_user_id_idx").on(t.userId),
+  ],
 );
 
 export type Client = typeof clientsTable.$inferSelect;

@@ -34,14 +34,15 @@ const router = Router();
 
 async function nextInvoiceNumberInTx(
   tx: Parameters<Parameters<(typeof db)["transaction"]>[0]>[0],
+  userId: string,
 ): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `INV-${year}-`;
-  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('invoice_number_gen'))`);
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${"invoice_number_gen_" + userId}))`);
   const [last] = await tx
     .select({ number: invoicesTable.number })
     .from(invoicesTable)
-    .where(sql`${invoicesTable.number} like ${prefix + "%"}`)
+    .where(and(eq(invoicesTable.userId, userId), sql`${invoicesTable.number} like ${prefix + "%"}`))
     .orderBy(desc(invoicesTable.number))
     .limit(1);
   const n = last ? parseInt(last.number.slice(prefix.length), 10) + 1 : 1;
@@ -115,10 +116,10 @@ router.get("/invoices", requireAuth, async (req, res): Promise<void> => {
       .leftJoin(clientsTable, eq(invoicesTable.clientId, clientsTable.id))
       .$dynamic();
 
-    const conditions = [];
+    const conditions = [eq(invoicesTable.userId, req.userId)];
     if (status) conditions.push(eq(invoicesTable.status, status));
     if (clientId) conditions.push(eq(invoicesTable.clientId, clientId));
-    if (conditions.length) query = query.where(and(...conditions));
+    query = query.where(and(...conditions));
 
     const invoices = await query.orderBy(desc(invoicesTable.createdAt));
     res.json(invoices);
@@ -133,7 +134,7 @@ router.get("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
     const [invoice] = await db
       .select()
       .from(invoicesTable)
-      .where(eq(invoicesTable.id, String(req.params.id)));
+      .where(and(eq(invoicesTable.id, String(req.params.id)), eq(invoicesTable.userId, req.userId)));
     if (!invoice) {
       res.status(404).json({ error: "Invoice not found" });
       return;
@@ -188,9 +189,10 @@ router.post("/invoices", requireAuth, requireSubscription, async (req, res): Pro
     }
 
     await db.transaction(async (tx) => {
-      const number = await nextInvoiceNumberInTx(tx);
+      const number = await nextInvoiceNumberInTx(tx, req.userId);
       await tx.insert(invoicesTable).values({
         id,
+        userId: req.userId,
         number,
         clientId: data.clientId,
         issueDate: data.issueDate,
@@ -276,7 +278,7 @@ router.put("/invoices/:id", requireAuth, requireSubscription, async (req, res): 
         secondaryExchangeRate: invoicesTable.secondaryExchangeRate,
       })
       .from(invoicesTable)
-      .where(eq(invoicesTable.id, String(req.params.id)));
+      .where(and(eq(invoicesTable.id, String(req.params.id)), eq(invoicesTable.userId, req.userId)));
 
     if (!existing) {
       res.status(404).json({ error: "Invoice not found" });
@@ -385,7 +387,7 @@ router.patch("/invoices/:id/status", requireAuth, async (req, res): Promise<void
     const [invoice] = await db
       .select()
       .from(invoicesTable)
-      .where(eq(invoicesTable.id, String(req.params.id)));
+      .where(and(eq(invoicesTable.id, String(req.params.id)), eq(invoicesTable.userId, req.userId)));
     if (!invoice) {
       res.status(404).json({ error: "Invoice not found" });
       return;
@@ -418,7 +420,7 @@ router.patch("/invoices/:id/status", requireAuth, async (req, res): Promise<void
       const [settings] = await db
         .select()
         .from(companySettingsTable)
-        .limit(1);
+        .where(eq(companySettingsTable.userId, invoice.userId));
       updates.clientSnapshot = client ?? null;
       updates.companySnapshot = settings ?? null;
     }
@@ -443,7 +445,7 @@ router.post("/invoices/:id/payment-link", requireAuth, async (req, res): Promise
     const [invoice] = await db
       .select()
       .from(invoicesTable)
-      .where(eq(invoicesTable.id, String(req.params.id)));
+      .where(and(eq(invoicesTable.id, String(req.params.id)), eq(invoicesTable.userId, req.userId)));
     if (!invoice) {
       res.status(404).json({ error: "Invoice not found" });
       return;
@@ -613,7 +615,7 @@ router.get("/invoices/:id/pdf/public", async (req, res): Promise<void> => {
       .where(eq(invoiceLineItemsTable.invoiceId, invoice.id))
       .orderBy(invoiceLineItemsTable.position);
 
-    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    const [settings] = await db.select().from(companySettingsTable).where(eq(companySettingsTable.userId, invoice.userId));
     if (!settings) {
       res.status(400).json({ error: "Company not configured" });
       return;
@@ -643,7 +645,7 @@ router.delete("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
   try {
     await db
       .delete(invoicesTable)
-      .where(eq(invoicesTable.id, String(req.params.id)));
+      .where(and(eq(invoicesTable.id, String(req.params.id)), eq(invoicesTable.userId, req.userId)));
     res.status(204).send();
   } catch {
     res.status(500).json({ error: "Failed to delete invoice" });
@@ -656,7 +658,7 @@ router.get("/invoices/:id/pdf", requireAuth, async (req, res): Promise<void> => 
     const [invoice] = await db
       .select()
       .from(invoicesTable)
-      .where(eq(invoicesTable.id, String(req.params.id)));
+      .where(and(eq(invoicesTable.id, String(req.params.id)), eq(invoicesTable.userId, req.userId)));
     if (!invoice) {
       res.status(404).json({ error: "Invoice not found" });
       return;
@@ -673,7 +675,7 @@ router.get("/invoices/:id/pdf", requireAuth, async (req, res): Promise<void> => 
       .where(eq(invoiceLineItemsTable.invoiceId, invoice.id))
       .orderBy(invoiceLineItemsTable.position);
 
-    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    const [settings] = await db.select().from(companySettingsTable).where(eq(companySettingsTable.userId, req.userId));
     if (!settings) {
       res.status(400).json({ error: "Configure company settings first" });
       return;
