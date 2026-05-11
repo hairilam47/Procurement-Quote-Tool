@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
-import { getUncachableStripeClient } from "../stripeClient";
+import { getUncachableStripeClient, getStripePublishableKey } from "../stripeClient";
 import { requireAuth } from "./auth";
 
 const router: IRouter = Router();
@@ -25,6 +25,20 @@ const PLAN_INTERVALS: Record<string, string> = {
   yearly: "year",
 };
 
+router.get("/stripe/mode", async (_req, res): Promise<void> => {
+  try {
+    const publishableKey = await getStripePublishableKey();
+    const mode = publishableKey.startsWith("pk_live_")
+      ? "live"
+      : publishableKey.startsWith("pk_test_")
+        ? "test"
+        : "unknown";
+    res.json({ mode });
+  } catch {
+    res.json({ mode: "unknown" });
+  }
+});
+
 router.get("/stripe/prices", async (_req, res) => {
   try {
     const result = await db.execute(sql`
@@ -45,79 +59,90 @@ router.get("/stripe/prices", async (_req, res) => {
 });
 
 router.post("/stripe/create-checkout-session", requireAuth, async (req, res): Promise<void> => {
-  const { plan } = req.body as { plan?: string };
+  try {
+    const { plan } = req.body as { plan?: string };
 
-  const validPlans = ["daily", "weekly", "monthly", "yearly"] as const;
-  if (!plan || !validPlans.includes(plan as (typeof validPlans)[number])) {
-    res.status(400).json({ error: "Invalid plan. Must be daily, weekly, monthly, or yearly." });
-    return;
-  }
-
-  // 1. Try explicit env var (fastest, no DB round-trip)
-  let priceId: string | undefined = PLAN_PRICE_IDS[plan];
-
-  // 2. Fall back to DB (stripe-replit-sync may have synced the price)
-  if (!priceId) {
-    const interval = PLAN_INTERVALS[plan];
-    try {
-      const result = await db.execute(sql`
-        SELECT id FROM stripe.prices
-        WHERE active = true
-          AND (recurring->>'interval') = ${interval}
-        ORDER BY unit_amount ASC
-        LIMIT 1
-      `);
-      priceId = (result.rows[0] as { id: string } | undefined)?.id;
-    } catch {
-      // stripe schema may not be ready yet
+    const validPlans = ["daily", "weekly", "monthly", "yearly"] as const;
+    if (!plan || !validPlans.includes(plan as (typeof validPlans)[number])) {
+      res.status(400).json({ error: "Invalid plan. Must be daily, weekly, monthly, or yearly." });
+      return;
     }
-  }
 
-  if (!priceId) {
-    res.status(503).json({
-      error: "Pricing not configured yet. Please contact support.",
-    });
-    return;
-  }
+    // 1. Try explicit env var (fastest, no DB round-trip)
+    let priceId: string | undefined = PLAN_PRICE_IDS[plan];
 
-  const stripe = await getUncachableStripeClient();
-  const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+    // 2. Fall back to DB (stripe-replit-sync may have synced the price)
+    if (!priceId) {
+      const interval = PLAN_INTERVALS[plan];
+      try {
+        const result = await db.execute(sql`
+          SELECT id FROM stripe.prices
+          WHERE active = true
+            AND (recurring->>'interval') = ${interval}
+          ORDER BY unit_amount ASC
+          LIMIT 1
+        `);
+        priceId = (result.rows[0] as { id: string } | undefined)?.id;
+      } catch {
+        // stripe schema may not be ready yet
+      }
+    }
 
-  // Get or create a Stripe customer for this user so subscription can be linked
-  const [user] = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.id, req.userId));
+    if (!priceId) {
+      res.status(503).json({
+        error: "Pricing not configured yet. Please contact support.",
+      });
+      return;
+    }
 
-  let customerId = user?.stripeCustomerId ?? undefined;
+    let stripe;
+    try {
+      stripe = await getUncachableStripeClient();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Stripe is not configured";
+      res.status(503).json({ error: `Payment unavailable: ${msg}` });
+      return;
+    }
 
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: user?.email,
-      name: user?.name ?? undefined,
-      metadata: { userId: req.userId },
-    });
-    customerId = customer.id;
-    await db
-      .update(usersTable)
-      .set({ stripeCustomerId: customerId, updatedAt: new Date() })
+    const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+
+    const [user] = await db
+      .select()
+      .from(usersTable)
       .where(eq(usersTable.id, req.userId));
+
+    let customerId = user?.stripeCustomerId ?? undefined;
+
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user?.email,
+        name: user?.name ?? undefined,
+        metadata: { userId: req.userId },
+      });
+      customerId = customer.id;
+      await db
+        .update(usersTable)
+        .set({ stripeCustomerId: customerId, updatedAt: new Date() })
+        .where(eq(usersTable.id, req.userId));
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      payment_method_types: ["card"],
+      line_items: [{ price: priceId, quantity: 1 }],
+      mode: "subscription",
+      success_url: `${baseUrl}/app?checkout=success`,
+      cancel_url: `${baseUrl}/app/settings`,
+      allow_promotion_codes: true,
+      subscription_data: {
+        metadata: { userId: req.userId },
+      },
+    });
+
+    res.json({ url: session.url });
+  } catch {
+    res.status(500).json({ error: "Failed to create checkout session" });
   }
-
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    payment_method_types: ["card"],
-    line_items: [{ price: priceId, quantity: 1 }],
-    mode: "subscription",
-    success_url: `${baseUrl}/app?checkout=success`,
-    cancel_url: `${baseUrl}/app/settings`,
-    allow_promotion_codes: true,
-    subscription_data: {
-      metadata: { userId: req.userId },
-    },
-  });
-
-  res.json({ url: session.url });
 });
 
 router.get("/stripe/subscription", requireAuth, async (req, res): Promise<void> => {
@@ -132,7 +157,14 @@ router.get("/stripe/subscription", requireAuth, async (req, res): Promise<void> 
       return;
     }
 
-    const stripe = await getUncachableStripeClient();
+    let stripe;
+    try {
+      stripe = await getUncachableStripeClient();
+    } catch {
+      res.json({ subscription: null });
+      return;
+    }
+
     const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId, {
       expand: ["items.data.price.product"],
     });
@@ -168,7 +200,15 @@ router.post("/stripe/customer-portal", requireAuth, async (req, res): Promise<vo
       return;
     }
 
-    const stripe = await getUncachableStripeClient();
+    let stripe;
+    try {
+      stripe = await getUncachableStripeClient();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Stripe is not configured";
+      res.status(503).json({ error: `Billing portal unavailable: ${msg}` });
+      return;
+    }
+
     const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
 
     const session = await stripe.billingPortal.sessions.create({

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Settings, Upload, Loader2, CreditCard, ExternalLink, CheckCircle2, AlertCircle, Link2, Building2 } from "lucide-react";
+import { Settings, Upload, Loader2, CreditCard, ExternalLink, CheckCircle2, AlertCircle, Link2, Building2, Zap, FlaskConical } from "lucide-react";
 
 interface SubscriptionInfo {
   id: string;
@@ -37,9 +37,19 @@ interface StripeConnectConfig {
   configured: boolean;
 }
 
+interface StripeMode {
+  mode: "live" | "test" | "unknown";
+}
+
 async function fetchSubscription(): Promise<{ subscription: SubscriptionInfo | null }> {
   const res = await fetch("/api/stripe/subscription", { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch subscription");
+  return res.json();
+}
+
+async function fetchStripeMode(): Promise<StripeMode> {
+  const res = await fetch("/api/stripe/mode");
+  if (!res.ok) return { mode: "unknown" };
   return res.json();
 }
 
@@ -71,6 +81,13 @@ export default function SettingsPage() {
   const { data: subscriptionData, isLoading: subscriptionLoading } = useQuery({
     queryKey: ["stripe-subscription"],
     queryFn: fetchSubscription,
+    retry: false,
+  });
+
+  const { data: stripeModeData } = useQuery({
+    queryKey: ["stripe-mode"],
+    queryFn: fetchStripeMode,
+    staleTime: 60_000,
     retry: false,
   });
 
@@ -651,6 +668,7 @@ export default function SettingsPage() {
 
       {/* Billing */}
       <Section title="Billing">
+        <StripeModeBar mode={stripeModeData?.mode} />
         {subscriptionLoading ? (
           <div className="h-10 bg-muted rounded-lg animate-pulse" />
         ) : subscriptionData?.subscription ? (
@@ -670,6 +688,17 @@ export default function SettingsPage() {
         )}
       </Section>
     </motion.div>
+  );
+}
+
+function StripeModeBar({ mode }: { mode?: "live" | "test" | "unknown" }) {
+  if (!mode || mode === "unknown") return null;
+  const isLive = mode === "live";
+  return (
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${isLive ? "bg-green-950/60 border border-green-800 text-green-300" : "bg-amber-950/60 border border-amber-800 text-amber-300"}`}>
+      {isLive ? <Zap size={13} className="flex-shrink-0" /> : <FlaskConical size={13} className="flex-shrink-0" />}
+      {isLive ? "Live mode — real payments are active" : "Test mode — no real charges will occur"}
+    </div>
   );
 }
 
