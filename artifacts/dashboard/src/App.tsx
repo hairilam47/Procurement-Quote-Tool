@@ -193,10 +193,14 @@ function AuthenticatedApp() {
   const trialDismissed = !!userMe?.trialDismissedAt;
   const isTrialMode = !hasActiveSubscription && trialDismissed;
 
-  // Auto-open modal on login when user has no subscription and hasn't dismissed
+  // Auto-open modal on login when user has no subscription and hasn't dismissed.
+  // Also honour a localStorage fallback set when the server dismiss call fails.
   useEffect(() => {
     if (userMe && !hasActiveSubscription && !trialDismissed) {
-      setModalOpen(true);
+      const localDismissed = (() => {
+        try { return localStorage.getItem("trial_dismissed_local") === "1"; } catch { return false; }
+      })();
+      if (!localDismissed) setModalOpen(true);
     }
   }, [userMe, hasActiveSubscription, trialDismissed]);
 

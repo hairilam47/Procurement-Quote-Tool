@@ -86,12 +86,16 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
   async function handleSkip() {
     setDismissLoading(true);
     try {
-      await fetch(`${basePath}/api/user/dismiss-trial`, {
+      const res = await fetch(`${basePath}/api/user/dismiss-trial`, {
         method: "POST",
         credentials: "include",
       });
+      if (!res.ok) {
+        // Fall back to localStorage so the modal doesn't reappear this session
+        try { localStorage.setItem("trial_dismissed_local", "1"); } catch { /* ignore */ }
+      }
     } catch {
-      // best-effort — dismiss locally even if request fails
+      try { localStorage.setItem("trial_dismissed_local", "1"); } catch { /* ignore */ }
     } finally {
       setDismissLoading(false);
       onClose();
