@@ -222,8 +222,7 @@ router.post("/stripe/create-checkout-session", requireAuth, async (req, res): Pr
     res.json({ url: session.url });
   } catch (err) {
     console.error("[checkout-session] Error:", err);
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    res.status(500).json({ error: `Failed to create checkout session: ${msg}` });
+    res.status(500).json({ error: "Failed to create checkout session" });
   }
 });
 
@@ -261,7 +260,7 @@ router.get("/stripe/subscription", requireAuth, async (req, res): Promise<void> 
         status: subscription.status,
         planName: product?.name ?? price?.nickname ?? "Subscription",
         interval: price?.recurring?.interval ?? null,
-        currentPeriodEnd: (subscription as unknown as { current_period_end: number }).current_period_end,
+        currentPeriodEnd: subscription.current_period_end,
         cancelAtPeriodEnd: subscription.cancel_at_period_end,
       },
     });
