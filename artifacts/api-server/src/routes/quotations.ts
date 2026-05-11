@@ -38,6 +38,23 @@ async function fetchExchangeRate(from: string, to: string): Promise<number | nul
 
 const router = Router();
 
+type OwnedQuotation =
+  | { quote: typeof quotationsTable.$inferSelect; status: null }
+  | { quote: null; status: 403 | 404 };
+
+async function fetchOwnedQuotation(id: string, userId: string): Promise<OwnedQuotation> {
+  const [row] = await db.select().from(quotationsTable).where(eq(quotationsTable.id, id));
+  if (!row) return { quote: null, status: 404 };
+  if (row.userId !== userId) return { quote: null, status: 403 };
+  return { quote: row, status: null };
+}
+
+async function verifyClientOwnership(clientId: string, userId: string): Promise<boolean> {
+  const [row] = await db.select({ id: clientsTable.id }).from(clientsTable)
+    .where(and(eq(clientsTable.id, clientId), eq(clientsTable.userId, userId)));
+  return !!row;
+}
+
 /** Generate next invoice number atomically using a pg advisory lock. */
 async function nextInvoiceNumberInTx(
   tx: Parameters<Parameters<(typeof db)["transaction"]>[0]>[0],
@@ -126,14 +143,9 @@ router.get("/quotations", requireAuth, async (req, res): Promise<void> => {
 // Get quotation by ID (with line items)
 router.get("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
   try {
-    const [quote] = await db
-      .select()
-      .from(quotationsTable)
-      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
-    if (!quote) {
-      res.status(404).json({ error: "Quotation not found" });
-      return;
-    }
+    const owned = await fetchOwnedQuotation(String(req.params.id), req.userId);
+    if (owned.status) { res.status(owned.status).json({ error: owned.status === 404 ? "Quotation not found" : "Forbidden" }); return; }
+    const quote = owned.quote;
 
     const [client] = await db
       .select()
@@ -190,6 +202,9 @@ function applyFormulas(
 router.post("/quotations", requireAuth, requireSubscription, async (req, res): Promise<void> => {
   try {
     const data = quotationSchema.parse(req.body);
+
+    const clientOwned = await verifyClientOwnership(data.clientId, req.userId);
+    if (!clientOwned) { res.status(400).json({ error: "Client not found" }); return; }
 
     const formulaResult = applyFormulas(data.lineItems);
     if (!formulaResult.ok) {
@@ -301,19 +316,14 @@ router.put("/quotations/:id", requireAuth, requireSubscription, async (req, res)
       data.taxRate,
     );
 
-    // Load the existing row to check whether currencies have changed
-    const [existing] = await db
-      .select({
-        currency: quotationsTable.currency,
-        secondaryCurrency: quotationsTable.secondaryCurrency,
-        secondaryExchangeRate: quotationsTable.secondaryExchangeRate,
-      })
-      .from(quotationsTable)
-      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
+    // Load the existing row to check ownership and whether currencies have changed
+    const ownedForUpdate = await fetchOwnedQuotation(String(req.params.id), req.userId);
+    if (ownedForUpdate.status) { res.status(ownedForUpdate.status).json({ error: ownedForUpdate.status === 404 ? "Quotation not found" : "Forbidden" }); return; }
+    const existing = ownedForUpdate.quote;
 
-    if (!existing) {
-      res.status(404).json({ error: "Quotation not found" });
-      return;
+    if (data.clientId) {
+      const clientOwnedUpd = await verifyClientOwnership(data.clientId, req.userId);
+      if (!clientOwnedUpd) { res.status(400).json({ error: "Client not found" }); return; }
     }
 
     const secCurrency = data.secondaryCurrency ?? null;
@@ -417,14 +427,9 @@ router.put("/quotations/:id", requireAuth, requireSubscription, async (req, res)
 router.patch("/quotations/:id/status", requireAuth, async (req, res): Promise<void> => {
   try {
     const { status } = changeStatusSchema.parse(req.body);
-    const [quote] = await db
-      .select()
-      .from(quotationsTable)
-      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
-    if (!quote) {
-      res.status(404).json({ error: "Quotation not found" });
-      return;
-    }
+    const ownedStatus = await fetchOwnedQuotation(String(req.params.id), req.userId);
+    if (ownedStatus.status) { res.status(ownedStatus.status).json({ error: ownedStatus.status === 404 ? "Quotation not found" : "Forbidden" }); return; }
+    const quote = ownedStatus.quote;
 
     const updates: Record<string, unknown> = { status, updatedAt: new Date() };
     const now = new Date();
@@ -468,14 +473,9 @@ router.patch("/quotations/:id/status", requireAuth, async (req, res): Promise<vo
 // Duplicate quotation
 router.post("/quotations/:id/duplicate", requireAuth, requireSubscription, async (req, res): Promise<void> => {
   try {
-    const [src] = await db
-      .select()
-      .from(quotationsTable)
-      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
-    if (!src) {
-      res.status(404).json({ error: "Quotation not found" });
-      return;
-    }
+    const ownedDup = await fetchOwnedQuotation(String(req.params.id), req.userId);
+    if (ownedDup.status) { res.status(ownedDup.status).json({ error: ownedDup.status === 404 ? "Quotation not found" : "Forbidden" }); return; }
+    const src = ownedDup.quote;
 
     const srcLines = await db
       .select()
@@ -575,11 +575,16 @@ router.post("/quotations/:id/convert-to-invoice", requireAuth, requireSubscripti
       const [quote] = await tx
         .select()
         .from(quotationsTable)
-        .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)))
+        .where(eq(quotationsTable.id, String(req.params.id)))
         .for("update");
       if (!quote) {
         const err = new Error("NOT_FOUND");
         (err as NodeJS.ErrnoException).code = "NOT_FOUND";
+        throw err;
+      }
+      if (quote.userId !== req.userId) {
+        const err = new Error("FORBIDDEN");
+        (err as NodeJS.ErrnoException).code = "FORBIDDEN";
         throw err;
       }
       if (quote.status !== "ACCEPTED") {
@@ -663,6 +668,7 @@ router.post("/quotations/:id/convert-to-invoice", requireAuth, requireSubscripti
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === "NOT_FOUND") { res.status(404).json({ error: "Quotation not found" }); return; }
+    if (code === "FORBIDDEN") { res.status(403).json({ error: "Forbidden" }); return; }
     if (code === "NOT_ACCEPTED") { res.status(400).json({ error: "Only ACCEPTED quotations can be converted to invoices" }); return; }
     if (code === "ALREADY_CONVERTED") {
       const existingInvoiceId = (err as Error).message;
@@ -676,14 +682,9 @@ router.post("/quotations/:id/convert-to-invoice", requireAuth, requireSubscripti
 // Generate Stripe Payment Link for a quotation
 router.post("/quotations/:id/payment-link", requireAuth, async (req, res): Promise<void> => {
   try {
-    const [quote] = await db
-      .select()
-      .from(quotationsTable)
-      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
-    if (!quote) {
-      res.status(404).json({ error: "Quotation not found" });
-      return;
-    }
+    const ownedPayment = await fetchOwnedQuotation(String(req.params.id), req.userId);
+    if (ownedPayment.status) { res.status(ownedPayment.status).json({ error: ownedPayment.status === 404 ? "Quotation not found" : "Forbidden" }); return; }
+    const quote = ownedPayment.quote;
     if (quote.status !== "SENT" && quote.status !== "ACCEPTED") {
       res.status(400).json({ error: "Payment links can only be generated for SENT or ACCEPTED quotations" });
       return;
@@ -765,9 +766,9 @@ router.post("/quotations/:id/payment-link", requireAuth, async (req, res): Promi
 // Delete quotation
 router.delete("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
   try {
-    await db
-      .delete(quotationsTable)
-      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
+    const ownedDel = await fetchOwnedQuotation(String(req.params.id), req.userId);
+    if (ownedDel.status) { res.status(ownedDel.status).json({ error: ownedDel.status === 404 ? "Quotation not found" : "Forbidden" }); return; }
+    await db.delete(quotationsTable).where(eq(quotationsTable.id, String(req.params.id)));
     res.status(204).send();
   } catch {
     res.status(500).json({ error: "Failed to delete quotation" });
@@ -777,14 +778,9 @@ router.delete("/quotations/:id", requireAuth, async (req, res): Promise<void> =>
 // Manually resend receipt email (PAID quotations only)
 router.post("/quotations/:id/resend-receipt", requireAuth, async (req, res): Promise<void> => {
   try {
-    const [quote] = await db
-      .select({ id: quotationsTable.id, status: quotationsTable.status })
-      .from(quotationsTable)
-      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
-    if (!quote) {
-      res.status(404).json({ error: "Quotation not found" });
-      return;
-    }
+    const ownedReceipt = await fetchOwnedQuotation(String(req.params.id), req.userId);
+    if (ownedReceipt.status) { res.status(ownedReceipt.status).json({ error: ownedReceipt.status === 404 ? "Quotation not found" : "Forbidden" }); return; }
+    const quote = ownedReceipt.quote;
     if (quote.status !== "PAID") {
       res.status(400).json({ error: "Receipt emails can only be sent for PAID quotations" });
       return;
@@ -800,14 +796,9 @@ router.post("/quotations/:id/resend-receipt", requireAuth, async (req, res): Pro
 // Receipt PDF endpoint (PAID quotations only)
 router.get("/quotations/:id/receipt-pdf", requireAuth, async (req, res): Promise<void> => {
   try {
-    const [quote] = await db
-      .select()
-      .from(quotationsTable)
-      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
-    if (!quote) {
-      res.status(404).json({ error: "Quotation not found" });
-      return;
-    }
+    const ownedReceiptPdf = await fetchOwnedQuotation(String(req.params.id), req.userId);
+    if (ownedReceiptPdf.status) { res.status(ownedReceiptPdf.status).json({ error: ownedReceiptPdf.status === 404 ? "Quotation not found" : "Forbidden" }); return; }
+    const quote = ownedReceiptPdf.quote;
 
     if (quote.status !== "PAID") {
       res.status(400).json({ error: "Receipt is only available for PAID quotations" });
@@ -854,14 +845,9 @@ router.get("/quotations/:id/receipt-pdf", requireAuth, async (req, res): Promise
 // Follow-up invoice PDF endpoint (deferred items only)
 router.get("/quotations/:id/followup-invoice-pdf", requireAuth, async (req, res): Promise<void> => {
   try {
-    const [quote] = await db
-      .select()
-      .from(quotationsTable)
-      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
-    if (!quote) {
-      res.status(404).json({ error: "Quotation not found" });
-      return;
-    }
+    const ownedFollowup = await fetchOwnedQuotation(String(req.params.id), req.userId);
+    if (ownedFollowup.status) { res.status(ownedFollowup.status).json({ error: ownedFollowup.status === 404 ? "Quotation not found" : "Forbidden" }); return; }
+    const quote = ownedFollowup.quote;
 
     if (quote.status !== "ACCEPTED" && quote.status !== "PAID") {
       res.status(400).json({ error: "Follow-up invoice is only available for ACCEPTED or PAID quotations" });
@@ -917,14 +903,9 @@ router.get("/quotations/:id/followup-invoice-pdf", requireAuth, async (req, res)
 // PDF endpoint
 router.get("/quotations/:id/pdf", requireAuth, async (req, res): Promise<void> => {
   try {
-    const [quote] = await db
-      .select()
-      .from(quotationsTable)
-      .where(and(eq(quotationsTable.id, String(req.params.id)), eq(quotationsTable.userId, req.userId)));
-    if (!quote) {
-      res.status(404).json({ error: "Quotation not found" });
-      return;
-    }
+    const ownedPdf = await fetchOwnedQuotation(String(req.params.id), req.userId);
+    if (ownedPdf.status) { res.status(ownedPdf.status).json({ error: ownedPdf.status === 404 ? "Quotation not found" : "Forbidden" }); return; }
+    const quote = ownedPdf.quote;
 
     const [client] = await db
       .select()

@@ -32,6 +32,23 @@ async function fetchExchangeRate(from: string, to: string): Promise<number | nul
 
 const router = Router();
 
+type OwnedInvoice =
+  | { invoice: typeof invoicesTable.$inferSelect; status: null }
+  | { invoice: null; status: 403 | 404 };
+
+async function fetchOwnedInvoice(id: string, userId: string): Promise<OwnedInvoice> {
+  const [row] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, id));
+  if (!row) return { invoice: null, status: 404 };
+  if (row.userId !== userId) return { invoice: null, status: 403 };
+  return { invoice: row, status: null };
+}
+
+async function verifyClientOwnership(clientId: string, userId: string): Promise<boolean> {
+  const [row] = await db.select({ id: clientsTable.id }).from(clientsTable)
+    .where(and(eq(clientsTable.id, clientId), eq(clientsTable.userId, userId)));
+  return !!row;
+}
+
 async function nextInvoiceNumberInTx(
   tx: Parameters<Parameters<(typeof db)["transaction"]>[0]>[0],
   userId: string,
@@ -131,14 +148,9 @@ router.get("/invoices", requireAuth, async (req, res): Promise<void> => {
 // Get invoice by ID (with line items)
 router.get("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
   try {
-    const [invoice] = await db
-      .select()
-      .from(invoicesTable)
-      .where(and(eq(invoicesTable.id, String(req.params.id)), eq(invoicesTable.userId, req.userId)));
-    if (!invoice) {
-      res.status(404).json({ error: "Invoice not found" });
-      return;
-    }
+    const owned = await fetchOwnedInvoice(String(req.params.id), req.userId);
+    if (owned.status) { res.status(owned.status).json({ error: owned.status === 404 ? "Invoice not found" : "Forbidden" }); return; }
+    const invoice = owned.invoice;
 
     const [client] = await db
       .select()
@@ -161,6 +173,9 @@ router.get("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
 router.post("/invoices", requireAuth, requireSubscription, async (req, res): Promise<void> => {
   try {
     const data = invoiceSchema.parse(req.body);
+
+    const clientOwned = await verifyClientOwnership(data.clientId, req.userId);
+    if (!clientOwned) { res.status(400).json({ error: "Client not found" }); return; }
 
     const formulaResult = applyFormulas(data.lineItems);
     if (!formulaResult.ok) {
@@ -271,18 +286,13 @@ router.put("/invoices/:id", requireAuth, requireSubscription, async (req, res): 
       data.taxRate,
     );
 
-    const [existing] = await db
-      .select({
-        currency: invoicesTable.currency,
-        secondaryCurrency: invoicesTable.secondaryCurrency,
-        secondaryExchangeRate: invoicesTable.secondaryExchangeRate,
-      })
-      .from(invoicesTable)
-      .where(and(eq(invoicesTable.id, String(req.params.id)), eq(invoicesTable.userId, req.userId)));
+    const ownedForUpdate = await fetchOwnedInvoice(String(req.params.id), req.userId);
+    if (ownedForUpdate.status) { res.status(ownedForUpdate.status).json({ error: ownedForUpdate.status === 404 ? "Invoice not found" : "Forbidden" }); return; }
+    const existing = ownedForUpdate.invoice;
 
-    if (!existing) {
-      res.status(404).json({ error: "Invoice not found" });
-      return;
+    if (data.clientId) {
+      const clientOwnedUpd = await verifyClientOwnership(data.clientId, req.userId);
+      if (!clientOwnedUpd) { res.status(400).json({ error: "Client not found" }); return; }
     }
 
     const secCurrency = data.secondaryCurrency ?? null;
@@ -384,14 +394,9 @@ router.put("/invoices/:id", requireAuth, requireSubscription, async (req, res): 
 router.patch("/invoices/:id/status", requireAuth, async (req, res): Promise<void> => {
   try {
     const { status } = changeInvoiceStatusSchema.parse(req.body);
-    const [invoice] = await db
-      .select()
-      .from(invoicesTable)
-      .where(and(eq(invoicesTable.id, String(req.params.id)), eq(invoicesTable.userId, req.userId)));
-    if (!invoice) {
-      res.status(404).json({ error: "Invoice not found" });
-      return;
-    }
+    const ownedStatus = await fetchOwnedInvoice(String(req.params.id), req.userId);
+    if (ownedStatus.status) { res.status(ownedStatus.status).json({ error: ownedStatus.status === 404 ? "Invoice not found" : "Forbidden" }); return; }
+    const invoice = ownedStatus.invoice;
 
     // Enforce legal status transitions: DRAFT→SENT, SENT→PAID only
     const legalTransitions: Record<string, string[]> = {
@@ -442,14 +447,9 @@ router.patch("/invoices/:id/status", requireAuth, async (req, res): Promise<void
 // Generate Stripe Payment Link for an invoice
 router.post("/invoices/:id/payment-link", requireAuth, async (req, res): Promise<void> => {
   try {
-    const [invoice] = await db
-      .select()
-      .from(invoicesTable)
-      .where(and(eq(invoicesTable.id, String(req.params.id)), eq(invoicesTable.userId, req.userId)));
-    if (!invoice) {
-      res.status(404).json({ error: "Invoice not found" });
-      return;
-    }
+    const ownedPayment = await fetchOwnedInvoice(String(req.params.id), req.userId);
+    if (ownedPayment.status) { res.status(ownedPayment.status).json({ error: ownedPayment.status === 404 ? "Invoice not found" : "Forbidden" }); return; }
+    const invoice = ownedPayment.invoice;
     if (invoice.status !== "SENT") {
       res.status(400).json({ error: "Payment links can only be generated for SENT invoices" });
       return;
@@ -643,9 +643,9 @@ router.get("/invoices/:id/pdf/public", async (req, res): Promise<void> => {
 // Delete invoice
 router.delete("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
   try {
-    await db
-      .delete(invoicesTable)
-      .where(and(eq(invoicesTable.id, String(req.params.id)), eq(invoicesTable.userId, req.userId)));
+    const ownedDel = await fetchOwnedInvoice(String(req.params.id), req.userId);
+    if (ownedDel.status) { res.status(ownedDel.status).json({ error: ownedDel.status === 404 ? "Invoice not found" : "Forbidden" }); return; }
+    await db.delete(invoicesTable).where(eq(invoicesTable.id, String(req.params.id)));
     res.status(204).send();
   } catch {
     res.status(500).json({ error: "Failed to delete invoice" });
@@ -655,14 +655,9 @@ router.delete("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
 // PDF endpoint
 router.get("/invoices/:id/pdf", requireAuth, async (req, res): Promise<void> => {
   try {
-    const [invoice] = await db
-      .select()
-      .from(invoicesTable)
-      .where(and(eq(invoicesTable.id, String(req.params.id)), eq(invoicesTable.userId, req.userId)));
-    if (!invoice) {
-      res.status(404).json({ error: "Invoice not found" });
-      return;
-    }
+    const ownedPdf = await fetchOwnedInvoice(String(req.params.id), req.userId);
+    if (ownedPdf.status) { res.status(ownedPdf.status).json({ error: ownedPdf.status === 404 ? "Invoice not found" : "Forbidden" }); return; }
+    const invoice = ownedPdf.invoice;
 
     const [client] = await db
       .select()

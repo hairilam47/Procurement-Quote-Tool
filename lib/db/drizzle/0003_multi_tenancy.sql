@@ -19,10 +19,14 @@ ALTER TABLE company_settings ADD CONSTRAINT company_settings_user_id_fkey
 ALTER TABLE clients ADD COLUMN user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE;
 CREATE INDEX clients_user_id_idx ON clients USING btree (user_id);
 
--- 4. quotations: add user_id
+-- 4. quotations: add user_id; replace global unique on number with per-user composite unique
 ALTER TABLE quotations ADD COLUMN user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE;
 CREATE INDEX quotations_user_id_idx ON quotations USING btree (user_id);
+ALTER TABLE quotations DROP CONSTRAINT IF EXISTS quotations_number_unique;
+CREATE UNIQUE INDEX quotations_user_id_number_uidx ON quotations (user_id, number);
 
--- 5. invoices: add user_id
+-- 5. invoices: add user_id; replace global unique on number with per-user composite unique
 ALTER TABLE invoices ADD COLUMN user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE;
 CREATE INDEX invoices_user_id_idx ON invoices USING btree (user_id);
+ALTER TABLE invoices DROP CONSTRAINT IF EXISTS invoices_number_unique;
+CREATE UNIQUE INDEX invoices_user_id_number_uidx ON invoices (user_id, number);
