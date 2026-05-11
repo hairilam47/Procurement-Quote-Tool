@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { authClient } from "@/lib/auth-client";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-const hasGoogle = !!(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
 export default function SignUpPage() {
   const [, setLocation] = useLocation();
@@ -14,6 +13,14 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [verifyPending, setVerifyPending] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+
+  useEffect(() => {
+    fetch(`${basePath}/api/capabilities`)
+      .then((r) => r.json())
+      .then((d) => setGoogleEnabled(!!(d?.google)))
+      .catch(() => setGoogleEnabled(false));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,7 +167,7 @@ export default function SignUpPage() {
             </button>
           </form>
 
-          {hasGoogle && (
+          {googleEnabled && (
             <>
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">

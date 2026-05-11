@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -23,8 +23,6 @@ const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
   : "http://localhost:8080";
 
-const HAS_GOOGLE = !!(process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID);
-
 export default function SignInScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -37,6 +35,14 @@ export default function SignInScreen() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/capabilities`)
+      .then((r) => r.json())
+      .then((d) => setGoogleEnabled(!!(d?.google)))
+      .catch(() => setGoogleEnabled(false));
+  }, []);
 
   const canSubmit = !!email && !!password && !loading;
 
@@ -59,19 +65,30 @@ export default function SignInScreen() {
     setError("");
     setGoogleLoading(true);
     try {
-      const callbackURL = `${API_BASE}/api/auth/callback/google`;
+      // The server-side mobile-callback route converts the cookie session
+      // to a bearer token and redirects to mobile://auth-callback?token=...
+      const callbackURL = `${API_BASE}/api/mobile-callback`;
       const authURL = `${API_BASE}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
-      const result = await WebBrowser.openAuthSessionAsync(authURL, API_BASE + "/auth-mobile-callback");
+
+      // Open browser — will intercept any redirect to the "mobile://" scheme
+      const result = await WebBrowser.openAuthSessionAsync(authURL, "mobile://auth-callback");
+
       if (result.type === "success" && result.url) {
         const url = new URL(result.url);
         const token = url.searchParams.get("token");
+        const err = url.searchParams.get("error");
         if (token) {
           const signInResult = await signIn("", "", token);
           if (!signInResult.error) {
             router.replace("/(home)");
             return;
           }
+          setError(signInResult.error ?? "Sign in failed");
+        } else {
+          setError(err === "auth_failed" ? "Google sign-in failed. Please try again." : "Sign in cancelled.");
         }
+      } else if (result.type !== "cancel") {
+        setError("Google sign-in failed. Please try again.");
       }
     } catch {
       setError("Google sign-in failed. Please try again.");
@@ -161,7 +178,7 @@ export default function SignInScreen() {
           )}
         </Pressable>
 
-        {HAS_GOOGLE && (
+        {googleEnabled && (
           <>
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
@@ -183,7 +200,7 @@ export default function SignInScreen() {
                 <ActivityIndicator size="small" color={colors.foreground} />
               ) : (
                 <>
-                  <GoogleIcon />
+                  <GoogleSVG />
                   <Text style={styles.googleButtonText}>Continue with Google</Text>
                 </>
               )}
@@ -204,10 +221,10 @@ export default function SignInScreen() {
   );
 }
 
-function GoogleIcon() {
+function GoogleSVG() {
   return (
-    <View style={{ width: 18, height: 18, marginRight: 8 }}>
-      <Text style={{ fontSize: 16 }}>G</Text>
+    <View style={{ width: 20, height: 20, alignItems: "center", justifyContent: "center" }}>
+      <Text style={{ fontSize: 15, fontWeight: "bold", color: "#4285F4" }}>G</Text>
     </View>
   );
 }
