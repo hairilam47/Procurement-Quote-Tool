@@ -7,6 +7,7 @@ import {
   useListClients,
   useGetSettings,
   getGetQuotationQueryKey,
+  ApiError,
 } from "@workspace/api-client-react";
 import { BeamCard } from "@/components/ui/beam-card";
 import type { QuotationInput, LineItemInput, QuotationInputDiscountType } from "@workspace/api-client-react";
@@ -321,6 +322,9 @@ export default function QuotationFormPage() {
   const [notes, setNotes] = useState("");
   const [terms, setTerms] = useState("");
   const [paymentUrl, setPaymentUrl] = useState("");
+  const [paymentUrlError, setPaymentUrlError] = useState<string | null>(null);
+  const [currencyError, setCurrencyError] = useState<string | null>(null);
+  const [secondaryCurrencyError, setSecondaryCurrencyError] = useState<string | null>(null);
   const [showQrCode, setShowQrCode] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"stripe" | "bank_transfer" | "both" | "none">("none");
   const [template, setTemplate] = useState<"MODERN" | "CLASSIC">("MODERN");
@@ -476,8 +480,19 @@ export default function QuotationFormPage() {
 
   const hasSecondary = !!(secondaryCurrency && exchangeRate);
 
+  function ensureHttps(url: string): string | null {
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+    return `https://${trimmed}`;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setPaymentUrlError(null);
+    setCurrencyError(null);
+    setSecondaryCurrencyError(null);
+
     if (!clientId) {
       toast({ title: "Please select a client", variant: "destructive" });
       return;
@@ -487,18 +502,32 @@ export default function QuotationFormPage() {
       return;
     }
 
+    const normalizedCurrency = currency.trim().toUpperCase();
+    if (normalizedCurrency.length !== 3) {
+      setCurrencyError("Currency must be exactly 3 characters (e.g. USD)");
+      return;
+    }
+    const normalizedSecondaryCurrency = secondaryCurrency.trim().toUpperCase();
+    if (normalizedSecondaryCurrency && normalizedSecondaryCurrency.length !== 3) {
+      setSecondaryCurrencyError("Secondary currency must be exactly 3 characters (e.g. EUR)");
+      return;
+    }
+
+    const prefixedUrl = ensureHttps(paymentUrl);
+    if (prefixedUrl) setPaymentUrl(prefixedUrl);
+
     const payload: QuotationInput = {
       clientId,
       issueDate,
       validUntil,
-      currency,
-      secondaryCurrency: secondaryCurrency.trim().toUpperCase() || null,
+      currency: normalizedCurrency,
+      secondaryCurrency: normalizedSecondaryCurrency || null,
       discountType: discountType ?? null,
       discountValue: discountValue || 0,
       taxRate: taxRate || 0,
       notes: notes || null,
       terms: terms || null,
-      paymentUrl: paymentUrl || null,
+      paymentUrl: prefixedUrl,
       showQrCode,
       paymentMethod,
       template,
@@ -515,7 +544,30 @@ export default function QuotationFormPage() {
         toast({ title: "Quotation created" });
         navigate(`/quotations/${created.id}`);
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 400 && err.data) {
+        const data = err.data as { error?: Array<{ path: (string | number)[]; message: string }> };
+        if (Array.isArray(data.error) && data.error.length > 0) {
+          const unhandled: string[] = [];
+          for (const issue of data.error) {
+            const field = issue.path[issue.path.length - 1];
+            if (field === "paymentUrl") {
+              setPaymentUrlError(issue.message);
+            } else if (field === "currency") {
+              setCurrencyError(issue.message);
+            } else if (field === "secondaryCurrency") {
+              setSecondaryCurrencyError(issue.message);
+            } else {
+              const label = issue.path.length > 0 ? `${field}: ` : "";
+              unhandled.push(`${label}${issue.message}`);
+            }
+          }
+          if (unhandled.length > 0) {
+            toast({ title: "Validation error", description: unhandled.join("\n"), variant: "destructive" });
+          }
+          return;
+        }
+      }
       toast({ title: "Failed to save quotation", variant: "destructive" });
     }
   }
@@ -582,8 +634,8 @@ export default function QuotationFormPage() {
               />
             </Field>
             <Field label="Currency" required>
-              <Select value={currency} onValueChange={setCurrency} data-testid="currency-select">
-                <SelectTrigger className={inputCls} data-testid="currency-select-trigger">
+              <Select value={currency} onValueChange={(v) => { setCurrency(v); setCurrencyError(null); }} data-testid="currency-select">
+                <SelectTrigger className={`${inputCls} ${currencyError ? "border-red-500" : ""}`} data-testid="currency-select-trigger">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border max-h-60">
@@ -594,13 +646,16 @@ export default function QuotationFormPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {currencyError && (
+                <p className="text-red-400 text-xs mt-1">{currencyError}</p>
+              )}
             </Field>
             <Field label="Secondary Currency (optional)">
               <Select
                 value={secondaryCurrency || "none"}
-                onValueChange={(v) => setSecondaryCurrency(v === "none" ? "" : v)}
+                onValueChange={(v) => { setSecondaryCurrency(v === "none" ? "" : v); setSecondaryCurrencyError(null); }}
               >
-                <SelectTrigger className={inputCls} data-testid="secondary-currency-input">
+                <SelectTrigger className={`${inputCls} ${secondaryCurrencyError ? "border-red-500" : ""}`} data-testid="secondary-currency-input">
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border max-h-60">
@@ -612,6 +667,9 @@ export default function QuotationFormPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {secondaryCurrencyError && (
+                <p className="text-red-400 text-xs mt-1">{secondaryCurrencyError}</p>
+              )}
               {secondaryCurrency && rateLoading && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                   <Loader2 size={11} className="animate-spin" /> Fetching rate…
@@ -857,10 +915,17 @@ export default function QuotationFormPage() {
               <Field label="Payment URL">
                 <Input
                   value={paymentUrl}
-                  onChange={(e) => setPaymentUrl(e.target.value)}
-                  className={inputCls}
+                  onChange={(e) => { setPaymentUrl(e.target.value); setPaymentUrlError(null); }}
+                  onBlur={(e) => {
+                    const prefixed = ensureHttps(e.target.value);
+                    if (prefixed) setPaymentUrl(prefixed);
+                  }}
+                  className={`${inputCls} ${paymentUrlError ? "border-red-500" : ""}`}
                   placeholder="https://..."
                 />
+                {paymentUrlError && (
+                  <p className="text-red-400 text-xs mt-1">{paymentUrlError}</p>
+                )}
               </Field>
               <div className="flex items-center gap-3">
                 <Switch
