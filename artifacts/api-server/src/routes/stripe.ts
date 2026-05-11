@@ -41,18 +41,55 @@ router.get("/stripe/mode", async (_req, res): Promise<void> => {
 
 router.get("/stripe/prices", async (_req, res) => {
   try {
-    const result = await db.execute(sql`
-      SELECT
-        p.id as price_id,
-        p.unit_amount,
-        p.currency,
-        p.recurring,
-        p.active
-      FROM stripe.prices p
-      WHERE p.active = true
-      ORDER BY p.unit_amount ASC
-    `);
-    res.json({ data: result.rows });
+    // Build an ordered list of exactly the 4 canonical plan prices.
+    // Priority: explicit STRIPE_PRICE_* env var → cheapest active price for that interval.
+    const plans = [
+      { plan: "daily",   interval: "day" },
+      { plan: "weekly",  interval: "week" },
+      { plan: "monthly", interval: "month" },
+      { plan: "yearly",  interval: "year" },
+    ] as const;
+
+    const rows: object[] = [];
+
+    for (const { plan, interval } of plans) {
+      const explicitId = PLAN_PRICE_IDS[plan];
+
+      if (explicitId) {
+        // Fetch the exact configured price
+        const result = await db.execute(sql`
+          SELECT
+            p.id as price_id,
+            p.unit_amount,
+            p.currency,
+            p.recurring,
+            p.active
+          FROM stripe.prices p
+          WHERE p.id = ${explicitId}
+          LIMIT 1
+        `);
+        if (result.rows.length) rows.push(result.rows[0] as object);
+      } else {
+        // Fallback: cheapest active price for this interval
+        const result = await db.execute(sql`
+          SELECT
+            p.id as price_id,
+            p.unit_amount,
+            p.currency,
+            p.recurring,
+            p.active
+          FROM stripe.prices p
+          WHERE p.active = true
+            AND (p.recurring->>'interval') = ${interval}
+            AND (p.recurring->>'interval_count')::int = 1
+          ORDER BY p.unit_amount ASC
+          LIMIT 1
+        `);
+        if (result.rows.length) rows.push(result.rows[0] as object);
+      }
+    }
+
+    res.json({ data: rows });
   } catch {
     res.status(503).json({ error: "Stripe data unavailable" });
   }
