@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "@/components/layout/AppLayout";
@@ -19,14 +19,45 @@ import SignInPage from "@/pages/SignInPage";
 import SignUpPage from "@/pages/SignUpPage";
 import PaymentSuccessPage from "@/pages/PaymentSuccessPage";
 import { authClient } from "@/lib/auth-client";
+import { ApiError } from "@workspace/api-client-react";
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function redirectToPaywall() {
+  window.location.href = `${basePath}/settings#billing`;
+}
 
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 402) {
+        redirectToPaywall();
+      }
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 402) {
+        redirectToPaywall();
+      }
+    },
+  }),
   defaultOptions: {
     queries: { retry: 1, staleTime: 30_000 },
   },
 });
 
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+function CheckoutSuccessBanner() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") === "success") {
+      queryClient.invalidateQueries({ queryKey: ["stripe-subscription"] });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  return null;
+}
 
 function SyncUser() {
   const { data: session } = authClient.useSession();
@@ -112,6 +143,7 @@ function AppRoutes() {
         {session?.user ? (
           <>
             <SyncUser />
+            <CheckoutSuccessBanner />
             <ProtectedRoutes />
           </>
         ) : (

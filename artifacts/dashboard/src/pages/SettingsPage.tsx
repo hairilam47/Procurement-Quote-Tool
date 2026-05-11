@@ -660,27 +660,72 @@ export default function SettingsPage() {
             loading={portalLoading}
           />
         ) : (
-          <div className="flex items-center justify-between">
-            <p className="text-muted-foreground text-sm">No active subscription found.</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-              onClick={handleManageBilling}
-              disabled={portalLoading}
-              data-testid="manage-billing-btn"
-            >
-              {portalLoading ? (
-                <><Loader2 size={13} className="animate-spin mr-1.5" />Opening...</>
-              ) : (
-                <><CreditCard size={13} className="mr-1.5" />Manage Subscription</>
-              )}
-            </Button>
+          <div id="billing" className="space-y-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <AlertCircle size={15} className="flex-shrink-0 text-amber-400" />
+              <span>No active subscription. Subscribe to create quotations, invoices, and clients.</span>
+            </div>
+            <SubscribeCTA />
           </div>
         )}
       </Section>
     </motion.div>
+  );
+}
+
+function SubscribeCTA() {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  const plans = [
+    { key: "monthly", label: "Monthly", description: "Billed monthly" },
+    { key: "yearly", label: "Yearly", description: "Best value" },
+  ] as const;
+
+  async function handleSubscribe(plan: string) {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ plan }),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error((json as { error?: string }).error ?? "Failed to start checkout");
+      }
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch (err) {
+      toast({
+        title: err instanceof Error ? err.message : "Could not start checkout",
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap gap-3">
+      {plans.map((p) => (
+        <Button
+          key={p.key}
+          type="button"
+          size="sm"
+          className="bg-blue-600 hover:bg-blue-500 text-white"
+          disabled={loading}
+          onClick={() => handleSubscribe(p.key)}
+          data-testid={`subscribe-${p.key}-btn`}
+        >
+          {loading ? (
+            <><Loader2 size={13} className="animate-spin mr-1.5" />Redirecting...</>
+          ) : (
+            <><CreditCard size={13} className="mr-1.5" />Subscribe {p.label}</>
+          )}
+        </Button>
+      ))}
+    </div>
   );
 }
 

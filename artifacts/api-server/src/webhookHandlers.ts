@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { db, quotationsTable, invoicesTable } from '@workspace/db';
+import { db, quotationsTable, invoicesTable, usersTable } from '@workspace/db';
 import { getStripeSync } from './stripeClient';
 import { sendReceiptForQuotation } from './lib/email/resend';
 
@@ -68,6 +68,80 @@ async function handleInvoiceRefunded(invoiceId: string, source: string): Promise
 }
 
 /**
+ * Resolve the internal userId from a subscription object.
+ * Tries metadata.userId first, then falls back to matching stripeCustomerId.
+ */
+async function resolveUserFromSubscription(
+  subscriptionObj: Record<string, unknown>,
+): Promise<string | null> {
+  const meta = subscriptionObj.metadata as Record<string, string | null> | undefined;
+  if (meta?.userId) return meta.userId;
+
+  const customerId = subscriptionObj.customer as string | undefined;
+  if (!customerId) return null;
+
+  const [user] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.stripeCustomerId, customerId));
+
+  return user?.id ?? null;
+}
+
+/**
+ * Handle subscription created or updated — store subscriptionId (and customerId if missing).
+ */
+async function handleSubscriptionUpsert(
+  subscriptionObj: Record<string, unknown>,
+  source: string,
+): Promise<void> {
+  const subscriptionId = subscriptionObj.id as string | undefined;
+  const customerId = subscriptionObj.customer as string | undefined;
+  if (!subscriptionId) return;
+
+  const userId = await resolveUserFromSubscription(subscriptionObj);
+  if (!userId) {
+    console.log(`[webhook:${source}] subscription ${subscriptionId} — no userId found, skipping`);
+    return;
+  }
+
+  await db
+    .update(usersTable)
+    .set({
+      stripeSubscriptionId: subscriptionId,
+      stripeCustomerId: customerId ?? undefined,
+      updatedAt: new Date(),
+    })
+    .where(eq(usersTable.id, userId));
+
+  console.log(`[webhook:${source}] User ${userId} subscription set to ${subscriptionId}`);
+}
+
+/**
+ * Handle subscription deleted — clear subscriptionId from user.
+ */
+async function handleSubscriptionDeleted(
+  subscriptionObj: Record<string, unknown>,
+  source: string,
+): Promise<void> {
+  const subscriptionId = subscriptionObj.id as string | undefined;
+  if (!subscriptionId) return;
+
+  const userId = await resolveUserFromSubscription(subscriptionObj);
+  if (!userId) {
+    console.log(`[webhook:${source}] subscription ${subscriptionId} deleted — no userId found, skipping`);
+    return;
+  }
+
+  await db
+    .update(usersTable)
+    .set({ stripeSubscriptionId: null, updatedAt: new Date() })
+    .where(eq(usersTable.id, userId));
+
+  console.log(`[webhook:${source}] User ${userId} subscription cleared (deleted)`);
+}
+
+/**
  * Extract quotationId or invoiceId from a Stripe event object.
  *
  * For payment links: metadata is set on the Payment Link object.
@@ -123,6 +197,20 @@ export class WebhookHandlers {
       const event = JSON.parse(payload.toString()) as StripeEvent;
       const obj = event.data.object;
       const source = event.account ? `connected:${event.account}` : 'platform';
+
+      /**
+       * Subscription lifecycle — update user's stripeSubscriptionId so the
+       * requireSubscription middleware can gate write endpoints correctly.
+       */
+      if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
+        await handleSubscriptionUpsert(obj as Record<string, unknown>, `${source}:${event.type}`);
+        // Don't return — a checkout.session.completed may also fire alongside this
+      }
+
+      if (event.type === 'customer.subscription.deleted') {
+        await handleSubscriptionDeleted(obj as Record<string, unknown>, `${source}:${event.type}`);
+        return;
+      }
 
       /**
        * checkout.session.completed — primary reliable event for both platform and

@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, usersTable, companySettingsTable } from "@workspace/db";
 import { auth } from "../lib/auth";
 import { fromNodeHeaders } from "better-auth/node";
@@ -19,6 +19,45 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     next();
   } catch {
     res.status(401).json({ error: "Unauthorized" });
+  }
+}
+
+export async function requireSubscription(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const [user] = await db
+      .select({ stripeSubscriptionId: usersTable.stripeSubscriptionId })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.userId));
+
+    if (!user?.stripeSubscriptionId) {
+      res.status(402).json({
+        error: "subscription_required",
+        message: "An active subscription is required. Please subscribe to continue.",
+      });
+      return;
+    }
+
+    try {
+      const result = await db.execute(sql`
+        SELECT status FROM stripe.subscriptions
+        WHERE id = ${user.stripeSubscriptionId}
+        LIMIT 1
+      `);
+      const row = result.rows[0] as { status?: string } | undefined;
+      if (row && row.status !== "active" && row.status !== "trialing") {
+        res.status(402).json({
+          error: "subscription_required",
+          message: "Your subscription is not active. Please renew to continue.",
+        });
+        return;
+      }
+    } catch {
+      // Stripe schema unavailable — trust the stored subscription ID
+    }
+
+    next();
+  } catch {
+    res.status(500).json({ error: "Failed to verify subscription" });
   }
 }
 

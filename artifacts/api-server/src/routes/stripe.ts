@@ -44,12 +44,13 @@ router.get("/stripe/prices", async (_req, res) => {
   }
 });
 
-router.post("/stripe/create-checkout-session", async (req, res) => {
+router.post("/stripe/create-checkout-session", requireAuth, async (req, res): Promise<void> => {
   const { plan } = req.body as { plan?: string };
 
   const validPlans = ["daily", "weekly", "monthly", "yearly"] as const;
   if (!plan || !validPlans.includes(plan as (typeof validPlans)[number])) {
-    return res.status(400).json({ error: "Invalid plan. Must be daily, weekly, monthly, or yearly." });
+    res.status(400).json({ error: "Invalid plan. Must be daily, weekly, monthly, or yearly." });
+    return;
   }
 
   // 1. Try explicit env var (fastest, no DB round-trip)
@@ -73,24 +74,50 @@ router.post("/stripe/create-checkout-session", async (req, res) => {
   }
 
   if (!priceId) {
-    return res.status(503).json({
+    res.status(503).json({
       error: "Pricing not configured yet. Please contact support.",
     });
+    return;
   }
 
   const stripe = await getUncachableStripeClient();
   const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
 
+  // Get or create a Stripe customer for this user so subscription can be linked
+  const [user] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, req.userId));
+
+  let customerId = user?.stripeCustomerId ?? undefined;
+
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: user?.email,
+      name: user?.name ?? undefined,
+      metadata: { userId: req.userId },
+    });
+    customerId = customer.id;
+    await db
+      .update(usersTable)
+      .set({ stripeCustomerId: customerId, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.userId));
+  }
+
   const session = await stripe.checkout.sessions.create({
+    customer: customerId,
     payment_method_types: ["card"],
     line_items: [{ price: priceId, quantity: 1 }],
     mode: "subscription",
-    success_url: `${baseUrl}/sign-in?checkout=success`,
+    success_url: `${baseUrl}/app?checkout=success`,
     cancel_url: `${baseUrl}/marketing/#pricing`,
     allow_promotion_codes: true,
+    subscription_data: {
+      metadata: { userId: req.userId },
+    },
   });
 
-  return res.json({ url: session.url });
+  res.json({ url: session.url });
 });
 
 router.get("/stripe/subscription", requireAuth, async (req, res): Promise<void> => {
@@ -146,7 +173,7 @@ router.post("/stripe/customer-portal", requireAuth, async (req, res): Promise<vo
 
     const session = await stripe.billingPortal.sessions.create({
       customer: user.stripeCustomerId,
-      return_url: `${baseUrl}/settings`,
+      return_url: `${baseUrl}/app/settings`,
     });
 
     res.json({ url: session.url });

@@ -7,7 +7,7 @@ import { evaluateFormula } from "../lib/formula";
 import { generateId } from "../lib/id";
 import { renderQuotationPdf, renderFollowUpInvoicePdf, renderReceiptPdf } from "../lib/pdf/render";
 import { sendReceiptForQuotation } from "../lib/email/resend";
-import { requireAuth } from "./auth";
+import { requireAuth, requireSubscription } from "./auth";
 import { getZodErrors } from "../lib/zodError";
 import { getUncachableStripeClient } from "../stripeClient";
 
@@ -185,7 +185,7 @@ function applyFormulas(
 }
 
 // Create quotation
-router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
+router.post("/quotations", requireAuth, requireSubscription, async (req, res): Promise<void> => {
   try {
     const data = quotationSchema.parse(req.body);
 
@@ -281,7 +281,7 @@ router.post("/quotations", requireAuth, async (req, res): Promise<void> => {
 });
 
 // Update quotation
-router.put("/quotations/:id", requireAuth, async (req, res): Promise<void> => {
+router.put("/quotations/:id", requireAuth, requireSubscription, async (req, res): Promise<void> => {
   try {
     const data = quotationSchema.parse(req.body);
 
@@ -463,7 +463,7 @@ router.patch("/quotations/:id/status", requireAuth, async (req, res): Promise<vo
 });
 
 // Duplicate quotation
-router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<void> => {
+router.post("/quotations/:id/duplicate", requireAuth, requireSubscription, async (req, res): Promise<void> => {
   try {
     const [src] = await db
       .select()
@@ -559,7 +559,7 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
 });
 
 // Convert accepted quotation to invoice
-router.post("/quotations/:id/convert-to-invoice", requireAuth, async (req, res): Promise<void> => {
+router.post("/quotations/:id/convert-to-invoice", requireAuth, requireSubscription, async (req, res): Promise<void> => {
   try {
     const invoiceId = generateId();
     const today = new Date();

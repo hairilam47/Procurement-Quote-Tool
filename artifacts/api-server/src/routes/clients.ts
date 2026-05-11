@@ -4,7 +4,7 @@ import { eq, ilike, or } from "drizzle-orm";
 import { db, clientsTable, quotationsTable } from "@workspace/db";
 import { clientSchema } from "../lib/validation";
 import { generateId } from "../lib/id";
-import { requireAuth } from "./auth";
+import { requireAuth, requireSubscription } from "./auth";
 
 const router = Router();
 
@@ -56,7 +56,7 @@ router.get("/clients/:id", requireAuth, async (req, res): Promise<void> => {
 });
 
 // Create client
-router.post("/clients", requireAuth, async (req, res): Promise<void> => {
+router.post("/clients", requireAuth, requireSubscription, async (req, res): Promise<void> => {
   try {
     const data = clientSchema.parse(req.body);
     const [client] = await db
@@ -72,7 +72,7 @@ router.post("/clients", requireAuth, async (req, res): Promise<void> => {
 });
 
 // Update client
-router.put("/clients/:id", requireAuth, async (req, res): Promise<void> => {
+router.put("/clients/:id", requireAuth, requireSubscription, async (req, res): Promise<void> => {
   try {
     const data = clientSchema.parse(req.body);
     const [client] = await db

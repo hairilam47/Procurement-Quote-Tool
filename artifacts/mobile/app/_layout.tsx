@@ -5,14 +5,15 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
+import { Alert } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { setBaseUrl } from "@workspace/api-client-react";
+import { setBaseUrl, ApiError } from "@workspace/api-client-react";
 import { AuthProvider } from "@/lib/auth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -21,7 +22,30 @@ if (domain) setBaseUrl(`https://${domain}`);
 
 SplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient();
+function showPaywallAlert() {
+  Alert.alert(
+    "Subscription Required",
+    "An active subscription is needed to perform this action. Please subscribe via the web dashboard.",
+    [{ text: "OK" }],
+  );
+}
+
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 402) {
+        showPaywallAlert();
+      }
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 402) {
+        showPaywallAlert();
+      }
+    },
+  }),
+});
 
 function RootLayoutNav() {
   return (

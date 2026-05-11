@@ -6,7 +6,7 @@ import { computeTotals } from "../lib/calculations";
 import { evaluateFormula } from "../lib/formula";
 import { generateId } from "../lib/id";
 import { renderInvoicePdf } from "../lib/pdf/render";
-import { requireAuth } from "./auth";
+import { requireAuth, requireSubscription } from "./auth";
 import { getZodErrors } from "../lib/zodError";
 import { getUncachableStripeClient } from "../stripeClient";
 
@@ -157,7 +157,7 @@ router.get("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
 });
 
 // Create invoice
-router.post("/invoices", requireAuth, async (req, res): Promise<void> => {
+router.post("/invoices", requireAuth, requireSubscription, async (req, res): Promise<void> => {
   try {
     const data = invoiceSchema.parse(req.body);
 
@@ -252,7 +252,7 @@ router.post("/invoices", requireAuth, async (req, res): Promise<void> => {
 });
 
 // Update invoice
-router.put("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
+router.put("/invoices/:id", requireAuth, requireSubscription, async (req, res): Promise<void> => {
   try {
     const data = invoiceSchema.parse(req.body);
 
