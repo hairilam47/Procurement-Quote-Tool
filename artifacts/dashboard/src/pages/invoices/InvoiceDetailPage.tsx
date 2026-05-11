@@ -150,7 +150,7 @@ export default function InvoiceDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4 max-w-3xl">
+      <div className="space-y-4">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />
         ))}
@@ -167,7 +167,7 @@ export default function InvoiceDetailPage() {
   const client = invoice.client;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl space-y-5">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
       <div className="flex items-start gap-3">
         <Link href="/invoices">
           <span className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors mt-1">

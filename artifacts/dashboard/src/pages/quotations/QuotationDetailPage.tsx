@@ -264,7 +264,7 @@ export default function QuotationDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4 max-w-3xl">
+      <div className="space-y-4">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />
         ))}
@@ -288,7 +288,7 @@ export default function QuotationDetailPage() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-3xl space-y-5"
+      className="space-y-5"
     >
       {/* Header */}
       <div className="flex items-start gap-3">

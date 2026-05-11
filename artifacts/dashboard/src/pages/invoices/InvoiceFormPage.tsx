@@ -320,7 +320,7 @@ export default function InvoiceFormPage() {
   const showStripe = connectStatus?.connected === true;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl space-y-5">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-5">
       <div className="flex items-center gap-3">
         <Link href={isEdit && id ? `/invoices/${id}` : "/invoices"}>
           <span className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
