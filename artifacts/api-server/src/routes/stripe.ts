@@ -278,7 +278,7 @@ router.get("/stripe/subscription", requireAuth, async (req, res): Promise<void> 
         status: subscription.status,
         planName: product?.name ?? price?.nickname ?? "Subscription",
         interval: price?.recurring?.interval ?? null,
-        currentPeriodEnd: subscription.current_period_end,
+        currentPeriodEnd: item?.current_period_end ?? null,
         cancelAtPeriodEnd: subscription.cancel_at_period_end,
       },
     });
