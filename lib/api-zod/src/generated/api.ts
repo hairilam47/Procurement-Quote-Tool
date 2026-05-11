@@ -35,23 +35,6 @@ export const SeedUserResponse = zod.object({
 });
 
 /**
- * @summary Sync Clerk user into DB
- */
-export const SyncUserBody = zod.object({
-  email: zod.string().optional(),
-  name: zod.string().optional(),
-});
-
-export const SyncUserResponse = zod.object({
-  id: zod.string(),
-  email: zod.string(),
-  name: zod.string().nullish(),
-  role: zod.string(),
-  createdAt: zod.coerce.date(),
-  updatedAt: zod.coerce.date(),
-});
-
-/**
  * @summary Get current user
  */
 export const GetMeResponse = zod.object({
@@ -281,6 +264,7 @@ export const GetQuotationResponse = zod
       sentAt: zod.coerce.date().nullish(),
       acceptedAt: zod.coerce.date().nullish(),
       paidAt: zod.coerce.date().nullish(),
+      invoiceId: zod.string().nullish(),
       client: zod
         .object({
           id: zod.string(),
@@ -391,6 +375,7 @@ export const UpdateQuotationResponse = zod
       sentAt: zod.coerce.date().nullish(),
       acceptedAt: zod.coerce.date().nullish(),
       paidAt: zod.coerce.date().nullish(),
+      invoiceId: zod.string().nullish(),
       client: zod
         .object({
           id: zod.string(),
@@ -488,6 +473,7 @@ export const ChangeQuotationStatusResponse = zod
       sentAt: zod.coerce.date().nullish(),
       acceptedAt: zod.coerce.date().nullish(),
       paidAt: zod.coerce.date().nullish(),
+      invoiceId: zod.string().nullish(),
       client: zod
         .object({
           id: zod.string(),
@@ -963,33 +949,35 @@ export const CreateInvoicePaymentLinkResponse = zod
 /**
  * @summary Get company settings
  */
-export const GetSettingsResponse = zod.object({
-  id: zod.string(),
-  name: zod.string(),
-  addressLine1: zod.string(),
-  addressLine2: zod.string().nullish(),
-  city: zod.string(),
-  region: zod.string().nullish(),
-  postalCode: zod.string(),
-  country: zod.string(),
-  phone: zod.string().nullish(),
-  email: zod.string(),
-  website: zod.string().nullish(),
-  taxNumber: zod.string().nullish(),
-  registrationNumber: zod.string().nullish(),
-  logoUrl: zod.string().nullish(),
-  currency: zod.string(),
-  defaultTaxRate: zod.string(),
-  defaultTerms: zod.string().nullish(),
-  defaultNotes: zod.string().nullish(),
-  defaultTemplate: zod.string(),
-  defaultPaymentUrl: zod.string().nullish(),
-  bankName: zod.string().nullish(),
-  bankAccountNumber: zod.string().nullish(),
-  bankRecipientName: zod.string().nullish(),
-  bankQrCodeUrl: zod.string().nullish(),
-  updatedAt: zod.coerce.date(),
-});
+export const GetSettingsResponse = zod
+  .object({
+    id: zod.string(),
+    name: zod.string(),
+    addressLine1: zod.string(),
+    addressLine2: zod.string().nullish(),
+    city: zod.string(),
+    region: zod.string().nullish(),
+    postalCode: zod.string(),
+    country: zod.string(),
+    phone: zod.string().nullish(),
+    email: zod.string(),
+    website: zod.string().nullish(),
+    taxNumber: zod.string().nullish(),
+    registrationNumber: zod.string().nullish(),
+    logoUrl: zod.string().nullish(),
+    currency: zod.string(),
+    defaultTaxRate: zod.string(),
+    defaultTerms: zod.string().nullish(),
+    defaultNotes: zod.string().nullish(),
+    defaultTemplate: zod.string(),
+    defaultPaymentUrl: zod.string().nullish(),
+    bankName: zod.string().nullish(),
+    bankAccountNumber: zod.string().nullish(),
+    bankRecipientName: zod.string().nullish(),
+    bankQrCodeUrl: zod.string().nullish(),
+    updatedAt: zod.coerce.date(),
+  })
+  .nullable();
 
 /**
  * @summary Upsert company settings

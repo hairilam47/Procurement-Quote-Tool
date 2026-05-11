@@ -365,7 +365,6 @@ export type SeedUser200 = {
   seeded: boolean;
 };
 
-
 export type ListClientsParams = {
   search?: string;
 };

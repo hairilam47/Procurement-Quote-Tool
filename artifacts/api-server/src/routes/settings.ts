@@ -29,7 +29,7 @@ router.get("/settings", requireAuth, async (req, res): Promise<void> => {
       .from(companySettingsTable)
       .where(eq(companySettingsTable.userId, req.userId));
     if (!settings) {
-      res.status(404).json({ error: "Settings not configured" });
+      res.status(200).json(null);
       return;
     }
     res.json(settings);

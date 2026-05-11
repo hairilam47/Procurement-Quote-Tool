@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useGetSettings, useUpdateSettings } from "@workspace/api-client-react";
+import { useGetSettings, useUpdateSettings, ApiError } from "@workspace/api-client-react";
 import { BeamCard } from "@/components/ui/beam-card";
 import type { SettingsInput, SettingsInputDefaultTemplate } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
@@ -274,13 +274,55 @@ export default function SettingsPage() {
     }
   }
 
+  function ensureHttps(url: string | null | undefined): string | null {
+    if (!url || url.trim() === "") return null;
+    const trimmed = url.trim();
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+    return `https://${trimmed}`;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (form.currency.length !== 3) {
+      toast({
+        title: "Currency must be exactly 3 characters (e.g. USD)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const payload: SettingsInput = {
+      ...form,
+      website: ensureHttps(form.website),
+      defaultPaymentUrl: ensureHttps(form.defaultPaymentUrl),
+    };
+
     try {
-      await updateSettings.mutateAsync({ data: form });
+      await updateSettings.mutateAsync({ data: payload });
+      setForm((prev) => ({
+        ...prev,
+        website: payload.website,
+        defaultPaymentUrl: payload.defaultPaymentUrl,
+      }));
       toast({ title: "Settings saved" });
       refetch();
-    } catch {
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 400 && err.data) {
+        const data = err.data as { error?: Array<{ path: (string | number)[]; message: string }> };
+        if (Array.isArray(data.error) && data.error.length > 0) {
+          const messages = data.error.map((issue) => {
+            const field = issue.path.length > 0 ? `${issue.path[issue.path.length - 1]}: ` : "";
+            return `${field}${issue.message}`;
+          });
+          toast({
+            title: "Validation error",
+            description: messages.join("\n"),
+            variant: "destructive",
+          });
+          return;
+        }
+      }
       toast({ title: "Failed to save settings", variant: "destructive" });
     }
   }
@@ -379,6 +421,7 @@ export default function SettingsPage() {
                 value={form.website ?? ""}
                 onChange={(e) => set("website", e.target.value || null)}
                 className={inputCls}
+                placeholder="https://example.com"
               />
             </Field>
             <Field label="Tax Number">
@@ -454,12 +497,14 @@ export default function SettingsPage() {
         {/* Quotation Defaults */}
         <Section title="Quotation Defaults">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Default Currency">
+            <Field label="Default Currency" required>
               <Input
                 value={form.currency}
                 onChange={(e) => set("currency", e.target.value)}
                 className={inputCls}
                 maxLength={3}
+                minLength={3}
+                required
                 placeholder="USD"
               />
             </Field>
@@ -493,7 +538,7 @@ export default function SettingsPage() {
                 value={form.defaultPaymentUrl ?? ""}
                 onChange={(e) => set("defaultPaymentUrl", e.target.value || null)}
                 className={inputCls}
-                placeholder="https://..."
+                placeholder="https://example.com/pay"
               />
             </Field>
             <Field label="Default Terms" className="col-span-2">

@@ -426,11 +426,13 @@ paths:
       summary: Get company settings
       responses:
         "200":
-          description: Company settings
+          description: Company settings, or null if not yet configured
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CompanySettings"
+                nullable: true
+                allOf:
+                  - $ref: "#/components/schemas/CompanySettings"
     put:
       operationId: updateSettings
       tags: [settings]

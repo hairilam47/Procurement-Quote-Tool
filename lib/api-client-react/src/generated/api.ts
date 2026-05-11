@@ -2114,8 +2114,8 @@ export const getGetSettingsUrl = () => {
 
 export const getSettings = async (
   options?: RequestInit,
-): Promise<CompanySettings> => {
-  return customFetch<CompanySettings>(getGetSettingsUrl(), {
+): Promise<CompanySettings | null> => {
+  return customFetch<CompanySettings | null>(getGetSettingsUrl(), {
     ...options,
     method: "GET",
   });
