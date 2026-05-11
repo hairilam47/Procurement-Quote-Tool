@@ -56,6 +56,7 @@ export const quotationsTable = pgTable(
     sentAt: timestamp("sent_at"),
     acceptedAt: timestamp("accepted_at"),
     paidAt: timestamp("paid_at"),
+    invoiceId: text("invoice_id"),
   },
   (t) => [
     index("quotations_client_id_idx").on(t.clientId),

@@ -18,12 +18,14 @@ import {
   Copy,
   ChevronDown,
   FileText,
+  FilePlus,
   Receipt,
   Link2,
   ClipboardCheck,
   Loader2,
   Mail,
   AlertCircle,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -73,6 +75,7 @@ export default function QuotationDetailPage() {
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [isResendingEmail, setIsResendingEmail] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
 
   const { data: connectStatus } = useQuery({
     queryKey: ["stripe-connect-status"],
@@ -205,6 +208,31 @@ export default function QuotationDetailPage() {
       toast({ title: err instanceof Error ? err.message : "Failed to send email", variant: "destructive" });
     } finally {
       setIsResendingEmail(false);
+    }
+  }
+
+  async function handleConvertToInvoice() {
+    setIsConverting(true);
+    try {
+      const res = await fetch(`/api/quotations/${id}/convert-to-invoice`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const body = await res.json().catch(() => ({})) as { id?: string; error?: string; invoiceId?: string };
+      if (res.status === 409 && body.invoiceId) {
+        toast({ title: "Invoice already exists — opening it" });
+        navigate(`/invoices/${body.invoiceId}`);
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to convert to invoice");
+      }
+      toast({ title: "Invoice created successfully" });
+      navigate(`/invoices/${body.id}`);
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Failed to convert to invoice", variant: "destructive" });
+    } finally {
+      setIsConverting(false);
     }
   }
 
@@ -378,6 +406,33 @@ export default function QuotationDetailPage() {
                 : <Mail size={13} className="mr-1.5" />}
               Resend Email
             </Button>
+          )}
+          {quotation.status === "ACCEPTED" && !quotation.invoiceId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleConvertToInvoice}
+              disabled={isConverting}
+              className="border-blue-700 text-blue-400 hover:text-blue-200 hover:bg-blue-900/30"
+              data-testid="convert-to-invoice-btn"
+            >
+              {isConverting
+                ? <Loader2 size={13} className="mr-1.5 animate-spin" />
+                : <FilePlus size={13} className="mr-1.5" />}
+              Convert to Invoice
+            </Button>
+          )}
+          {quotation.status === "ACCEPTED" && quotation.invoiceId && (
+            <Link href={`/invoices/${quotation.invoiceId}`}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-blue-700 text-blue-400 hover:text-blue-200 hover:bg-blue-900/30"
+                data-testid="view-invoice-btn"
+              >
+                <ExternalLink size={13} className="mr-1.5" /> View Invoice
+              </Button>
+            </Link>
           )}
           {showFollowUpInvoice && (
             <Button

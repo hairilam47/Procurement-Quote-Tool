@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, and, desc, sql } from "drizzle-orm";
-import { db, quotationsTable, lineItemsTable, clientsTable, companySettingsTable, usersTable } from "@workspace/db";
+import { db, quotationsTable, lineItemsTable, clientsTable, companySettingsTable, usersTable, invoicesTable, invoiceLineItemsTable } from "@workspace/db";
 import { quotationSchema, changeStatusSchema } from "../lib/validation";
 import { computeTotals } from "../lib/calculations";
 import { evaluateFormula } from "../lib/formula";
@@ -37,6 +37,23 @@ async function fetchExchangeRate(from: string, to: string): Promise<number | nul
 }
 
 const router = Router();
+
+/** Generate next invoice number atomically using a pg advisory lock. */
+async function nextInvoiceNumberInTx(
+  tx: Parameters<Parameters<(typeof db)["transaction"]>[0]>[0],
+): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `INV-${year}-`;
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('invoice_number_gen'))`);
+  const [last] = await tx
+    .select({ number: invoicesTable.number })
+    .from(invoicesTable)
+    .where(sql`${invoicesTable.number} like ${prefix + "%"}`)
+    .orderBy(desc(invoicesTable.number))
+    .limit(1);
+  const n = last ? parseInt(last.number.slice(prefix.length), 10) + 1 : 1;
+  return `${prefix}${String(n).padStart(4, "0")}`;
+}
 
 /** Generate next quote number atomically using a pg advisory lock (held for the duration of the TX). */
 async function nextQuoteNumberInTx(
@@ -538,6 +555,116 @@ router.post("/quotations/:id/duplicate", requireAuth, async (req, res): Promise<
     res.status(201).json({ ...dup, lineItems });
   } catch {
     res.status(500).json({ error: "Failed to duplicate quotation" });
+  }
+});
+
+// Convert accepted quotation to invoice
+router.post("/quotations/:id/convert-to-invoice", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const invoiceId = generateId();
+    const today = new Date();
+    const dueDate = new Date(today);
+    dueDate.setDate(dueDate.getDate() + 30);
+
+    await db.transaction(async (tx) => {
+      // Lock the quotation row first to prevent concurrent conversions
+      const [quote] = await tx
+        .select()
+        .from(quotationsTable)
+        .where(eq(quotationsTable.id, String(req.params.id)))
+        .for("update");
+      if (!quote) {
+        const err = new Error("NOT_FOUND");
+        (err as NodeJS.ErrnoException).code = "NOT_FOUND";
+        throw err;
+      }
+      if (quote.status !== "ACCEPTED") {
+        const err = new Error("NOT_ACCEPTED");
+        (err as NodeJS.ErrnoException).code = "NOT_ACCEPTED";
+        throw err;
+      }
+      if (quote.invoiceId) {
+        const err = new Error(quote.invoiceId);
+        (err as NodeJS.ErrnoException).code = "ALREADY_CONVERTED";
+        throw err;
+      }
+
+      const srcLines = await tx
+        .select()
+        .from(lineItemsTable)
+        .where(eq(lineItemsTable.quotationId, quote.id))
+        .orderBy(lineItemsTable.position);
+
+      const number = await nextInvoiceNumberInTx(tx);
+      await tx.insert(invoicesTable).values({
+        id: invoiceId,
+        number,
+        clientId: quote.clientId,
+        issueDate: today,
+        dueDate,
+        currency: quote.currency,
+        secondaryCurrency: quote.secondaryCurrency,
+        secondaryExchangeRate: quote.secondaryExchangeRate,
+        discountType: quote.discountType,
+        discountValue: quote.discountValue,
+        taxRate: quote.taxRate,
+        subtotal: quote.subtotal,
+        discountAmount: quote.discountAmount,
+        taxAmount: quote.taxAmount,
+        total: quote.total,
+        requiredTotal: quote.requiredTotal,
+        notes: quote.notes,
+        terms: quote.terms,
+        showQrCode: quote.showQrCode,
+        paymentMethod: quote.paymentMethod,
+        template: quote.template,
+      });
+
+      if (srcLines.length > 0) {
+        await tx.insert(invoiceLineItemsTable).values(
+          srcLines.map((li) => ({
+            id: generateId(),
+            invoiceId,
+            sku: li.sku ?? null,
+            description: li.description,
+            quantity: li.quantity,
+            unit: li.unit,
+            unitPrice: li.unitPrice,
+            rateFormula: li.rateFormula ?? null,
+            paymentRequired: li.paymentRequired,
+            lineTotal: li.lineTotal,
+            position: li.position,
+          })),
+        );
+      }
+
+      await tx
+        .update(quotationsTable)
+        .set({ invoiceId, updatedAt: new Date() })
+        .where(eq(quotationsTable.id, quote.id));
+    });
+
+    const [invoice] = await db
+      .select()
+      .from(invoicesTable)
+      .where(eq(invoicesTable.id, invoiceId));
+    const lineItems = await db
+      .select()
+      .from(invoiceLineItemsTable)
+      .where(eq(invoiceLineItemsTable.invoiceId, invoiceId))
+      .orderBy(invoiceLineItemsTable.position);
+
+    res.status(201).json({ ...invoice, lineItems });
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "NOT_FOUND") { res.status(404).json({ error: "Quotation not found" }); return; }
+    if (code === "NOT_ACCEPTED") { res.status(400).json({ error: "Only ACCEPTED quotations can be converted to invoices" }); return; }
+    if (code === "ALREADY_CONVERTED") {
+      const existingInvoiceId = (err as Error).message;
+      res.status(409).json({ error: "This quotation has already been converted to an invoice", invoiceId: existingInvoiceId });
+      return;
+    }
+    res.status(500).json({ error: "Failed to convert quotation to invoice" });
   }
 });
 

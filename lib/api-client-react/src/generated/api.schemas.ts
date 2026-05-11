@@ -161,6 +161,7 @@ export type QuotationDetail = QuotationSummary & {
   sentAt?: string | null;
   acceptedAt?: string | null;
   paidAt?: string | null;
+  invoiceId?: string | null;
   client?: Client;
   lineItems?: LineItem[];
 };

@@ -677,6 +677,7 @@ components:
             sentAt: { type: string, format: date-time, nullable: true }
             acceptedAt: { type: string, format: date-time, nullable: true }
             paidAt: { type: string, format: date-time, nullable: true }
+            invoiceId: { type: string, nullable: true }
             client:
               $ref: "#/components/schemas/Client"
             lineItems:
