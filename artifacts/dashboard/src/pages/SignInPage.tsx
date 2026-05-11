@@ -20,6 +20,14 @@ export default function SignInPage() {
       .catch(() => setGoogleEnabled(false));
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const prefill = params.get("email");
+    if (prefill) {
+      setEmail(decodeURIComponent(prefill));
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
