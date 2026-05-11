@@ -188,6 +188,7 @@ export const ListQuotationsResponseItem = zod.object({
   status: zod.string(),
   total: zod.string(),
   currency: zod.string(),
+  secondaryCurrency: zod.string().nullish(),
   issueDate: zod.coerce.date(),
   validUntil: zod.coerce.date(),
   createdAt: zod.coerce.date().optional(),
@@ -201,6 +202,7 @@ export const ListQuotationsResponseItem = zod.object({
   subtotal: zod.string().optional(),
   discountAmount: zod.string().optional(),
   taxAmount: zod.string().optional(),
+  requiredTotal: zod.string().nullish(),
 });
 export const ListQuotationsResponse = zod.array(ListQuotationsResponseItem);
 
@@ -212,6 +214,7 @@ export const CreateQuotationBody = zod.object({
   issueDate: zod.coerce.date(),
   validUntil: zod.coerce.date(),
   currency: zod.string().optional(),
+  secondaryCurrency: zod.string().nullish(),
   discountType: zod.enum(["PERCENTAGE", "FIXED"]).nullish(),
   discountValue: zod.number().optional(),
   taxRate: zod.number().optional(),
@@ -219,13 +222,19 @@ export const CreateQuotationBody = zod.object({
   terms: zod.string().nullish(),
   paymentUrl: zod.string().nullish(),
   showQrCode: zod.boolean().optional(),
+  paymentMethod: zod
+    .enum(["stripe", "bank_transfer", "both", "none"])
+    .optional(),
   template: zod.enum(["MODERN", "CLASSIC"]).optional(),
   lineItems: zod.array(
     zod.object({
+      sku: zod.string().nullish(),
       description: zod.string(),
       quantity: zod.number(),
       unit: zod.enum(["hours", "days", "fixed"]).optional(),
       unitPrice: zod.number(),
+      rateFormula: zod.string().nullish(),
+      paymentRequired: zod.boolean().optional(),
       position: zod.number().optional(),
     }),
   ),
@@ -245,6 +254,7 @@ export const GetQuotationResponse = zod
     status: zod.string(),
     total: zod.string(),
     currency: zod.string(),
+    secondaryCurrency: zod.string().nullish(),
     issueDate: zod.coerce.date(),
     validUntil: zod.coerce.date(),
     createdAt: zod.coerce.date().optional(),
@@ -258,6 +268,7 @@ export const GetQuotationResponse = zod
     subtotal: zod.string().optional(),
     discountAmount: zod.string().optional(),
     taxAmount: zod.string().optional(),
+    requiredTotal: zod.string().nullish(),
   })
   .and(
     zod.object({
@@ -265,6 +276,8 @@ export const GetQuotationResponse = zod
       terms: zod.string().nullish(),
       paymentUrl: zod.string().nullish(),
       showQrCode: zod.boolean().optional(),
+      paymentMethod: zod.string().nullish(),
+      secondaryExchangeRate: zod.string().nullish(),
       sentAt: zod.coerce.date().nullish(),
       acceptedAt: zod.coerce.date().nullish(),
       paidAt: zod.coerce.date().nullish(),
@@ -291,11 +304,14 @@ export const GetQuotationResponse = zod
           zod.object({
             id: zod.string(),
             quotationId: zod.string(),
+            sku: zod.string().nullish(),
             description: zod.string(),
             quantity: zod.string(),
             unit: zod.string(),
             unitPrice: zod.string(),
             lineTotal: zod.string(),
+            rateFormula: zod.string().nullish(),
+            paymentRequired: zod.boolean().nullish(),
             position: zod.number(),
           }),
         )
@@ -315,6 +331,7 @@ export const UpdateQuotationBody = zod.object({
   issueDate: zod.coerce.date(),
   validUntil: zod.coerce.date(),
   currency: zod.string().optional(),
+  secondaryCurrency: zod.string().nullish(),
   discountType: zod.enum(["PERCENTAGE", "FIXED"]).nullish(),
   discountValue: zod.number().optional(),
   taxRate: zod.number().optional(),
@@ -322,13 +339,19 @@ export const UpdateQuotationBody = zod.object({
   terms: zod.string().nullish(),
   paymentUrl: zod.string().nullish(),
   showQrCode: zod.boolean().optional(),
+  paymentMethod: zod
+    .enum(["stripe", "bank_transfer", "both", "none"])
+    .optional(),
   template: zod.enum(["MODERN", "CLASSIC"]).optional(),
   lineItems: zod.array(
     zod.object({
+      sku: zod.string().nullish(),
       description: zod.string(),
       quantity: zod.number(),
       unit: zod.enum(["hours", "days", "fixed"]).optional(),
       unitPrice: zod.number(),
+      rateFormula: zod.string().nullish(),
+      paymentRequired: zod.boolean().optional(),
       position: zod.number().optional(),
     }),
   ),
@@ -341,6 +364,7 @@ export const UpdateQuotationResponse = zod
     status: zod.string(),
     total: zod.string(),
     currency: zod.string(),
+    secondaryCurrency: zod.string().nullish(),
     issueDate: zod.coerce.date(),
     validUntil: zod.coerce.date(),
     createdAt: zod.coerce.date().optional(),
@@ -354,6 +378,7 @@ export const UpdateQuotationResponse = zod
     subtotal: zod.string().optional(),
     discountAmount: zod.string().optional(),
     taxAmount: zod.string().optional(),
+    requiredTotal: zod.string().nullish(),
   })
   .and(
     zod.object({
@@ -361,6 +386,8 @@ export const UpdateQuotationResponse = zod
       terms: zod.string().nullish(),
       paymentUrl: zod.string().nullish(),
       showQrCode: zod.boolean().optional(),
+      paymentMethod: zod.string().nullish(),
+      secondaryExchangeRate: zod.string().nullish(),
       sentAt: zod.coerce.date().nullish(),
       acceptedAt: zod.coerce.date().nullish(),
       paidAt: zod.coerce.date().nullish(),
@@ -387,11 +414,14 @@ export const UpdateQuotationResponse = zod
           zod.object({
             id: zod.string(),
             quotationId: zod.string(),
+            sku: zod.string().nullish(),
             description: zod.string(),
             quantity: zod.string(),
             unit: zod.string(),
             unitPrice: zod.string(),
             lineTotal: zod.string(),
+            rateFormula: zod.string().nullish(),
+            paymentRequired: zod.boolean().nullish(),
             position: zod.number(),
           }),
         )
@@ -431,6 +461,7 @@ export const ChangeQuotationStatusResponse = zod
     status: zod.string(),
     total: zod.string(),
     currency: zod.string(),
+    secondaryCurrency: zod.string().nullish(),
     issueDate: zod.coerce.date(),
     validUntil: zod.coerce.date(),
     createdAt: zod.coerce.date().optional(),
@@ -444,6 +475,7 @@ export const ChangeQuotationStatusResponse = zod
     subtotal: zod.string().optional(),
     discountAmount: zod.string().optional(),
     taxAmount: zod.string().optional(),
+    requiredTotal: zod.string().nullish(),
   })
   .and(
     zod.object({
@@ -451,6 +483,8 @@ export const ChangeQuotationStatusResponse = zod
       terms: zod.string().nullish(),
       paymentUrl: zod.string().nullish(),
       showQrCode: zod.boolean().optional(),
+      paymentMethod: zod.string().nullish(),
+      secondaryExchangeRate: zod.string().nullish(),
       sentAt: zod.coerce.date().nullish(),
       acceptedAt: zod.coerce.date().nullish(),
       paidAt: zod.coerce.date().nullish(),
@@ -477,11 +511,14 @@ export const ChangeQuotationStatusResponse = zod
           zod.object({
             id: zod.string(),
             quotationId: zod.string(),
+            sku: zod.string().nullish(),
             description: zod.string(),
             quantity: zod.string(),
             unit: zod.string(),
             unitPrice: zod.string(),
             lineTotal: zod.string(),
+            rateFormula: zod.string().nullish(),
+            paymentRequired: zod.boolean().nullish(),
             position: zod.number(),
           }),
         )
@@ -504,6 +541,426 @@ export const GetQuotationPdfParams = zod.object({
 });
 
 /**
+ * @summary List invoices
+ */
+export const ListInvoicesQueryParams = zod.object({
+  status: zod.coerce.string().optional(),
+  clientId: zod.coerce.string().optional(),
+});
+
+export const ListInvoicesResponseItem = zod.object({
+  id: zod.string(),
+  number: zod.string(),
+  status: zod.string(),
+  total: zod.string(),
+  currency: zod.string(),
+  secondaryCurrency: zod.string().nullish(),
+  issueDate: zod.coerce.date(),
+  dueDate: zod.coerce.date(),
+  createdAt: zod.coerce.date().optional(),
+  clientId: zod.string(),
+  clientName: zod.string().nullish(),
+  clientCompany: zod.string().nullish(),
+  template: zod.string().optional(),
+  discountType: zod.string().nullish(),
+  discountValue: zod.string().optional(),
+  taxRate: zod.string().optional(),
+  subtotal: zod.string().optional(),
+  discountAmount: zod.string().optional(),
+  taxAmount: zod.string().optional(),
+  paymentUrl: zod.string().nullish(),
+  paymentMethod: zod.string().nullish(),
+});
+export const ListInvoicesResponse = zod.array(ListInvoicesResponseItem);
+
+/**
+ * @summary Create an invoice
+ */
+export const CreateInvoiceBody = zod.object({
+  clientId: zod.string(),
+  issueDate: zod.coerce.date(),
+  dueDate: zod.coerce.date(),
+  currency: zod.string().optional(),
+  secondaryCurrency: zod.string().nullish(),
+  discountType: zod.enum(["PERCENTAGE", "FIXED"]).nullish(),
+  discountValue: zod.number().optional(),
+  taxRate: zod.number().optional(),
+  notes: zod.string().nullish(),
+  terms: zod.string().nullish(),
+  paymentUrl: zod.string().nullish(),
+  showQrCode: zod.boolean().optional(),
+  paymentMethod: zod
+    .enum(["stripe", "bank_transfer", "both", "none"])
+    .optional(),
+  template: zod.enum(["MODERN", "CLASSIC"]).optional(),
+  lineItems: zod.array(
+    zod.object({
+      sku: zod.string().nullish(),
+      description: zod.string(),
+      quantity: zod.number(),
+      unit: zod.enum(["hours", "days", "fixed"]).optional(),
+      unitPrice: zod.number(),
+      rateFormula: zod.string().nullish(),
+      paymentRequired: zod.boolean().optional(),
+      position: zod.number().optional(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get invoice by ID (with line items)
+ */
+export const GetInvoiceParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetInvoiceResponse = zod
+  .object({
+    id: zod.string(),
+    number: zod.string(),
+    status: zod.string(),
+    total: zod.string(),
+    currency: zod.string(),
+    secondaryCurrency: zod.string().nullish(),
+    issueDate: zod.coerce.date(),
+    dueDate: zod.coerce.date(),
+    createdAt: zod.coerce.date().optional(),
+    clientId: zod.string(),
+    clientName: zod.string().nullish(),
+    clientCompany: zod.string().nullish(),
+    template: zod.string().optional(),
+    discountType: zod.string().nullish(),
+    discountValue: zod.string().optional(),
+    taxRate: zod.string().optional(),
+    subtotal: zod.string().optional(),
+    discountAmount: zod.string().optional(),
+    taxAmount: zod.string().optional(),
+    paymentUrl: zod.string().nullish(),
+    paymentMethod: zod.string().nullish(),
+  })
+  .and(
+    zod.object({
+      notes: zod.string().nullish(),
+      terms: zod.string().nullish(),
+      showQrCode: zod.boolean().optional(),
+      sentAt: zod.coerce.date().nullish(),
+      paidAt: zod.coerce.date().nullish(),
+      client: zod
+        .object({
+          id: zod.string(),
+          name: zod.string(),
+          company: zod.string().nullish(),
+          email: zod.string(),
+          phone: zod.string().nullish(),
+          addressLine1: zod.string().nullish(),
+          addressLine2: zod.string().nullish(),
+          city: zod.string().nullish(),
+          region: zod.string().nullish(),
+          postalCode: zod.string().nullish(),
+          country: zod.string().nullish(),
+          notes: zod.string().nullish(),
+          createdAt: zod.coerce.date(),
+          updatedAt: zod.coerce.date(),
+        })
+        .optional(),
+      lineItems: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            invoiceId: zod.string(),
+            sku: zod.string().nullish(),
+            description: zod.string(),
+            quantity: zod.string(),
+            unit: zod.string(),
+            unitPrice: zod.string(),
+            lineTotal: zod.string(),
+            rateFormula: zod.string().nullish(),
+            paymentRequired: zod.boolean().nullish(),
+            position: zod.number(),
+          }),
+        )
+        .optional(),
+    }),
+  );
+
+/**
+ * @summary Update invoice
+ */
+export const UpdateInvoiceParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateInvoiceBody = zod.object({
+  clientId: zod.string(),
+  issueDate: zod.coerce.date(),
+  dueDate: zod.coerce.date(),
+  currency: zod.string().optional(),
+  secondaryCurrency: zod.string().nullish(),
+  discountType: zod.enum(["PERCENTAGE", "FIXED"]).nullish(),
+  discountValue: zod.number().optional(),
+  taxRate: zod.number().optional(),
+  notes: zod.string().nullish(),
+  terms: zod.string().nullish(),
+  paymentUrl: zod.string().nullish(),
+  showQrCode: zod.boolean().optional(),
+  paymentMethod: zod
+    .enum(["stripe", "bank_transfer", "both", "none"])
+    .optional(),
+  template: zod.enum(["MODERN", "CLASSIC"]).optional(),
+  lineItems: zod.array(
+    zod.object({
+      sku: zod.string().nullish(),
+      description: zod.string(),
+      quantity: zod.number(),
+      unit: zod.enum(["hours", "days", "fixed"]).optional(),
+      unitPrice: zod.number(),
+      rateFormula: zod.string().nullish(),
+      paymentRequired: zod.boolean().optional(),
+      position: zod.number().optional(),
+    }),
+  ),
+});
+
+export const UpdateInvoiceResponse = zod
+  .object({
+    id: zod.string(),
+    number: zod.string(),
+    status: zod.string(),
+    total: zod.string(),
+    currency: zod.string(),
+    secondaryCurrency: zod.string().nullish(),
+    issueDate: zod.coerce.date(),
+    dueDate: zod.coerce.date(),
+    createdAt: zod.coerce.date().optional(),
+    clientId: zod.string(),
+    clientName: zod.string().nullish(),
+    clientCompany: zod.string().nullish(),
+    template: zod.string().optional(),
+    discountType: zod.string().nullish(),
+    discountValue: zod.string().optional(),
+    taxRate: zod.string().optional(),
+    subtotal: zod.string().optional(),
+    discountAmount: zod.string().optional(),
+    taxAmount: zod.string().optional(),
+    paymentUrl: zod.string().nullish(),
+    paymentMethod: zod.string().nullish(),
+  })
+  .and(
+    zod.object({
+      notes: zod.string().nullish(),
+      terms: zod.string().nullish(),
+      showQrCode: zod.boolean().optional(),
+      sentAt: zod.coerce.date().nullish(),
+      paidAt: zod.coerce.date().nullish(),
+      client: zod
+        .object({
+          id: zod.string(),
+          name: zod.string(),
+          company: zod.string().nullish(),
+          email: zod.string(),
+          phone: zod.string().nullish(),
+          addressLine1: zod.string().nullish(),
+          addressLine2: zod.string().nullish(),
+          city: zod.string().nullish(),
+          region: zod.string().nullish(),
+          postalCode: zod.string().nullish(),
+          country: zod.string().nullish(),
+          notes: zod.string().nullish(),
+          createdAt: zod.coerce.date(),
+          updatedAt: zod.coerce.date(),
+        })
+        .optional(),
+      lineItems: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            invoiceId: zod.string(),
+            sku: zod.string().nullish(),
+            description: zod.string(),
+            quantity: zod.string(),
+            unit: zod.string(),
+            unitPrice: zod.string(),
+            lineTotal: zod.string(),
+            rateFormula: zod.string().nullish(),
+            paymentRequired: zod.boolean().nullish(),
+            position: zod.number(),
+          }),
+        )
+        .optional(),
+    }),
+  );
+
+/**
+ * @summary Delete invoice
+ */
+export const DeleteInvoiceParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+/**
+ * @summary Change invoice status
+ */
+export const ChangeInvoiceStatusParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ChangeInvoiceStatusBody = zod.object({
+  status: zod.enum(["DRAFT", "SENT", "PAID"]),
+});
+
+export const ChangeInvoiceStatusResponse = zod
+  .object({
+    id: zod.string(),
+    number: zod.string(),
+    status: zod.string(),
+    total: zod.string(),
+    currency: zod.string(),
+    secondaryCurrency: zod.string().nullish(),
+    issueDate: zod.coerce.date(),
+    dueDate: zod.coerce.date(),
+    createdAt: zod.coerce.date().optional(),
+    clientId: zod.string(),
+    clientName: zod.string().nullish(),
+    clientCompany: zod.string().nullish(),
+    template: zod.string().optional(),
+    discountType: zod.string().nullish(),
+    discountValue: zod.string().optional(),
+    taxRate: zod.string().optional(),
+    subtotal: zod.string().optional(),
+    discountAmount: zod.string().optional(),
+    taxAmount: zod.string().optional(),
+    paymentUrl: zod.string().nullish(),
+    paymentMethod: zod.string().nullish(),
+  })
+  .and(
+    zod.object({
+      notes: zod.string().nullish(),
+      terms: zod.string().nullish(),
+      showQrCode: zod.boolean().optional(),
+      sentAt: zod.coerce.date().nullish(),
+      paidAt: zod.coerce.date().nullish(),
+      client: zod
+        .object({
+          id: zod.string(),
+          name: zod.string(),
+          company: zod.string().nullish(),
+          email: zod.string(),
+          phone: zod.string().nullish(),
+          addressLine1: zod.string().nullish(),
+          addressLine2: zod.string().nullish(),
+          city: zod.string().nullish(),
+          region: zod.string().nullish(),
+          postalCode: zod.string().nullish(),
+          country: zod.string().nullish(),
+          notes: zod.string().nullish(),
+          createdAt: zod.coerce.date(),
+          updatedAt: zod.coerce.date(),
+        })
+        .optional(),
+      lineItems: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            invoiceId: zod.string(),
+            sku: zod.string().nullish(),
+            description: zod.string(),
+            quantity: zod.string(),
+            unit: zod.string(),
+            unitPrice: zod.string(),
+            lineTotal: zod.string(),
+            rateFormula: zod.string().nullish(),
+            paymentRequired: zod.boolean().nullish(),
+            position: zod.number(),
+          }),
+        )
+        .optional(),
+    }),
+  );
+
+/**
+ * @summary Download invoice PDF
+ */
+export const GetInvoicePdfParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+/**
+ * @summary Generate Stripe payment link for an invoice
+ */
+export const CreateInvoicePaymentLinkParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const CreateInvoicePaymentLinkResponse = zod
+  .object({
+    id: zod.string(),
+    number: zod.string(),
+    status: zod.string(),
+    total: zod.string(),
+    currency: zod.string(),
+    secondaryCurrency: zod.string().nullish(),
+    issueDate: zod.coerce.date(),
+    dueDate: zod.coerce.date(),
+    createdAt: zod.coerce.date().optional(),
+    clientId: zod.string(),
+    clientName: zod.string().nullish(),
+    clientCompany: zod.string().nullish(),
+    template: zod.string().optional(),
+    discountType: zod.string().nullish(),
+    discountValue: zod.string().optional(),
+    taxRate: zod.string().optional(),
+    subtotal: zod.string().optional(),
+    discountAmount: zod.string().optional(),
+    taxAmount: zod.string().optional(),
+    paymentUrl: zod.string().nullish(),
+    paymentMethod: zod.string().nullish(),
+  })
+  .and(
+    zod.object({
+      notes: zod.string().nullish(),
+      terms: zod.string().nullish(),
+      showQrCode: zod.boolean().optional(),
+      sentAt: zod.coerce.date().nullish(),
+      paidAt: zod.coerce.date().nullish(),
+      client: zod
+        .object({
+          id: zod.string(),
+          name: zod.string(),
+          company: zod.string().nullish(),
+          email: zod.string(),
+          phone: zod.string().nullish(),
+          addressLine1: zod.string().nullish(),
+          addressLine2: zod.string().nullish(),
+          city: zod.string().nullish(),
+          region: zod.string().nullish(),
+          postalCode: zod.string().nullish(),
+          country: zod.string().nullish(),
+          notes: zod.string().nullish(),
+          createdAt: zod.coerce.date(),
+          updatedAt: zod.coerce.date(),
+        })
+        .optional(),
+      lineItems: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            invoiceId: zod.string(),
+            sku: zod.string().nullish(),
+            description: zod.string(),
+            quantity: zod.string(),
+            unit: zod.string(),
+            unitPrice: zod.string(),
+            lineTotal: zod.string(),
+            rateFormula: zod.string().nullish(),
+            paymentRequired: zod.boolean().nullish(),
+            position: zod.number(),
+          }),
+        )
+        .optional(),
+    }),
+  );
+
+/**
  * @summary Get company settings
  */
 export const GetSettingsResponse = zod.object({
@@ -519,6 +976,7 @@ export const GetSettingsResponse = zod.object({
   email: zod.string(),
   website: zod.string().nullish(),
   taxNumber: zod.string().nullish(),
+  registrationNumber: zod.string().nullish(),
   logoUrl: zod.string().nullish(),
   currency: zod.string(),
   defaultTaxRate: zod.string(),
@@ -526,6 +984,10 @@ export const GetSettingsResponse = zod.object({
   defaultNotes: zod.string().nullish(),
   defaultTemplate: zod.string(),
   defaultPaymentUrl: zod.string().nullish(),
+  bankName: zod.string().nullish(),
+  bankAccountNumber: zod.string().nullish(),
+  bankRecipientName: zod.string().nullish(),
+  bankQrCodeUrl: zod.string().nullish(),
   updatedAt: zod.coerce.date(),
 });
 
@@ -544,6 +1006,7 @@ export const UpdateSettingsBody = zod.object({
   email: zod.string(),
   website: zod.string().nullish(),
   taxNumber: zod.string().nullish(),
+  registrationNumber: zod.string().nullish(),
   logoUrl: zod.string().nullish(),
   currency: zod.string(),
   defaultTaxRate: zod.number(),
@@ -551,6 +1014,10 @@ export const UpdateSettingsBody = zod.object({
   defaultNotes: zod.string().nullish(),
   defaultTemplate: zod.enum(["MODERN", "CLASSIC"]),
   defaultPaymentUrl: zod.string().nullish(),
+  bankName: zod.string().nullish(),
+  bankAccountNumber: zod.string().nullish(),
+  bankRecipientName: zod.string().nullish(),
+  bankQrCodeUrl: zod.string().nullish(),
 });
 
 export const UpdateSettingsResponse = zod.object({
@@ -566,6 +1033,7 @@ export const UpdateSettingsResponse = zod.object({
   email: zod.string(),
   website: zod.string().nullish(),
   taxNumber: zod.string().nullish(),
+  registrationNumber: zod.string().nullish(),
   logoUrl: zod.string().nullish(),
   currency: zod.string(),
   defaultTaxRate: zod.string(),
@@ -573,6 +1041,10 @@ export const UpdateSettingsResponse = zod.object({
   defaultNotes: zod.string().nullish(),
   defaultTemplate: zod.string(),
   defaultPaymentUrl: zod.string().nullish(),
+  bankName: zod.string().nullish(),
+  bankAccountNumber: zod.string().nullish(),
+  bankRecipientName: zod.string().nullish(),
+  bankQrCodeUrl: zod.string().nullish(),
   updatedAt: zod.coerce.date(),
 });
 
@@ -601,6 +1073,7 @@ export const GetDashboardResponse = zod.object({
       status: zod.string(),
       total: zod.string(),
       currency: zod.string(),
+      secondaryCurrency: zod.string().nullish(),
       issueDate: zod.coerce.date(),
       validUntil: zod.coerce.date(),
       createdAt: zod.coerce.date().optional(),
@@ -614,6 +1087,7 @@ export const GetDashboardResponse = zod.object({
       subtotal: zod.string().optional(),
       discountAmount: zod.string().optional(),
       taxAmount: zod.string().optional(),
+      requiredTotal: zod.string().nullish(),
     }),
   ),
 });

@@ -26,7 +26,7 @@ type QuoteData = {
   number: string;
   status: string;
   issueDate: Date;
-  validUntil: Date;
+  validUntil?: Date | null;
   paidAt?: Date | null;
   currency: string;
   secondaryCurrency?: string | null;
@@ -136,6 +136,65 @@ async function fetchLogoDataUrl(
   } catch {
     return undefined;
   }
+}
+
+export async function renderInvoicePdf(args: {
+  invoice: QuoteData & { dueDate?: Date | null };
+  client: ClientData;
+  company: CompanyData;
+}): Promise<Buffer> {
+  const { invoice, client, company } = args;
+
+  const effectiveClient =
+    (invoice.clientSnapshot as ClientData | null) ?? client;
+  const effectiveCompany =
+    (invoice.companySnapshot as CompanyData | null) ?? company;
+
+  const method =
+    (!invoice.paymentMethod || invoice.paymentMethod === "none") && invoice.paymentUrl
+      ? "stripe"
+      : (invoice.paymentMethod ?? "none");
+  const needsStripeQr = (method === "stripe" || method === "both") && invoice.showQrCode && invoice.paymentUrl;
+  const needsBankQr = (method === "bank_transfer" || method === "both") && effectiveCompany.bankQrCodeUrl;
+
+  const [logoDataUrl, qrDataUrl, bankQrCodeDataUrl] = await Promise.all([
+    fetchLogoDataUrl(effectiveCompany.logoUrl),
+    needsStripeQr ? generateQrDataUrl(invoice.paymentUrl!) : Promise.resolve(undefined),
+    needsBankQr ? fetchLogoDataUrl(effectiveCompany.bankQrCodeUrl) : Promise.resolve(undefined),
+  ]);
+
+  const bankDetails = (method === "bank_transfer" || method === "both") ? {
+    bankName: effectiveCompany.bankName,
+    bankAccountNumber: effectiveCompany.bankAccountNumber,
+    bankRecipientName: effectiveCompany.bankRecipientName,
+    bankQrCodeDataUrl: bankQrCodeDataUrl ?? null,
+  } : null;
+
+  const props: TemplateProps = {
+    quote: {
+      ...invoice,
+      lineItems: invoice.lineItems as TemplateLineItem[],
+      paymentMethod: method,
+    },
+    client: effectiveClient,
+    company: effectiveCompany,
+    logoDataUrl,
+    qrDataUrl,
+    bankDetails,
+    invoiceMode: {
+      documentTitle: "INVOICE",
+      referenceNumber: invoice.number,
+      dueDate: invoice.dueDate ?? undefined,
+      standaloneInvoice: true,
+    },
+  };
+
+  const Component =
+    invoice.template === "CLASSIC" ? ClassicTemplate : ModernTemplate;
+
+  return (await renderToBuffer(
+    React.createElement(Component, props) as React.ReactElement<DocumentProps>,
+  )) as Buffer;
 }
 
 export async function renderFollowUpInvoicePdf(args: {

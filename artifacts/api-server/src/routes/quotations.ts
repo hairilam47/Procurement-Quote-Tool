@@ -855,7 +855,7 @@ router.get("/quotations/:id/public-summary", async (req, res): Promise<void> => 
 
     // Extract client name from snapshot (set at SENT time) or live client table
     type ClientSnap = { name?: string; company?: string | null };
-    type CompanySnap = { name?: string };
+    type CompanySnap = { name?: string; email?: string; phone?: string | null };
     const snap = quote.clientSnapshot as ClientSnap | null;
     let clientName: string | null = snap?.name ?? null;
     let clientCompany: string | null = snap?.company ?? null;
@@ -868,7 +868,6 @@ router.get("/quotations/:id/public-summary", async (req, res): Promise<void> => 
       clientCompany = liveClient?.company ?? null;
     }
 
-    type CompanySnap = { name?: string; email?: string; phone?: string | null };
     const companySnap = quote.companySnapshot as CompanySnap | null;
     const companyName: string | null = companySnap?.name ?? null;
     const companyEmail: string | null = companySnap?.email ?? null;

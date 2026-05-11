@@ -13,8 +13,11 @@ export type TemplateLineItem = {
 export type InvoiceMode = {
   documentTitle: string;
   referenceNumber: string;
+  dueDate?: Date | string | null;
   paidAt?: Date | string | null;
   receiptMode?: boolean;
+  /** True for stand-alone invoices (INV-…). False/absent = follow-up invoice attached to a quotation. */
+  standaloneInvoice?: boolean;
 };
 
 export type BankDetails = {
@@ -31,7 +34,7 @@ export type TemplateProps = {
     number: string;
     status: string;
     issueDate: Date | string;
-    validUntil: Date | string;
+    validUntil?: Date | string | null;
     currency: string;
     secondaryCurrency?: string | null;
     secondaryExchangeRate?: string | null;

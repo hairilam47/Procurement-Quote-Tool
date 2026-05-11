@@ -10,6 +10,9 @@ import DashboardPage from "@/pages/DashboardPage";
 import QuotationsPage from "@/pages/quotations/QuotationsPage";
 import QuotationFormPage from "@/pages/quotations/QuotationFormPage";
 import QuotationDetailPage from "@/pages/quotations/QuotationDetailPage";
+import InvoicesPage from "@/pages/invoices/InvoicesPage";
+import InvoiceFormPage from "@/pages/invoices/InvoiceFormPage";
+import InvoiceDetailPage from "@/pages/invoices/InvoiceDetailPage";
 import ClientsPage from "@/pages/clients/ClientsPage";
 import ClientFormPage from "@/pages/clients/ClientFormPage";
 import ClientDetailPage from "@/pages/clients/ClientDetailPage";
@@ -88,6 +91,10 @@ function ProtectedRoutes() {
         <Route path="/quotations/new" component={QuotationFormPage} />
         <Route path="/quotations/:id/edit" component={QuotationFormPage} />
         <Route path="/quotations/:id" component={QuotationDetailPage} />
+        <Route path="/invoices" component={InvoicesPage} />
+        <Route path="/invoices/new" component={InvoiceFormPage} />
+        <Route path="/invoices/:id/edit" component={InvoiceFormPage} />
+        <Route path="/invoices/:id" component={InvoiceDetailPage} />
         <Route path="/clients" component={ClientsPage} />
         <Route path="/clients/new" component={ClientFormPage} />
         <Route path="/clients/:id/edit" component={ClientFormPage} />

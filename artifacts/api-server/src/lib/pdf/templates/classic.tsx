@@ -248,7 +248,10 @@ export function ClassicTemplate({
   const hasDeferred = deferredItems.length > 0;
 
   const docTitle = invoiceMode?.documentTitle ?? "QUOTATION";
-  const isFollowUp = !!invoiceMode;
+  // isFollowUp = true ONLY for follow-up invoices (invoiceMode present but not standalone and not receipt)
+  const isFollowUp = !!invoiceMode && !invoiceMode.standaloneInvoice && !invoiceMode.receiptMode;
+  // isInvoiceDoc = true for any invoice variant (standalone OR follow-up) — controls line-item rendering
+  const isInvoiceDoc = !!invoiceMode && !invoiceMode.receiptMode;
 
   const colDesc = hasSec ? "38%" : "50%";
   const colQty = hasSec ? "10%" : "12%";
@@ -348,12 +351,17 @@ export function ClassicTemplate({
                 <Text style={{ color: C.muted, fontSize: 9 }}>Payment date</Text>
                 <Text style={s.bold}>{fmtDate(invoiceMode.paidAt)}</Text>
               </>
-            ) : (
+            ) : invoiceMode?.dueDate ? (
+              <>
+                <Text style={{ color: C.muted, fontSize: 9 }}>Due date</Text>
+                <Text style={s.bold}>{fmtDate(invoiceMode.dueDate)}</Text>
+              </>
+            ) : quote.validUntil ? (
               <>
                 <Text style={{ color: C.muted, fontSize: 9 }}>Valid until</Text>
                 <Text style={s.bold}>{fmtDate(quote.validUntil)}</Text>
               </>
-            )}
+            ) : null}
           </View>
         </View>
 
@@ -374,8 +382,8 @@ export function ClassicTemplate({
             )}
           </View>
 
-          {/* In follow-up invoice mode: show all items as regular rows */}
-          {isFollowUp ? (
+          {/* In invoice mode (standalone or follow-up): show all items as regular rows */}
+          {isInvoiceDoc ? (
             quote.lineItems.map((li) => (
               <View key={li.id} style={s.tr} wrap={false}>
                 <View style={{ width: colDesc, paddingRight: 8 }}>
@@ -636,7 +644,7 @@ export function ClassicTemplate({
         {/* Footer */}
         <View style={s.footer} fixed>
           <Text>
-            {company.name} · {invoiceMode?.receiptMode ? `Receipt · Ref: ${invoiceMode.referenceNumber}` : isFollowUp && invoiceMode ? `Follow-up Invoice · Ref: ${invoiceMode.referenceNumber}` : `Quotation ${quote.number}`}
+            {company.name} · {invoiceMode?.receiptMode ? `Receipt · Ref: ${invoiceMode.referenceNumber}` : invoiceMode?.standaloneInvoice ? `Invoice · ${quote.number}` : isFollowUp && invoiceMode ? `Follow-up Invoice · Ref: ${invoiceMode.referenceNumber}` : `Quotation ${quote.number}`}
           </Text>
           <Text style={{ color: C.line }}>KuotFlow</Text>
           <Text

@@ -115,3 +115,42 @@ export type SettingsInput = z.infer<typeof settingsSchema>;
 export const changeStatusSchema = z.object({
   status: z.enum(["DRAFT", "SENT", "ACCEPTED", "REJECTED", "PAID", "EXPIRED"]),
 });
+
+export const invoiceSchema = z
+  .object({
+    clientId: z.string().min(1, "Pick a client"),
+    issueDate: z.coerce.date(),
+    dueDate: z.coerce.date(),
+    currency: z.string().length(3).default("USD"),
+    secondaryCurrency: z
+      .string()
+      .length(3)
+      .optional()
+      .nullable()
+      .or(z.literal("").transform(() => null)),
+    discountType: z.enum(["PERCENTAGE", "FIXED"]).nullable().optional(),
+    discountValue: z.coerce.number().nonnegative().default(0),
+    taxRate: z.coerce.number().min(0).max(100).default(0),
+    notes: z.string().max(5000).optional().nullable(),
+    terms: z.string().max(5000).optional().nullable(),
+    paymentUrl: z
+      .string()
+      .url()
+      .optional()
+      .nullable()
+      .or(z.literal("").transform(() => null)),
+    showQrCode: z.boolean().default(true),
+    paymentMethod: z.enum(["stripe", "bank_transfer", "both", "none"]).default("none"),
+    template: z.enum(["MODERN", "CLASSIC"]).default("MODERN"),
+    lineItems: z.array(lineItemSchema).min(1, "At least one line item"),
+  })
+  .refine((d) => d.dueDate >= d.issueDate, {
+    message: "Due date must be on or after issue date",
+    path: ["dueDate"],
+  });
+
+export type InvoiceInput = z.infer<typeof invoiceSchema>;
+
+export const changeInvoiceStatusSchema = z.object({
+  status: z.enum(["DRAFT", "SENT", "PAID"]),
+});

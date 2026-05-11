@@ -64,12 +64,20 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Overview of your quotation pipeline</p>
         </div>
-        <Link href="/quotations/new">
-          <span className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
-            <Plus size={15} />
-            New Quotation
-          </span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/invoices/new">
+            <span className="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
+              <Plus size={15} />
+              New Invoice
+            </span>
+          </Link>
+          <Link href="/quotations/new">
+            <span className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
+              <Plus size={15} />
+              New Quotation
+            </span>
+          </Link>
+        </div>
       </div>
 
       {/* Stat cards */}

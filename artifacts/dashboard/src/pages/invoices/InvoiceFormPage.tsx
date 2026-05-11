@@ -1,0 +1,518 @@
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  useCreateInvoice,
+  useUpdateInvoice,
+  useGetInvoice,
+  useListClients,
+  useGetSettings,
+  getGetInvoiceQueryKey,
+} from "@workspace/api-client-react";
+import { BeamCard } from "@/components/ui/beam-card";
+import type { InvoiceInput, LineItemInput, InvoiceInputDiscountType } from "@workspace/api-client-react";
+import { useLocation, useParams, Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { motion } from "framer-motion";
+import { ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react";
+import { formatCurrency } from "@/lib/format";
+
+const inputCls =
+  "bg-input border-border text-foreground placeholder:text-muted-foreground focus:border-violet-500";
+
+function evaluateFormulaClient(formula: string): number | null {
+  const trimmed = formula.trim();
+  if (!trimmed) return null;
+  if (!/^[\d\s.()+\-*/]+$/.test(trimmed)) return null;
+  try {
+    const result = new Function(`"use strict"; return (${trimmed});`)();
+    if (typeof result !== "number" || !isFinite(result) || isNaN(result) || result < 0) return null;
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+const ALL_CURRENCIES = [
+  { code: "AED", name: "UAE Dirham" }, { code: "AUD", name: "Australian Dollar" },
+  { code: "BRL", name: "Brazilian Real" }, { code: "CAD", name: "Canadian Dollar" },
+  { code: "CHF", name: "Swiss Franc" }, { code: "CLP", name: "Chilean Peso" },
+  { code: "CNY", name: "Chinese Yuan" }, { code: "COP", name: "Colombian Peso" },
+  { code: "CZK", name: "Czech Koruna" }, { code: "DKK", name: "Danish Krone" },
+  { code: "EUR", name: "Euro" }, { code: "GBP", name: "British Pound" },
+  { code: "HKD", name: "Hong Kong Dollar" }, { code: "HUF", name: "Hungarian Forint" },
+  { code: "IDR", name: "Indonesian Rupiah" }, { code: "ILS", name: "Israeli Shekel" },
+  { code: "INR", name: "Indian Rupee" }, { code: "JPY", name: "Japanese Yen" },
+  { code: "KRW", name: "South Korean Won" }, { code: "KWD", name: "Kuwaiti Dinar" },
+  { code: "MXN", name: "Mexican Peso" }, { code: "MYR", name: "Malaysian Ringgit" },
+  { code: "NOK", name: "Norwegian Krone" }, { code: "NZD", name: "New Zealand Dollar" },
+  { code: "PHP", name: "Philippine Peso" }, { code: "PLN", name: "Polish Zloty" },
+  { code: "QAR", name: "Qatari Riyal" }, { code: "RUB", name: "Russian Ruble" },
+  { code: "SAR", name: "Saudi Riyal" }, { code: "SEK", name: "Swedish Krona" },
+  { code: "SGD", name: "Singapore Dollar" }, { code: "THB", name: "Thai Baht" },
+  { code: "TRY", name: "Turkish Lira" }, { code: "TWD", name: "Taiwan Dollar" },
+  { code: "USD", name: "US Dollar" }, { code: "VND", name: "Vietnamese Dong" },
+  { code: "ZAR", name: "South African Rand" },
+];
+
+const EURO_ZONE = ["AT","BE","CY","EE","FI","FR","DE","GR","IE","IT","LV","LT","LU","MT","NL","PT","SK","SI","ES"];
+const REGION_CURRENCY: Record<string, string> = {
+  NZ: "NZD", AU: "AUD", GB: "GBP", CA: "CAD", JP: "JPY", CN: "CNY",
+  CH: "CHF", HK: "HKD", SE: "SEK", NO: "NOK", DK: "DKK", SG: "SGD",
+  MX: "MXN", BR: "BRL", IN: "INR", ZA: "ZAR", KR: "KRW", MY: "MYR",
+  TH: "THB", ID: "IDR", PH: "PHP", TW: "TWD", AE: "AED", SA: "SAR",
+  PL: "PLN", CZ: "CZK", HU: "HUF", IL: "ILS", TR: "TRY", RU: "RUB",
+  CL: "CLP", CO: "COP", QA: "QAR", KW: "KWD", VN: "VND",
+};
+
+function detectLocaleCurrency(): string {
+  try {
+    const locale = navigator.language || "en-US";
+    const region = locale.split("-")[1]?.toUpperCase();
+    if (region && EURO_ZONE.includes(region)) return "EUR";
+    return (region && REGION_CURRENCY[region]) || "USD";
+  } catch {
+    return "USD";
+  }
+}
+
+function Field({ label, children, required, className }: {
+  label: string; children: React.ReactNode; required?: boolean; className?: string;
+}) {
+  return (
+    <div className={`space-y-1.5 ${className ?? ""}`}>
+      <Label className="text-muted-foreground text-xs">
+        {label}{required && <span className="text-violet-400 ml-0.5">*</span>}
+      </Label>
+      {children}
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <BeamCard className="p-5 space-y-4">
+      <h2 className="text-sm font-semibold text-muted-foreground border-b border-border pb-3">{title}</h2>
+      {children}
+    </BeamCard>
+  );
+}
+
+const today = () => new Date().toISOString().split("T")[0];
+const thirtyDays = () => {
+  const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split("T")[0];
+};
+
+const emptyLineItem = (): LineItemInput => ({
+  sku: null, description: "", quantity: 1, unit: "hours", unitPrice: 0,
+  rateFormula: null, paymentRequired: true, position: 0,
+});
+
+const LineItemRow = memo(function LineItemRow({
+  li, idx, currency, isOnly, onUpdate, onFormulaChange, onRemove,
+}: {
+  li: LineItemInput; idx: number; currency: string; isOnly: boolean;
+  onUpdate: (index: number, key: keyof LineItemInput, value: unknown) => void;
+  onFormulaChange: (index: number, formula: string) => void;
+  onRemove: (index: number) => void;
+}) {
+  const rowTotal = (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0);
+  return (
+    <div className="grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2.5 border-b border-border/30 last:border-0 items-center">
+      <div className="flex flex-col gap-1">
+        <Input value={li.description} onChange={(e) => onUpdate(idx, "description", e.target.value)}
+          placeholder="Description..." className={`${inputCls} h-8 text-sm`} data-testid={`line-item-description-${idx}`} />
+        <Input value={li.sku ?? ""} onChange={(e) => onUpdate(idx, "sku", e.target.value || null)}
+          placeholder="SKU (optional)" className={`${inputCls} h-6 text-xs`} />
+      </div>
+      <Input type="number" min={0} step={0.01} value={li.quantity}
+        onChange={(e) => onUpdate(idx, "quantity", parseFloat(e.target.value) || 0)}
+        className={`${inputCls} h-8 text-sm`} />
+      <Select value={li.unit ?? "hours"} onValueChange={(v) => onUpdate(idx, "unit", v)}>
+        <SelectTrigger className={`${inputCls} h-8 text-sm`}><SelectValue /></SelectTrigger>
+        <SelectContent className="bg-popover border-border">
+          <SelectItem value="hours" className="text-foreground text-sm">hrs</SelectItem>
+          <SelectItem value="days" className="text-foreground text-sm">days</SelectItem>
+          <SelectItem value="fixed" className="text-foreground text-sm">fixed</SelectItem>
+        </SelectContent>
+      </Select>
+      <div className="flex flex-col gap-1">
+        <div className="relative">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+          <Input type="number" min={0} step={0.01} value={li.unitPrice}
+            onChange={(e) => onUpdate(idx, "unitPrice", parseFloat(e.target.value) || 0)}
+            className={`${inputCls} h-8 text-sm pl-6 ${li.rateFormula ? "opacity-60" : ""}`}
+            readOnly={!!li.rateFormula} />
+        </div>
+        <Input value={li.rateFormula ?? ""} onChange={(e) => onFormulaChange(idx, e.target.value)}
+          placeholder="e.g. 30*0.0032" className={`${inputCls} h-6 text-xs font-mono`} />
+      </div>
+      <span className="text-foreground/90 text-sm font-medium tabular-nums">
+        {formatCurrency(rowTotal, currency)}
+      </span>
+      <button type="button" onClick={() => onRemove(idx)}
+        className="text-muted-foreground/40 hover:text-red-400 transition-colors p-1" disabled={isOnly}>
+        <Trash2 size={13} />
+      </button>
+    </div>
+  );
+});
+
+interface StripeConnectStatus {
+  connected: boolean; accountId: string | null; displayName: string | null;
+}
+
+async function fetchStripeConnectStatus(): Promise<StripeConnectStatus> {
+  const res = await fetch("/api/stripe/connect/status", { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch connect status");
+  return res.json();
+}
+
+export default function InvoiceFormPage() {
+  const params = useParams<{ id?: string }>();
+  const id = params.id;
+  const isEdit = Boolean(id);
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+
+  const { data: settings } = useGetSettings();
+  const { data: clients = [] } = useListClients();
+  const { data: existing } = useGetInvoice(id ?? "", {
+    query: { enabled: isEdit && !!id, queryKey: getGetInvoiceQueryKey(id ?? "") },
+  });
+  const { data: connectStatus } = useQuery({
+    queryKey: ["stripe-connect-status"],
+    queryFn: fetchStripeConnectStatus,
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  const createInvoice = useCreateInvoice();
+  const updateInvoice = useUpdateInvoice();
+
+  const [clientId, setClientId] = useState("");
+  const [issueDate, setIssueDate] = useState(today());
+  const [dueDate, setDueDate] = useState(thirtyDays());
+  const [currency, setCurrency] = useState(() => detectLocaleCurrency());
+  const [secondaryCurrency, setSecondaryCurrency] = useState<string>("");
+  const [discountType, setDiscountType] = useState<InvoiceInputDiscountType>(null);
+  const [discountValue, setDiscountValue] = useState(0);
+  const [taxRate, setTaxRate] = useState(0);
+  const [notes, setNotes] = useState("");
+  const [terms, setTerms] = useState("");
+  const [paymentUrl, setPaymentUrl] = useState("");
+  const [showQrCode, setShowQrCode] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "bank_transfer" | "both" | "none">("none");
+  const [template, setTemplate] = useState<"MODERN" | "CLASSIC">("MODERN");
+  const [lineItems, setLineItems] = useState<LineItemInput[]>([emptyLineItem()]);
+
+  useEffect(() => {
+    if (!settings || isEdit) return;
+    setCurrency(settings.currency);
+    setTaxRate(parseFloat(settings.defaultTaxRate));
+    setTemplate(settings.defaultTemplate as "MODERN" | "CLASSIC");
+    setTerms(settings.defaultTerms ?? "");
+    setNotes(settings.defaultNotes ?? "");
+  }, [settings, isEdit]);
+
+  useEffect(() => {
+    if (!existing) return;
+    setClientId(existing.clientId);
+    setIssueDate(existing.issueDate.split("T")[0]);
+    setDueDate(existing.dueDate.split("T")[0]);
+    setCurrency(existing.currency);
+    setSecondaryCurrency(existing.secondaryCurrency ?? "");
+    setDiscountType((existing.discountType as InvoiceInputDiscountType) ?? null);
+    setDiscountValue(parseFloat(existing.discountValue ?? "0"));
+    setTaxRate(parseFloat(existing.taxRate ?? "0"));
+    setNotes(existing.notes ?? "");
+    setTerms(existing.terms ?? "");
+    setPaymentUrl(existing.paymentUrl ?? "");
+    setShowQrCode(existing.showQrCode ?? false);
+    const resolvedMethod = (existing.paymentMethod as "stripe" | "bank_transfer" | "both" | "none") ?? "none";
+    setPaymentMethod(resolvedMethod);
+    setTemplate((existing.template as "MODERN" | "CLASSIC") ?? "MODERN");
+    if (existing.lineItems && existing.lineItems.length > 0) {
+      setLineItems(
+        existing.lineItems.map((li, idx) => ({
+          sku: li.sku ?? null, description: li.description,
+          quantity: parseFloat(li.quantity), unit: li.unit as LineItemInput["unit"],
+          unitPrice: parseFloat(li.unitPrice), rateFormula: li.rateFormula ?? null,
+          paymentRequired: li.paymentRequired !== false, position: idx,
+        }))
+      );
+    }
+  }, [existing]);
+
+  const updateLineItem = useCallback((index: number, key: keyof LineItemInput, value: unknown) => {
+    setLineItems((prev) => prev.map((li, i) => (i === index ? { ...li, [key]: value } : li)));
+  }, []);
+
+  const handleFormulaChange = useCallback((index: number, formula: string) => {
+    const evaluated = formula.trim() ? evaluateFormulaClient(formula) : null;
+    setLineItems((prev) => prev.map((li, i) => {
+      if (i !== index) return li;
+      return { ...li, rateFormula: formula || null, unitPrice: evaluated !== null ? evaluated : li.unitPrice };
+    }));
+  }, []);
+
+  const addLineItem = useCallback(() => {
+    setLineItems((prev) => [...prev, { ...emptyLineItem(), position: prev.length }]);
+  }, []);
+
+  const removeLineItem = useCallback((index: number) => {
+    setLineItems((prev) => prev.filter((_, i) => i !== index).map((li, i) => ({ ...li, position: i })));
+  }, []);
+
+  const { subtotal, discountAmount, taxAmount, total } = useMemo(() => {
+    const subtotal = lineItems.reduce((sum, li) => sum + (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0), 0);
+    const discountAmount = discountType === "PERCENTAGE" ? subtotal * (discountValue / 100)
+      : discountType === "FIXED" ? discountValue : 0;
+    const taxableAmount = subtotal - discountAmount;
+    const taxAmount = taxableAmount * (taxRate / 100);
+    const total = taxableAmount + taxAmount;
+    return { subtotal, discountAmount, taxAmount, total };
+  }, [lineItems, discountType, discountValue, taxRate]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!clientId) { toast({ title: "Please select a client", variant: "destructive" }); return; }
+    if (lineItems.length === 0) { toast({ title: "Add at least one line item", variant: "destructive" }); return; }
+
+    const payload: InvoiceInput = {
+      clientId, issueDate, dueDate, currency,
+      secondaryCurrency: secondaryCurrency.trim().toUpperCase() || null,
+      discountType: discountType ?? null,
+      discountValue: discountValue || 0, taxRate: taxRate || 0,
+      notes: notes || null, terms: terms || null,
+      paymentUrl: paymentUrl || null,
+      showQrCode, paymentMethod, template,
+      lineItems: lineItems.map((li, i) => ({ ...li, position: i })),
+    };
+
+    try {
+      if (isEdit && id) {
+        await updateInvoice.mutateAsync({ id, data: payload });
+        toast({ title: "Invoice updated" });
+        navigate(`/invoices/${id}`);
+      } else {
+        const created = await createInvoice.mutateAsync({ data: payload });
+        toast({ title: "Invoice created" });
+        navigate(`/invoices/${created.id}`);
+      }
+    } catch {
+      toast({ title: "Failed to save invoice", variant: "destructive" });
+    }
+  }
+
+  const isPending = createInvoice.isPending || updateInvoice.isPending;
+  const showStripe = connectStatus?.connected === true;
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl space-y-5">
+      <div className="flex items-center gap-3">
+        <Link href={isEdit && id ? `/invoices/${id}` : "/invoices"}>
+          <span className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
+            <ArrowLeft size={18} />
+          </span>
+        </Link>
+        <h1 className="text-2xl font-bold text-foreground">
+          {isEdit ? "Edit Invoice" : "New Invoice"}
+        </h1>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <Section title="Invoice Details">
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Client" required className="col-span-2">
+              <Select value={clientId} onValueChange={setClientId}>
+                <SelectTrigger className={inputCls}>
+                  <SelectValue placeholder="Select a client..." />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  {clients.map((c) => (
+                    <SelectItem key={c.id} value={c.id} className="text-foreground">
+                      {c.name}{c.company ? ` — ${c.company}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Issue Date" required>
+              <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className={inputCls} required />
+            </Field>
+            <Field label="Due Date" required>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={inputCls} required />
+            </Field>
+            <Field label="Currency" required>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger className={inputCls}><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border-border max-h-60">
+                  {ALL_CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code} className="text-foreground">{c.code} — {c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Secondary Currency (optional)">
+              <Select value={secondaryCurrency || "none"} onValueChange={(v) => setSecondaryCurrency(v === "none" ? "" : v)}>
+                <SelectTrigger className={inputCls}><SelectValue placeholder="None" /></SelectTrigger>
+                <SelectContent className="bg-popover border-border max-h-60">
+                  <SelectItem value="none" className="text-foreground">None</SelectItem>
+                  {ALL_CURRENCIES.filter((c) => c.code !== currency).map((c) => (
+                    <SelectItem key={c.code} value={c.code} className="text-foreground">{c.code} — {c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Template">
+              <Select value={template} onValueChange={(v) => setTemplate(v as "MODERN" | "CLASSIC")}>
+                <SelectTrigger className={inputCls}><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="MODERN" className="text-foreground">Modern</SelectItem>
+                  <SelectItem value="CLASSIC" className="text-foreground">Classic</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+        </Section>
+
+        <BeamCard>
+          <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-muted-foreground">Line Items</h2>
+            <button type="button" onClick={addLineItem}
+              className="inline-flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 transition-colors">
+              <Plus size={12} /> Add Item
+            </button>
+          </div>
+          <div className="grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2 border-b border-border/60">
+            {["Description", "Qty", "Unit", "Unit Price", "Total", ""].map((h) => (
+              <span key={h} className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{h}</span>
+            ))}
+          </div>
+          {lineItems.map((li, idx) => (
+            <LineItemRow key={idx} li={li} idx={idx} currency={currency}
+              isOnly={lineItems.length === 1} onUpdate={updateLineItem}
+              onFormulaChange={handleFormulaChange} onRemove={removeLineItem} />
+          ))}
+          <div className="px-5 py-4 border-t border-border bg-muted/30">
+            <div className="max-w-xs ml-auto space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="text-foreground">{formatCurrency(subtotal, currency)}</span>
+              </div>
+              {discountType && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span className="text-amber-400">- {formatCurrency(discountAmount, currency)}</span>
+                </div>
+              )}
+              {taxRate > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Tax ({taxRate}%)</span>
+                  <span className="text-foreground">{formatCurrency(taxAmount, currency)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm font-semibold border-t border-border pt-1.5">
+                <span className="text-foreground">Total</span>
+                <span className="text-foreground">{formatCurrency(total, currency)}</span>
+              </div>
+            </div>
+          </div>
+        </BeamCard>
+
+        <Section title="Pricing & Discounts">
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Discount Type">
+              <Select value={discountType ?? "none"} onValueChange={(v) => setDiscountType(v === "none" ? null : v as InvoiceInputDiscountType)}>
+                <SelectTrigger className={inputCls}><SelectValue placeholder="No discount" /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="none" className="text-foreground">No discount</SelectItem>
+                  <SelectItem value="PERCENTAGE" className="text-foreground">Percentage (%)</SelectItem>
+                  <SelectItem value="FIXED" className="text-foreground">Fixed amount</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            {discountType && (
+              <Field label={discountType === "PERCENTAGE" ? "Discount %" : "Discount Amount"}>
+                <Input type="number" min={0} step={0.01} value={discountValue}
+                  onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)} className={inputCls} />
+              </Field>
+            )}
+            <Field label="Tax Rate (%)">
+              <Input type="number" min={0} max={100} step={0.01} value={taxRate}
+                onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)} className={inputCls} />
+            </Field>
+          </div>
+        </Section>
+
+        <Section title="Payment Method">
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Payment Method" className="col-span-2">
+              <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as typeof paymentMethod)}>
+                <SelectTrigger className={inputCls}><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="none" className="text-foreground">None</SelectItem>
+                  {showStripe && <SelectItem value="stripe" className="text-foreground">Stripe payment link</SelectItem>}
+                  <SelectItem value="bank_transfer" className="text-foreground">Bank transfer</SelectItem>
+                  {showStripe && <SelectItem value="both" className="text-foreground">Both (Stripe + Bank)</SelectItem>}
+                </SelectContent>
+              </Select>
+            </Field>
+            {(paymentMethod === "stripe" || paymentMethod === "both") && (
+              <>
+                <Field label="Payment URL (optional)" className="col-span-2">
+                  <Input value={paymentUrl} onChange={(e) => setPaymentUrl(e.target.value)}
+                    placeholder="https://..." className={inputCls} />
+                </Field>
+                <Field label="Show QR code on PDF" className="col-span-2">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={showQrCode} onCheckedChange={setShowQrCode} />
+                    <span className="text-sm text-muted-foreground">{showQrCode ? "Yes" : "No"}</span>
+                  </div>
+                </Field>
+              </>
+            )}
+          </div>
+        </Section>
+
+        <Section title="Notes & Terms">
+          <Field label="Notes">
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+              placeholder="Additional notes for the client..." rows={3}
+              className={`${inputCls} resize-none`} />
+          </Field>
+          <Field label="Terms & Conditions">
+            <Textarea value={terms} onChange={(e) => setTerms(e.target.value)}
+              placeholder="Payment terms, conditions..." rows={3}
+              className={`${inputCls} resize-none`} />
+          </Field>
+        </Section>
+
+        <div className="flex justify-end gap-3">
+          <Link href={isEdit && id ? `/invoices/${id}` : "/invoices"}>
+            <Button type="button" variant="outline" className="border-border text-muted-foreground hover:text-foreground">
+              Cancel
+            </Button>
+          </Link>
+          <Button type="submit" disabled={isPending}
+            className="bg-violet-600 hover:bg-violet-500 text-white">
+            {isPending && <Loader2 size={13} className="mr-1.5 animate-spin" />}
+            {isEdit ? "Update Invoice" : "Create Invoice"}
+          </Button>
+        </div>
+      </form>
+    </motion.div>
+  );
+}

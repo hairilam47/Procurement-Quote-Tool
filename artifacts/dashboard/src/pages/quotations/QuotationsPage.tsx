@@ -72,12 +72,20 @@ export default function QuotationsPage() {
           <h1 className="text-2xl font-bold text-foreground">Quotations</h1>
           <p className="text-muted-foreground text-sm mt-0.5">{quotations.length} total</p>
         </div>
-        <Link href="/quotations/new">
-          <span data-testid="new-quotation-btn" className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
-            <Plus size={15} />
-            New Quotation
-          </span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/quotations/new">
+            <span data-testid="new-quotation-btn" className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
+              <Plus size={15} />
+              New Quotation
+            </span>
+          </Link>
+          <Link href="/invoices/new">
+            <span data-testid="new-invoice-btn-quotations" className="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
+              <Plus size={15} />
+              New Invoice
+            </span>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}

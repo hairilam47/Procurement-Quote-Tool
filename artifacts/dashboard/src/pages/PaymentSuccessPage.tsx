@@ -73,10 +73,19 @@ export default function PaymentSuccessPage() {
   const pollCountRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const quotationId = new URLSearchParams(window.location.search).get("quotationId");
+  const params = new URLSearchParams(window.location.search);
+  const quotationId = params.get("quotationId");
+  const invoiceId = params.get("invoiceId");
+
+  const docId = quotationId ?? invoiceId;
+  const isInvoice = !quotationId && !!invoiceId;
+
+  const summaryUrl = isInvoice
+    ? `/api/invoices/${invoiceId}/public-summary`
+    : `/api/quotations/${quotationId}/public-summary`;
 
   useEffect(() => {
-    if (!quotationId) {
+    if (!docId) {
       setState("not-found");
       return;
     }
@@ -85,7 +94,7 @@ export default function PaymentSuccessPage() {
 
     async function fetchSummary() {
       try {
-        const res = await fetch(`/api/quotations/${quotationId}/public-summary`);
+        const res = await fetch(summaryUrl);
         if (cancelled) return;
 
         if (res.status === 404) {
@@ -122,29 +131,35 @@ export default function PaymentSuccessPage() {
       cancelled = true;
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [quotationId]);
+  }, [docId, summaryUrl]);
 
   async function handleDownloadReceipt() {
-    if (!quotationId) return;
+    if (!docId) return;
     setIsDownloading(true);
     setDownloadError(null);
     try {
-      const res = await fetch(`/api/quotations/${quotationId}/receipt-pdf/public`);
+      const url = isInvoice
+        ? `/api/invoices/${invoiceId}/pdf/public`
+        : `/api/quotations/${quotationId}/receipt-pdf/public`;
+
+      const res = await fetch(url);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error((body as { error?: string }).error ?? "Download failed");
       }
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = `REC-${summary?.number ?? quotationId}.pdf`;
+      a.href = blobUrl;
+      a.download = isInvoice
+        ? `${summary?.number ?? invoiceId}.pdf`
+        : `REC-${summary?.number ?? quotationId}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     } catch (err) {
-      setDownloadError(err instanceof Error ? err.message : "Failed to download receipt");
+      setDownloadError(err instanceof Error ? err.message : "Failed to download");
     } finally {
       setIsDownloading(false);
     }
@@ -180,7 +195,7 @@ export default function PaymentSuccessPage() {
               )}
 
               <div className="space-y-3">
-                <SummaryRow label="Quotation" value={summary.number} mono />
+                <SummaryRow label={isInvoice ? "Invoice" : "Quotation"} value={summary.number} mono />
                 {summary.clientName && (
                   <SummaryRow
                     label="Client"
@@ -207,7 +222,7 @@ export default function PaymentSuccessPage() {
                 >
                   {isDownloading
                     ? <><Loader2 size={15} className="mr-2 animate-spin" /> Downloading…</>
-                    : <><Download size={15} className="mr-2" /> Download Receipt PDF</>}
+                    : <><Download size={15} className="mr-2" /> Download {isInvoice ? "Invoice" : "Receipt"} PDF</>}
                 </Button>
                 {downloadError && (
                   <p className="text-red-400 text-xs text-center">{downloadError}</p>

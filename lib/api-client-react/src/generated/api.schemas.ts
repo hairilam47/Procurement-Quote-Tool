@@ -57,9 +57,9 @@ export interface LineItem {
   quantity: string;
   unit: string;
   unitPrice: string;
-  rateFormula?: string | null;
-  paymentRequired: boolean;
   lineTotal: string;
+  rateFormula?: string | null;
+  paymentRequired?: boolean | null;
   position: number;
 }
 
@@ -92,14 +92,6 @@ export const QuotationInputDiscountType = {
   FIXED: "FIXED",
 } as const;
 
-export type QuotationInputTemplate =
-  (typeof QuotationInputTemplate)[keyof typeof QuotationInputTemplate];
-
-export const QuotationInputTemplate = {
-  MODERN: "MODERN",
-  CLASSIC: "CLASSIC",
-} as const;
-
 export type QuotationInputPaymentMethod =
   (typeof QuotationInputPaymentMethod)[keyof typeof QuotationInputPaymentMethod];
 
@@ -108,6 +100,14 @@ export const QuotationInputPaymentMethod = {
   bank_transfer: "bank_transfer",
   both: "both",
   none: "none",
+} as const;
+
+export type QuotationInputTemplate =
+  (typeof QuotationInputTemplate)[keyof typeof QuotationInputTemplate];
+
+export const QuotationInputTemplate = {
+  MODERN: "MODERN",
+  CLASSIC: "CLASSIC",
 } as const;
 
 export interface QuotationInput {
@@ -131,12 +131,10 @@ export interface QuotationInput {
 export interface QuotationSummary {
   id: string;
   number: string;
-  secondaryCurrency?: string | null;
-  secondaryExchangeRate?: string | null;
   status: string;
   total: string;
-  requiredTotal?: string;
   currency: string;
+  secondaryCurrency?: string | null;
   issueDate: string;
   validUntil: string;
   createdAt?: string;
@@ -150,6 +148,7 @@ export interface QuotationSummary {
   subtotal?: string;
   discountAmount?: string;
   taxAmount?: string;
+  requiredTotal?: string | null;
 }
 
 export type QuotationDetail = QuotationSummary & {
@@ -157,12 +156,11 @@ export type QuotationDetail = QuotationSummary & {
   terms?: string | null;
   paymentUrl?: string | null;
   showQrCode?: boolean;
-  paymentMethod?: string;
+  paymentMethod?: string | null;
+  secondaryExchangeRate?: string | null;
   sentAt?: string | null;
   acceptedAt?: string | null;
   paidAt?: string | null;
-  secondaryCurrency?: string | null;
-  secondaryExchangeRate?: string | null;
   client?: Client;
   lineItems?: LineItem[];
 };
@@ -237,6 +235,99 @@ export interface DashboardData {
   recentQuotations: QuotationSummary[];
 }
 
+export interface InvoiceLineItem {
+  id: string;
+  invoiceId: string;
+  sku?: string | null;
+  description: string;
+  quantity: string;
+  unit: string;
+  unitPrice: string;
+  lineTotal: string;
+  rateFormula?: string | null;
+  paymentRequired?: boolean | null;
+  position: number;
+}
+
+export type InvoiceInputDiscountType =
+  | (typeof InvoiceInputDiscountType)[keyof typeof InvoiceInputDiscountType]
+  | null;
+
+export const InvoiceInputDiscountType = {
+  PERCENTAGE: "PERCENTAGE",
+  FIXED: "FIXED",
+} as const;
+
+export type InvoiceInputPaymentMethod =
+  (typeof InvoiceInputPaymentMethod)[keyof typeof InvoiceInputPaymentMethod];
+
+export const InvoiceInputPaymentMethod = {
+  stripe: "stripe",
+  bank_transfer: "bank_transfer",
+  both: "both",
+  none: "none",
+} as const;
+
+export type InvoiceInputTemplate =
+  (typeof InvoiceInputTemplate)[keyof typeof InvoiceInputTemplate];
+
+export const InvoiceInputTemplate = {
+  MODERN: "MODERN",
+  CLASSIC: "CLASSIC",
+} as const;
+
+export interface InvoiceInput {
+  clientId: string;
+  issueDate: string;
+  dueDate: string;
+  currency?: string;
+  secondaryCurrency?: string | null;
+  discountType?: InvoiceInputDiscountType;
+  discountValue?: number;
+  taxRate?: number;
+  notes?: string | null;
+  terms?: string | null;
+  paymentUrl?: string | null;
+  showQrCode?: boolean;
+  paymentMethod?: InvoiceInputPaymentMethod;
+  template?: InvoiceInputTemplate;
+  lineItems: LineItemInput[];
+}
+
+export interface InvoiceSummary {
+  id: string;
+  number: string;
+  status: string;
+  total: string;
+  currency: string;
+  secondaryCurrency?: string | null;
+  issueDate: string;
+  dueDate: string;
+  createdAt?: string;
+  clientId: string;
+  clientName?: string | null;
+  clientCompany?: string | null;
+  template?: string;
+  discountType?: string | null;
+  discountValue?: string;
+  taxRate?: string;
+  subtotal?: string;
+  discountAmount?: string;
+  taxAmount?: string;
+  paymentUrl?: string | null;
+  paymentMethod?: string | null;
+}
+
+export type InvoiceDetail = InvoiceSummary & {
+  notes?: string | null;
+  terms?: string | null;
+  showQrCode?: boolean;
+  sentAt?: string | null;
+  paidAt?: string | null;
+  client?: Client;
+  lineItems?: InvoiceLineItem[];
+};
+
 export interface RequestUploadUrlBody {
   name: string;
   size: number;
@@ -293,6 +384,24 @@ export const ChangeQuotationStatusBodyStatus = {
 
 export type ChangeQuotationStatusBody = {
   status: ChangeQuotationStatusBodyStatus;
+};
+
+export type ListInvoicesParams = {
+  status?: string;
+  clientId?: string;
+};
+
+export type ChangeInvoiceStatusBodyStatus =
+  (typeof ChangeInvoiceStatusBodyStatus)[keyof typeof ChangeInvoiceStatusBodyStatus];
+
+export const ChangeInvoiceStatusBodyStatus = {
+  DRAFT: "DRAFT",
+  SENT: "SENT",
+  PAID: "PAID",
+} as const;
+
+export type ChangeInvoiceStatusBody = {
+  status: ChangeInvoiceStatusBodyStatus;
 };
 
 export type UploadLogoBody = {

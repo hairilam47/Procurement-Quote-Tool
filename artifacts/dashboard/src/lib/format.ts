@@ -58,3 +58,19 @@ export const STATUS_LABELS: Record<string, string> = {
 export function statusBadge(status: string) {
   return STATUS_COLORS[status] ?? "bg-slate-700 text-slate-300";
 }
+
+export const INVOICE_STATUS_COLORS: Record<string, string> = {
+  DRAFT: "bg-slate-700 text-slate-200",
+  SENT: "bg-blue-600/20 text-blue-400 border border-blue-600/30",
+  PAID: "bg-emerald-600/20 text-emerald-400 border border-emerald-600/30",
+};
+
+export const INVOICE_STATUS_LABELS: Record<string, string> = {
+  DRAFT: "Draft",
+  SENT: "Sent",
+  PAID: "Paid",
+};
+
+export function invoiceStatusBadge(status: string) {
+  return INVOICE_STATUS_COLORS[status] ?? "bg-slate-700 text-slate-300";
+}

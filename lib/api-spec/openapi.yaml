@@ -11,6 +11,7 @@ tags:
   - name: auth
   - name: clients
   - name: quotations
+  - name: invoices
   - name: settings
   - name: dashboard
   - name: storage
@@ -305,6 +306,141 @@ paths:
                 type: string
                 format: binary
 
+  /invoices:
+    get:
+      operationId: listInvoices
+      tags: [invoices]
+      summary: List invoices
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: clientId, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InvoiceSummary"
+    post:
+      operationId: createInvoice
+      tags: [invoices]
+      summary: Create an invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceInput"
+      responses:
+        "201":
+          description: Created invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceDetail"
+
+  /invoices/{id}:
+    get:
+      operationId: getInvoice
+      tags: [invoices]
+      summary: Get invoice by ID (with line items)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Invoice detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceDetail"
+    put:
+      operationId: updateInvoice
+      tags: [invoices]
+      summary: Update invoice
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceInput"
+      responses:
+        "200":
+          description: Updated invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceDetail"
+    delete:
+      operationId: deleteInvoice
+      tags: [invoices]
+      summary: Delete invoice
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "204":
+          description: Deleted
+
+  /invoices/{id}/status:
+    patch:
+      operationId: changeInvoiceStatus
+      tags: [invoices]
+      summary: Change invoice status
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [DRAFT, SENT, PAID]
+              required: [status]
+      responses:
+        "200":
+          description: Updated invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceDetail"
+
+  /invoices/{id}/pdf:
+    get:
+      operationId: getInvoicePdf
+      tags: [invoices]
+      summary: Download invoice PDF
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: PDF binary
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /invoices/{id}/payment-link:
+    post:
+      operationId: createInvoicePaymentLink
+      tags: [invoices]
+      summary: Generate Stripe payment link for an invoice
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Updated invoice with payment URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceDetail"
+
   /settings:
     get:
       operationId: getSettings
@@ -458,6 +594,8 @@ components:
         unit: { type: string }
         unitPrice: { type: string }
         lineTotal: { type: string }
+        rateFormula: { type: string, nullable: true }
+        paymentRequired: { type: boolean, nullable: true }
         position: { type: integer }
       required: [id, quotationId, description, quantity, unit, unitPrice, lineTotal, position]
 
@@ -469,6 +607,8 @@ components:
         quantity: { type: number }
         unit: { type: string, enum: [hours, days, fixed] }
         unitPrice: { type: number }
+        rateFormula: { type: string, nullable: true }
+        paymentRequired: { type: boolean }
         position: { type: integer }
       required: [description, quantity, unitPrice]
 
@@ -479,6 +619,7 @@ components:
         issueDate: { type: string, format: date-time }
         validUntil: { type: string, format: date-time }
         currency: { type: string }
+        secondaryCurrency: { type: string, nullable: true }
         discountType:
           type: string
           enum: [PERCENTAGE, FIXED]
@@ -489,6 +630,7 @@ components:
         terms: { type: string, nullable: true }
         paymentUrl: { type: string, nullable: true }
         showQrCode: { type: boolean }
+        paymentMethod: { type: string, enum: [stripe, bank_transfer, both, none] }
         template: { type: string, enum: [MODERN, CLASSIC] }
         lineItems:
           type: array
@@ -504,6 +646,7 @@ components:
         status: { type: string }
         total: { type: string }
         currency: { type: string }
+        secondaryCurrency: { type: string, nullable: true }
         issueDate: { type: string, format: date-time }
         validUntil: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
@@ -517,6 +660,7 @@ components:
         subtotal: { type: string }
         discountAmount: { type: string }
         taxAmount: { type: string }
+        requiredTotal: { type: string, nullable: true }
       required: [id, number, status, total, currency, issueDate, validUntil, clientId]
 
     QuotationDetail:
@@ -528,6 +672,8 @@ components:
             terms: { type: string, nullable: true }
             paymentUrl: { type: string, nullable: true }
             showQrCode: { type: boolean }
+            paymentMethod: { type: string, nullable: true }
+            secondaryExchangeRate: { type: string, nullable: true }
             sentAt: { type: string, format: date-time, nullable: true }
             acceptedAt: { type: string, format: date-time, nullable: true }
             paidAt: { type: string, format: date-time, nullable: true }
@@ -553,6 +699,7 @@ components:
         email: { type: string }
         website: { type: string, nullable: true }
         taxNumber: { type: string, nullable: true }
+        registrationNumber: { type: string, nullable: true }
         logoUrl: { type: string, nullable: true }
         currency: { type: string }
         defaultTaxRate: { type: string }
@@ -560,6 +707,10 @@ components:
         defaultNotes: { type: string, nullable: true }
         defaultTemplate: { type: string }
         defaultPaymentUrl: { type: string, nullable: true }
+        bankName: { type: string, nullable: true }
+        bankAccountNumber: { type: string, nullable: true }
+        bankRecipientName: { type: string, nullable: true }
+        bankQrCodeUrl: { type: string, nullable: true }
         updatedAt: { type: string, format: date-time }
       required: [id, name, addressLine1, city, postalCode, country, email, currency, defaultTaxRate, defaultTemplate, updatedAt]
 
@@ -577,6 +728,7 @@ components:
         email: { type: string }
         website: { type: string, nullable: true }
         taxNumber: { type: string, nullable: true }
+        registrationNumber: { type: string, nullable: true }
         logoUrl: { type: string, nullable: true }
         currency: { type: string }
         defaultTaxRate: { type: number }
@@ -584,6 +736,10 @@ components:
         defaultNotes: { type: string, nullable: true }
         defaultTemplate: { type: string, enum: [MODERN, CLASSIC] }
         defaultPaymentUrl: { type: string, nullable: true }
+        bankName: { type: string, nullable: true }
+        bankAccountNumber: { type: string, nullable: true }
+        bankRecipientName: { type: string, nullable: true }
+        bankQrCodeUrl: { type: string, nullable: true }
       required: [name, addressLine1, city, postalCode, country, email, currency, defaultTaxRate, defaultTemplate]
 
     DashboardData:
@@ -598,6 +754,91 @@ components:
           items:
             $ref: "#/components/schemas/QuotationSummary"
       required: [statusCounts, outstandingTotal, recentQuotations]
+
+    InvoiceLineItem:
+      type: object
+      properties:
+        id: { type: string }
+        invoiceId: { type: string }
+        sku: { type: string, nullable: true }
+        description: { type: string }
+        quantity: { type: string }
+        unit: { type: string }
+        unitPrice: { type: string }
+        lineTotal: { type: string }
+        rateFormula: { type: string, nullable: true }
+        paymentRequired: { type: boolean, nullable: true }
+        position: { type: integer }
+      required: [id, invoiceId, description, quantity, unit, unitPrice, lineTotal, position]
+
+    InvoiceInput:
+      type: object
+      properties:
+        clientId: { type: string }
+        issueDate: { type: string, format: date-time }
+        dueDate: { type: string, format: date-time }
+        currency: { type: string }
+        secondaryCurrency: { type: string, nullable: true }
+        discountType:
+          type: string
+          enum: [PERCENTAGE, FIXED]
+          nullable: true
+        discountValue: { type: number }
+        taxRate: { type: number }
+        notes: { type: string, nullable: true }
+        terms: { type: string, nullable: true }
+        paymentUrl: { type: string, nullable: true }
+        showQrCode: { type: boolean }
+        paymentMethod: { type: string, enum: [stripe, bank_transfer, both, none] }
+        template: { type: string, enum: [MODERN, CLASSIC] }
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/LineItemInput"
+      required: [clientId, issueDate, dueDate, lineItems]
+
+    InvoiceSummary:
+      type: object
+      properties:
+        id: { type: string }
+        number: { type: string }
+        status: { type: string }
+        total: { type: string }
+        currency: { type: string }
+        secondaryCurrency: { type: string, nullable: true }
+        issueDate: { type: string, format: date-time }
+        dueDate: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        clientId: { type: string }
+        clientName: { type: string, nullable: true }
+        clientCompany: { type: string, nullable: true }
+        template: { type: string }
+        discountType: { type: string, nullable: true }
+        discountValue: { type: string }
+        taxRate: { type: string }
+        subtotal: { type: string }
+        discountAmount: { type: string }
+        taxAmount: { type: string }
+        paymentUrl: { type: string, nullable: true }
+        paymentMethod: { type: string, nullable: true }
+      required: [id, number, status, total, currency, issueDate, dueDate, clientId]
+
+    InvoiceDetail:
+      allOf:
+        - $ref: "#/components/schemas/InvoiceSummary"
+        - type: object
+          properties:
+            notes: { type: string, nullable: true }
+            terms: { type: string, nullable: true }
+            showQrCode: { type: boolean }
+            sentAt: { type: string, format: date-time, nullable: true }
+            paidAt: { type: string, format: date-time, nullable: true }
+            client:
+              $ref: "#/components/schemas/Client"
+            lineItems:
+              type: array
+              items:
+                $ref: "#/components/schemas/InvoiceLineItem"
 
     RequestUploadUrlBody:
       type: object

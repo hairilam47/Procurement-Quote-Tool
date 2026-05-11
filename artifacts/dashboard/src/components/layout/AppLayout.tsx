@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   FileText,
+  Receipt,
   Users,
   Settings,
   ChevronRight,
@@ -20,6 +21,7 @@ import {
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/quotations", icon: FileText, label: "Quotations" },
+  { href: "/invoices", icon: Receipt, label: "Invoices" },
   { href: "/clients", icon: Users, label: "Clients" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];

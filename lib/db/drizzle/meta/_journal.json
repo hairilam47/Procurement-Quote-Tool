@@ -8,6 +8,13 @@
       "when": 1778452833505,
       "tag": "0000_stale_human_robot",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1746921600000,
+      "tag": "0001_invoices",
+      "breakpoints": true
     }
   ]
 }

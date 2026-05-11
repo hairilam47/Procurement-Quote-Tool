@@ -267,7 +267,10 @@ export function ModernTemplate({
   const hasDeferred = deferredItems.length > 0;
 
   const docTitle = invoiceMode?.documentTitle ?? "QUOTATION";
-  const isFollowUp = !!invoiceMode;
+  // isFollowUp = true ONLY for follow-up invoices (invoiceMode present but not standalone and not receipt)
+  const isFollowUp = !!invoiceMode && !invoiceMode.standaloneInvoice && !invoiceMode.receiptMode;
+  // isInvoiceDoc = true for any invoice variant (standalone OR follow-up) — controls line-item rendering
+  const isInvoiceDoc = !!invoiceMode && !invoiceMode.receiptMode;
 
   const colDesc = hasSec ? "38%" : "50%";
   const colQty = hasSec ? "10%" : "12%";
@@ -372,12 +375,17 @@ export function ModernTemplate({
                 <Text style={s.colLabel}>Payment date</Text>
                 <Text style={s.bold}>{fmtDate(invoiceMode.paidAt)}</Text>
               </>
-            ) : (
+            ) : invoiceMode?.dueDate ? (
+              <>
+                <Text style={s.colLabel}>Due date</Text>
+                <Text style={s.bold}>{fmtDate(invoiceMode.dueDate)}</Text>
+              </>
+            ) : quote.validUntil ? (
               <>
                 <Text style={s.colLabel}>Valid until</Text>
                 <Text style={s.bold}>{fmtDate(quote.validUntil)}</Text>
               </>
-            )}
+            ) : null}
           </View>
         </View>
 
@@ -398,8 +406,8 @@ export function ModernTemplate({
             )}
           </View>
 
-          {/* In follow-up invoice mode: show all items as regular rows */}
-          {isFollowUp ? (
+          {/* In invoice mode (standalone or follow-up): show all items as regular rows */}
+          {isInvoiceDoc ? (
             quote.lineItems.map((li, idx) => (
               <View key={li.id} style={idx % 2 === 0 ? s.tr : s.trAlt} wrap={false}>
                 <View style={{ width: colDesc, paddingRight: 8 }}>
@@ -610,7 +618,7 @@ export function ModernTemplate({
                 {showStripe && (
                   <>
                     <Text style={s.payBlurb}>
-                      Pay this quotation securely online.
+                      {`Pay this ${invoiceMode?.standaloneInvoice ? "invoice" : "quotation"} securely online.`}
                       {qrDataUrl ? " Scan the QR with your phone, or click the button." : ""}
                     </Text>
                     <Link src={quote.paymentUrl!}>
@@ -660,7 +668,7 @@ export function ModernTemplate({
         {/* Fixed footer */}
         <View style={s.footer} fixed>
           <Text>
-            {company.name} · {invoiceMode?.receiptMode ? `Receipt · Ref: ${invoiceMode.referenceNumber}` : isFollowUp && invoiceMode ? `Follow-up Invoice · Ref: ${invoiceMode.referenceNumber}` : `Quotation ${quote.number}`}
+            {company.name} · {invoiceMode?.receiptMode ? `Receipt · Ref: ${invoiceMode.referenceNumber}` : invoiceMode?.standaloneInvoice ? `Invoice · ${quote.number}` : isFollowUp && invoiceMode ? `Follow-up Invoice · Ref: ${invoiceMode.referenceNumber}` : `Quotation ${quote.number}`}
           </Text>
           <Text style={{ color: C.line }}>KuotFlow</Text>
           <Text
