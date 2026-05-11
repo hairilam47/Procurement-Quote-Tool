@@ -26,10 +26,10 @@ export function MarketingLayout({ children }: MarketingLayoutProps) {
           </nav>
 
           <div className="flex items-center gap-4">
-            <a href="/sign-in" data-testid="nav-login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
+            <a href="/app/sign-in" data-testid="nav-login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
               Log in
             </a>
-            <a href="/sign-up" data-testid="nav-signup">
+            <a href="/app/sign-up" data-testid="nav-signup">
               <Button size="sm" className="font-medium rounded-full px-5">
                 Sign up
               </Button>
@@ -68,9 +68,9 @@ export function MarketingLayout({ children }: MarketingLayoutProps) {
             <div>
               <h3 className="font-semibold mb-4 text-sm">Account</h3>
               <ul className="space-y-3 text-sm text-muted-foreground">
-                <li><a href="/sign-up" className="hover:text-foreground">Sign up free</a></li>
-                <li><a href="/sign-in" className="hover:text-foreground">Log in</a></li>
-                <li><a href="/" className="hover:text-foreground">Dashboard</a></li>
+                <li><a href="/app/sign-up" className="hover:text-foreground">Sign up free</a></li>
+                <li><a href="/app/sign-in" className="hover:text-foreground">Log in</a></li>
+                <li><a href="/app" className="hover:text-foreground">Dashboard</a></li>
               </ul>
             </div>
             <div>

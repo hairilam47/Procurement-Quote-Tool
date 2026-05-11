@@ -140,7 +140,7 @@ export default function Home() {
               Quotes that <span className="text-primary">close.</span>
             </h1>
             <div className="flex flex-col sm:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 w-full sm:w-auto">
-              <a href="/sign-up" className="w-full sm:w-auto">
+              <a href="/app/sign-up" className="w-full sm:w-auto">
                 <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-base rounded-full" data-testid="hero-cta">
                   Start for free
                   <ArrowRight className="ml-2 w-5 h-5" />
@@ -717,7 +717,7 @@ export default function Home() {
           <p className="text-xl text-primary-foreground/80 mb-10 max-w-xl mx-auto leading-relaxed">
             Join IT professionals who've ditched the spreadsheet and never looked back.
           </p>
-          <a href="/sign-up">
+          <a href="/app/sign-up">
             <Button size="lg" variant="secondary" className="h-14 px-8 text-base rounded-full font-semibold">
               Create your first quote
               <ArrowRight className="ml-2 w-5 h-5" />
