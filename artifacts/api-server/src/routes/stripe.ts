@@ -66,7 +66,9 @@ router.get("/stripe/prices", async (_req, res) => {
     let fetchedRows: PriceRow[] = [];
 
     if (explicitIds.length > 0) {
-      // Single query for all configured price IDs — no sequential round trips
+      // Single parameterized query for all configured price IDs — no sequential round trips.
+      // sql.join produces safe bound parameters rather than raw string interpolation.
+      const idList = sql.join(explicitIds.map((id) => sql`${id}`), sql`, `);
       const result = await db.execute(sql`
         SELECT
           p.id as price_id,
@@ -75,7 +77,7 @@ router.get("/stripe/prices", async (_req, res) => {
           p.recurring,
           p.active
         FROM stripe.prices p
-        WHERE p.id = ANY(${sql.raw(`ARRAY[${explicitIds.map(id => `'${id.replace(/'/g, "''")}'`).join(",")}]`)})
+        WHERE p.id IN (${idList})
       `);
       fetchedRows = result.rows as unknown as PriceRow[];
     }
