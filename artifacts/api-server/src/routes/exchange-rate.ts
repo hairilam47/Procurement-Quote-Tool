@@ -19,8 +19,10 @@ router.get("/exchange-rate", async (req, res): Promise<void> => {
   }
 
   try {
+    // open.er-api.com supports 160+ currencies including MYR, INR, BRL, ZAR, KRW, MXN
+    // (frankfurter.dev only covers ~31 ECB currencies and does not support these)
     const upstream = await fetch(
-      `https://api.frankfurter.dev/v1/latest?from=${encodeURIComponent(fromUpper)}&to=${encodeURIComponent(toUpper)}`,
+      `https://open.er-api.com/v6/latest/${encodeURIComponent(fromUpper)}`,
       { signal: AbortSignal.timeout(6000) },
     );
 
@@ -29,7 +31,13 @@ router.get("/exchange-rate", async (req, res): Promise<void> => {
       return;
     }
 
-    const json = await upstream.json() as { rates?: Record<string, number> };
+    const json = await upstream.json() as { result?: string; rates?: Record<string, number> };
+
+    if (json.result !== "success") {
+      res.status(502).json({ error: `Rate not available for ${fromUpper}` });
+      return;
+    }
+
     const rate = json.rates?.[toUpper];
 
     if (rate == null) {
@@ -38,7 +46,7 @@ router.get("/exchange-rate", async (req, res): Promise<void> => {
     }
 
     res.json({ rate });
-  } catch (err) {
+  } catch {
     res.status(502).json({ error: "Failed to fetch exchange rate from upstream" });
   }
 });

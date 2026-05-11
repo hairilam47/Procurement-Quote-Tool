@@ -18,13 +18,18 @@ const ZERO_DECIMAL_CURRENCIES = new Set([
 async function fetchExchangeRate(from: string, to: string): Promise<number | null> {
   try {
     if (from.toUpperCase() === to.toUpperCase()) return 1;
+    const fromUpper = from.toUpperCase();
+    const toUpper = to.toUpperCase();
+    // open.er-api.com supports 160+ currencies including MYR, INR, BRL, ZAR, KRW, MXN
+    // (frankfurter.dev only covers ~31 ECB currencies)
     const res = await fetch(
-      `https://api.frankfurter.dev/v1/latest?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      `https://open.er-api.com/v6/latest/${encodeURIComponent(fromUpper)}`,
       { signal: AbortSignal.timeout(5000) },
     );
     if (!res.ok) return null;
-    const json = await res.json() as { rates?: Record<string, number> };
-    return json.rates?.[to.toUpperCase()] ?? null;
+    const json = await res.json() as { result?: string; rates?: Record<string, number> };
+    if (json.result !== "success") return null;
+    return json.rates?.[toUpper] ?? null;
   } catch {
     return null;
   }
@@ -197,7 +202,7 @@ router.post("/invoices", requireAuth, requireSubscription, async (req, res): Pro
       secRate = await fetchExchangeRate(data.currency, secCurrency);
       if (secRate === null) {
         res.status(400).json({
-          error: `Could not fetch exchange rate for ${data.currency} → ${secCurrency}.`,
+          error: `Could not fetch exchange rate for ${data.currency} → ${secCurrency}. Try removing the secondary currency, or verify both codes are valid ISO 4217 codes.`,
         });
         return;
       }
@@ -306,7 +311,7 @@ router.put("/invoices/:id", requireAuth, requireSubscription, async (req, res): 
         const freshRate = await fetchExchangeRate(data.currency, secCurrency);
         if (freshRate === null) {
           res.status(400).json({
-            error: `Could not fetch exchange rate for ${data.currency} → ${secCurrency}.`,
+            error: `Could not fetch exchange rate for ${data.currency} → ${secCurrency}. Try removing the secondary currency, or verify both codes are valid ISO 4217 codes.`,
           });
           return;
         }
