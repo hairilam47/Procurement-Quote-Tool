@@ -16,7 +16,7 @@ import { useRouter, Redirect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useAuth } from "@clerk/expo";
+import { useAuth } from "@/lib/auth";
 import {
   useCreateInvoice,
   useListClients,

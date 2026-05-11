@@ -75,7 +75,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "@clerk/react": "^6.5.0",
+    "better-auth": "^1.6.10",
     "border-beam": "^1.0.1"
   }
 }

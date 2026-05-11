@@ -8,12 +8,12 @@ import {
   Text,
   View,
 } from "react-native";
-import { useAuth, useUser } from "@clerk/expo";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useGetMe } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/lib/auth";
 
 function InitialsAvatar({ name, email }: { name?: string | null; email?: string | null }) {
   const colors = useColors();
@@ -76,8 +76,7 @@ function InfoRow({ icon, label, value }: { icon: ComponentProps<typeof Feather>[
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { signOut } = useAuth();
-  const { user } = useUser();
+  const { signOut, user } = useAuth();
   const { data: me, isLoading } = useGetMe();
 
   const styles = makeStyles(colors, insets);
@@ -87,6 +86,9 @@ export default function ProfileScreen() {
     await signOut();
   };
 
+  const displayName = user?.name || me?.name;
+  const displayEmail = user?.email || me?.email;
+
   return (
     <ScrollView
       style={styles.scroll}
@@ -94,15 +96,12 @@ export default function ProfileScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.avatarSection}>
-        <InitialsAvatar
-          name={user?.fullName || me?.name}
-          email={user?.primaryEmailAddress?.emailAddress || me?.email}
-        />
+        <InitialsAvatar name={displayName} email={displayEmail} />
         <Text style={styles.name} numberOfLines={1}>
-          {user?.fullName || me?.name || "KuotFlow User"}
+          {displayName || "KuotFlow User"}
         </Text>
         <Text style={styles.email} numberOfLines={1}>
-          {user?.primaryEmailAddress?.emailAddress || me?.email}
+          {displayEmail}
         </Text>
       </View>
 
@@ -110,8 +109,8 @@ export default function ProfileScreen() {
         <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
       ) : (
         <View style={styles.infoCard}>
-          <InfoRow icon="mail" label="Email" value={user?.primaryEmailAddress?.emailAddress || me?.email} />
-          <InfoRow icon="user" label="Name" value={user?.fullName || me?.name} />
+          <InfoRow icon="mail" label="Email" value={displayEmail} />
+          <InfoRow icon="user" label="Name" value={displayName} />
           <InfoRow icon="shield" label="Role" value={me?.role} />
         </View>
       )}

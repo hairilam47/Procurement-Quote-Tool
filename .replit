@@ -51,11 +51,11 @@ externalPort = 3000
 [userenv]
 
 [userenv.shared]
-VITE_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsua3VvdGZsb3cuY29tJA"
 STRIPE_PRICE_DAILY = "price_1TTO98Di10YLVeRwceeiN0SW"
 STRIPE_PRICE_WEEKLY = "price_1TTO99Di10YLVeRwAOh333rp"
 STRIPE_PRICE_MONTHLY = "price_1TTO99Di10YLVeRwZsxxgrQI"
 STRIPE_PRICE_YEARLY = "price_1TTO99Di10YLVeRwdkjAwtlF"
+BETTER_AUTH_SECRET = "a90c7def2ce40b5ed570a4c985906eef44c698cbe936a8fb86a71c29c268de4b"
 
 [nix]
 channel = "stable-25_05"

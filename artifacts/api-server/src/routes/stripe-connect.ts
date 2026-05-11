@@ -43,7 +43,7 @@ router.get("/stripe/connect/status", requireAuth, async (req, res): Promise<void
     const [user] = await db
       .select({ stripeAccountId: usersTable.stripeAccountId })
       .from(usersTable)
-      .where(eq(usersTable.id, req.clerkUserId));
+      .where(eq(usersTable.id, req.userId));
 
     if (!user?.stripeAccountId) {
       res.json({ connected: false, accountId: null, displayName: null });
@@ -75,7 +75,7 @@ router.get("/stripe/connect", requireAuth, async (req, res): Promise<void> => {
   const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
   const redirectUri = `${baseUrl}/api/stripe/connect/callback`;
 
-  const nonce = createNonce(req.clerkUserId);
+  const nonce = createNonce(req.userId);
 
   const url = new URL("https://connect.stripe.com/oauth/authorize");
   url.searchParams.set("response_type", "code");
@@ -114,7 +114,7 @@ router.get("/stripe/connect/callback", requireAuth, async (req, res): Promise<vo
     return;
   }
 
-  if (nonceUserId !== req.clerkUserId) {
+  if (nonceUserId !== req.userId) {
     res.redirect(`${settingsUrl}error&reason=state_user_mismatch`);
     return;
   }
@@ -132,7 +132,7 @@ router.get("/stripe/connect/callback", requireAuth, async (req, res): Promise<vo
     await db
       .update(usersTable)
       .set({ stripeAccountId: stripeUserId, updatedAt: new Date() })
-      .where(eq(usersTable.id, req.clerkUserId));
+      .where(eq(usersTable.id, req.userId));
 
     res.redirect(`${settingsUrl}success`);
   } catch (err) {
@@ -147,7 +147,7 @@ router.delete("/stripe/connect", requireAuth, async (req, res): Promise<void> =>
     const [user] = await db
       .select({ stripeAccountId: usersTable.stripeAccountId })
       .from(usersTable)
-      .where(eq(usersTable.id, req.clerkUserId));
+      .where(eq(usersTable.id, req.userId));
 
     if (!user?.stripeAccountId) {
       res.status(400).json({ error: "No Stripe account connected" });
@@ -169,7 +169,7 @@ router.delete("/stripe/connect", requireAuth, async (req, res): Promise<void> =>
     await db
       .update(usersTable)
       .set({ stripeAccountId: null, updatedAt: new Date() })
-      .where(eq(usersTable.id, req.clerkUserId));
+      .where(eq(usersTable.id, req.userId));
 
     res.json({ disconnected: true });
   } catch {

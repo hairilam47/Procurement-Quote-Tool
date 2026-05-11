@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -9,81 +9,40 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useSignIn, useSSO } from "@clerk/expo";
-import * as WebBrowser from "expo-web-browser";
-import * as AuthSession from "expo-auth-session";
 import { Link, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useColors } from "@/hooks/useColors";
-
-WebBrowser.maybeCompleteAuthSession();
-
-function useWarmUpBrowser() {
-  useEffect(() => {
-    if (Platform.OS !== "android") return;
-    void WebBrowser.warmUpAsync();
-    return () => {
-      void WebBrowser.coolDownAsync();
-    };
-  }, []);
-}
+import { useAuth } from "@/lib/auth";
 
 export default function SignInScreen() {
-  useWarmUpBrowser();
-
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-
-  const { signIn, errors, fetchStatus } = useSignIn();
-  const { startSSOFlow } = useSSO();
+  const { signIn } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const isLoading = fetchStatus === "fetching";
-  const canSubmit = !!email && !!password && !isLoading;
+  const canSubmit = !!email && !!password && !loading;
 
   const handleSignIn = async () => {
     if (!canSubmit) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const { error } = await signIn.password({ emailAddress: email, password });
-    if (error) return;
-    if (signIn.status === "complete") {
-      await signIn.finalize({
-        navigate: () => {
-          router.replace("/(home)");
-        },
-      });
+    setError("");
+    setLoading(true);
+    const result = await signIn(email, password);
+    setLoading(false);
+    if (result.error) {
+      setError(result.error);
+      return;
     }
+    router.replace("/(home)");
   };
-
-  const handleGoogleSignIn = useCallback(async () => {
-    try {
-      setOauthLoading(true);
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const { createdSessionId, setActive } = await startSSOFlow({
-        strategy: "oauth_google",
-        redirectUrl: AuthSession.makeRedirectUri(),
-      });
-      if (createdSessionId) {
-        await setActive!({
-          session: createdSessionId,
-          navigate: () => {
-            router.replace("/(home)");
-          },
-        });
-      }
-    } catch (err) {
-      console.error(JSON.stringify(err, null, 2));
-    } finally {
-      setOauthLoading(false);
-    }
-  }, [startSSOFlow, router]);
 
   const styles = makeStyles(colors, insets);
 
@@ -102,6 +61,12 @@ export default function SignInScreen() {
       </View>
 
       <View style={styles.form}>
+        {!!error && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Email</Text>
           <TextInput
@@ -115,9 +80,6 @@ export default function SignInScreen() {
             autoComplete="email"
             testID="email-input"
           />
-          {errors?.fields?.identifier && (
-            <Text style={styles.error}>{errors.fields.identifier.message}</Text>
-          )}
         </View>
 
         <View style={styles.inputGroup}>
@@ -144,9 +106,6 @@ export default function SignInScreen() {
               />
             </Pressable>
           </View>
-          {errors?.fields?.password && (
-            <Text style={styles.error}>{errors.fields.password.message}</Text>
-          )}
         </View>
 
         <Pressable
@@ -159,35 +118,10 @@ export default function SignInScreen() {
           disabled={!canSubmit}
           testID="sign-in-button"
         >
-          {isLoading ? (
+          {loading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
             <Text style={styles.primaryButtonText}>Sign in</Text>
-          )}
-        </Pressable>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.oauthButton,
-            pressed && styles.pressed,
-          ]}
-          onPress={handleGoogleSignIn}
-          disabled={oauthLoading}
-          testID="google-sign-in-button"
-        >
-          {oauthLoading ? (
-            <ActivityIndicator color={colors.foreground} size="small" />
-          ) : (
-            <>
-              <Ionicons name="logo-google" size={18} color={colors.foreground} />
-              <Text style={styles.oauthButtonText}>Continue with Google</Text>
-            </>
           )}
         </Pressable>
       </View>
@@ -244,6 +178,18 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
     form: {
       gap: 16,
     },
+    errorBox: {
+      backgroundColor: "rgba(239,68,68,0.1)",
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: "rgba(239,68,68,0.3)",
+      padding: 12,
+    },
+    errorText: {
+      fontSize: 13,
+      fontFamily: "Inter_400Regular",
+      color: colors.destructive,
+    },
     inputGroup: {
       gap: 6,
     },
@@ -276,12 +222,6 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
       bottom: 0,
       justifyContent: "center",
     },
-    error: {
-      fontSize: 13,
-      fontFamily: "Inter_400Regular",
-      color: colors.destructive,
-      marginTop: 2,
-    },
     primaryButton: {
       height: 48,
       borderRadius: colors.radius,
@@ -300,37 +240,6 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
     },
     pressed: {
       opacity: 0.8,
-    },
-    divider: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-    },
-    dividerLine: {
-      flex: 1,
-      height: 1,
-      backgroundColor: colors.border,
-    },
-    dividerText: {
-      fontSize: 13,
-      fontFamily: "Inter_400Regular",
-      color: colors.mutedForeground,
-    },
-    oauthButton: {
-      height: 48,
-      borderRadius: colors.radius,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.card,
-      alignItems: "center",
-      justifyContent: "center",
-      flexDirection: "row",
-      gap: 10,
-    },
-    oauthButtonText: {
-      fontSize: 15,
-      fontFamily: "Inter_500Medium",
-      color: colors.foreground,
     },
     footer: {
       flexDirection: "row",

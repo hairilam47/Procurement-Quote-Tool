@@ -696,7 +696,7 @@ router.post("/quotations/:id/payment-link", requireAuth, async (req, res): Promi
     const [user] = await db
       .select({ stripeAccountId: usersTable.stripeAccountId })
       .from(usersTable)
-      .where(eq(usersTable.id, req.clerkUserId));
+      .where(eq(usersTable.id, req.userId));
 
     if (!user?.stripeAccountId) {
       res.status(402).json({

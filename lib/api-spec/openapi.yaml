@@ -30,7 +30,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
-  /auth/seed:
+  /user/seed:
     post:
       operationId: seedUser
       tags: [auth]
@@ -57,11 +57,11 @@ paths:
                   seeded: { type: boolean }
                 required: [user, seeded]
 
-  /auth/sync:
+  /user/sync:
     post:
       operationId: syncUser
       tags: [auth]
-      summary: Sync Clerk user into DB
+      summary: Sync user into DB
       requestBody:
         required: true
         content:
@@ -79,7 +79,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/User"
 
-  /auth/me:
+  /user/me:
     get:
       operationId: getMe
       tags: [auth]

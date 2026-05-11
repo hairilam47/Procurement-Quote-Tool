@@ -1,4 +1,3 @@
-import { useAuth } from "@clerk/expo";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { BlurView } from "expo-blur";
 import { isLiquidGlassAvailable } from "expo-glass-effect";
@@ -9,6 +8,7 @@ import { Feather } from "@expo/vector-icons";
 import React, { useEffect } from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/lib/auth";
 
 function NativeTabLayout() {
   return (
@@ -108,7 +108,7 @@ export default function HomeLayout() {
   const { isSignedIn, getToken } = useAuth();
 
   useEffect(() => {
-    setAuthTokenGetter(() => getToken());
+    setAuthTokenGetter(getToken);
   }, [getToken]);
 
   if (!isSignedIn) {

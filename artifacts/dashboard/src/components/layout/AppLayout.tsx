@@ -1,6 +1,5 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { UserButton } from "@clerk/react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import {
@@ -16,7 +15,17 @@ import {
   PanelLeftOpen,
   Sun,
   Moon,
+  LogOut,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { authClient } from "@/lib/auth-client";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -65,6 +74,62 @@ function NavLinks({
         );
       })}
     </nav>
+  );
+}
+
+function UserAvatar() {
+  const { data: session } = authClient.useSession();
+  const [, setLocation] = useLocation();
+  const user = session?.user;
+
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((w) => w[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : (user?.email?.[0] ?? "?").toUpperCase();
+
+  const handleSignOut = async () => {
+    await authClient.signOut();
+    setLocation("/sign-in");
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-semibold flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+          title={user?.email ?? "Account"}
+          aria-label="Account menu"
+        >
+          {initials}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" className="w-52">
+        {user?.email && (
+          <>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                {user.name && (
+                  <p className="text-sm font-medium leading-none truncate">{user.name}</p>
+                )}
+                <p className="text-xs leading-none text-muted-foreground truncate">{user.email}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        <DropdownMenuItem
+          onClick={handleSignOut}
+          className="text-destructive focus:text-destructive cursor-pointer"
+        >
+          <LogOut size={14} className="mr-2" />
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -149,7 +214,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             collapsed ? "flex-col gap-3 justify-center" : "gap-2.5"
           )}
         >
-          <UserButton />
+          <UserAvatar />
           {!collapsed && (
             <span className="text-muted-foreground text-xs flex-1 truncate">
               Account

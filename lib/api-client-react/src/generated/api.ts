@@ -132,7 +132,7 @@ export function useHealthCheck<
  * @summary First-run seed — upsert user and ensure company_settings row exists
  */
 export const getSeedUserUrl = () => {
-  return `/api/auth/seed`;
+  return `/api/user/seed`;
 };
 
 export const seedUser = async (
@@ -218,7 +218,7 @@ export const useSeedUser = <
  * @summary Sync Clerk user into DB
  */
 export const getSyncUserUrl = () => {
-  return `/api/auth/sync`;
+  return `/api/user/sync`;
 };
 
 export const syncUser = async (
@@ -304,7 +304,7 @@ export const useSyncUser = <
  * @summary Get current user
  */
 export const getGetMeUrl = () => {
-  return `/api/auth/me`;
+  return `/api/user/me`;
 };
 
 export const getMe = async (options?: RequestInit): Promise<User> => {
@@ -315,7 +315,7 @@ export const getMe = async (options?: RequestInit): Promise<User> => {
 };
 
 export const getGetMeQueryKey = () => {
-  return [`/api/auth/me`] as const;
+  return [`/api/user/me`] as const;
 };
 
 export const getGetMeQueryOptions = <

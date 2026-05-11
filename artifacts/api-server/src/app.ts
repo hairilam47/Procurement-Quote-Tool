@@ -1,13 +1,8 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
-import { clerkMiddleware } from "@clerk/express";
-import { publishableKeyFromHost } from "@clerk/shared/keys";
-import {
-  CLERK_PROXY_PATH,
-  clerkProxyMiddleware,
-  getClerkProxyHost,
-} from "./middlewares/clerkProxyMiddleware";
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "./lib/auth";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { WebhookHandlers } from "./webhookHandlers";
@@ -56,21 +51,18 @@ app.post(
   },
 );
 
-// Clerk proxy must be before body parsers
-app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+// Better-auth handler — MUST be before body parsers so it can read the raw body
+const authHandler = toNodeHandler(auth);
+app.use(async (req, res, next) => {
+  if (req.path.startsWith("/api/auth")) {
+    return authHandler(req, res);
+  }
+  next();
+});
 
 app.use(cors({ credentials: true, origin: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-app.use(
-  clerkMiddleware((req) => ({
-    publishableKey: publishableKeyFromHost(
-      getClerkProxyHost(req) ?? "",
-      process.env.CLERK_PUBLISHABLE_KEY,
-    ),
-  })),
-);
 
 app.use("/api", router);
 

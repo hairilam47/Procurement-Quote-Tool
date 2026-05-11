@@ -98,7 +98,7 @@ router.get("/stripe/subscription", requireAuth, async (req, res): Promise<void> 
     const [user] = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.id, req.clerkUserId));
+      .where(eq(usersTable.id, req.userId));
 
     if (!user?.stripeSubscriptionId) {
       res.json({ subscription: null });
@@ -134,7 +134,7 @@ router.post("/stripe/customer-portal", requireAuth, async (req, res): Promise<vo
     const [user] = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.id, req.clerkUserId));
+      .where(eq(usersTable.id, req.userId));
 
     if (!user?.stripeCustomerId) {
       res.status(400).json({ error: "No billing account found. Please subscribe first." });

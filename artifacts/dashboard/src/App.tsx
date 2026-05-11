@@ -1,8 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { ClerkProvider, Show, useAuth, useClerk } from "@clerk/react";
-import { publishableKeyFromHost } from "@clerk/react/internal";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "@/components/layout/AppLayout";
@@ -20,6 +18,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import SignInPage from "@/pages/SignInPage";
 import SignUpPage from "@/pages/SignUpPage";
 import PaymentSuccessPage from "@/pages/PaymentSuccessPage";
+import { authClient } from "@/lib/auth-client";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,29 +28,17 @@ const queryClient = new QueryClient({
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-const clerkPubKey = publishableKeyFromHost(
-  typeof window !== "undefined" ? window.location.hostname : "",
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
-);
-
-// Empty in dev, auto-set in production
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
-
-function stripBase(path: string): string {
-  return basePath && path.startsWith(basePath)
-    ? path.slice(basePath.length) || "/"
-    : path;
-}
-
 function SyncUser() {
-  const { isSignedIn, userId } = useAuth();
+  const { data: session } = authClient.useSession();
+  const userId = session?.user?.id;
+
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!userId) return;
     let cancelled = false;
     async function seed(retries = 3) {
       for (let i = 0; i < retries; i++) {
         try {
-          const res = await fetch("/api/auth/seed", { method: "POST", credentials: "include" });
+          const res = await fetch("/api/user/seed", { method: "POST", credentials: "include" });
           if (res.ok || cancelled) return;
         } catch {
           // network error — wait briefly before retrying
@@ -61,24 +48,24 @@ function SyncUser() {
     }
     seed();
     return () => { cancelled = true; };
-  }, [isSignedIn, userId]);
+  }, [userId]);
+
   return null;
 }
 
 function CacheInvalidator() {
-  const { addListener } = useClerk();
+  const { data: session } = authClient.useSession();
   const qc = useQueryClient();
   const prevRef = useRef<string | null | undefined>(undefined);
+
   useEffect(() => {
-    const unsub = addListener(({ user }) => {
-      const uid = user?.id ?? null;
-      if (prevRef.current !== undefined && prevRef.current !== uid) {
-        qc.clear();
-      }
-      prevRef.current = uid;
-    });
-    return unsub;
-  }, [addListener, qc]);
+    const uid = session?.user?.id ?? null;
+    if (prevRef.current !== undefined && prevRef.current !== uid) {
+      qc.clear();
+    }
+    prevRef.current = uid;
+  }, [session?.user?.id, qc]);
+
   return null;
 }
 
@@ -106,40 +93,38 @@ function ProtectedRoutes() {
 }
 
 function AppRoutes() {
+  const { data: session, isPending } = authClient.useSession();
+
+  if (isPending) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <Switch>
-      {/* Auth routes — always accessible */}
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />
-
-      {/* Public customer-facing routes — no auth required */}
       <Route path="/pay/success" component={PaymentSuccessPage} />
-
-      {/* All other routes — protected */}
       <Route>
-        <Show when="signed-in">
-          <SyncUser />
-          <ProtectedRoutes />
-        </Show>
-        <Show when="signed-out">
+        {session?.user ? (
+          <>
+            <SyncUser />
+            <ProtectedRoutes />
+          </>
+        ) : (
           <Redirect to="/sign-in" />
-        </Show>
+        )}
       </Route>
     </Switch>
   );
 }
 
-function ClerkProviderWithRoutes() {
-  const [, setLocation] = useLocation();
+function App() {
   return (
-    <ClerkProvider
-      publishableKey={clerkPubKey}
-      proxyUrl={clerkProxyUrl}
-      signInUrl={`${basePath}/sign-in`}
-      signUpUrl={`${basePath}/sign-up`}
-      routerPush={(to) => setLocation(stripBase(to))}
-      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
-    >
+    <WouterRouter base={basePath}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <CacheInvalidator />
@@ -147,14 +132,6 @@ function ClerkProviderWithRoutes() {
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
-    </ClerkProvider>
-  );
-}
-
-function App() {
-  return (
-    <WouterRouter base={basePath}>
-      <ClerkProviderWithRoutes />
     </WouterRouter>
   );
 }

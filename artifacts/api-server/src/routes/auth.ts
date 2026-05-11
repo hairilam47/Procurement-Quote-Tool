@@ -1,49 +1,48 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { eq } from "drizzle-orm";
 import { db, usersTable, companySettingsTable } from "@workspace/db";
-import { getAuth } from "@clerk/express";
+import { auth } from "../lib/auth";
+import { fromNodeHeaders } from "better-auth/node";
 
 const router = Router();
 
-export function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  const auth = getAuth(req);
-  if (!auth?.userId) {
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    });
+    if (!session?.user?.id) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    req.userId = session.user.id;
+    next();
+  } catch {
     res.status(401).json({ error: "Unauthorized" });
-    return;
   }
-  req.clerkUserId = auth.userId;
-  next();
 }
 
 // First-run seed: upsert user record + ensure company_settings row exists
-router.post("/auth/seed", requireAuth, async (req: Request, res: Response): Promise<void> => {
+// Note: uses /user/seed prefix to avoid conflict with better-auth's /auth/* handler
+router.post("/user/seed", requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const clerkUserId = req.clerkUserId;
-    const { email, name } = req.body as { email?: string; name?: string };
+    const userId = req.userId;
 
     const [existing] = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.id, clerkUserId));
+      .where(eq(usersTable.id, userId));
 
     let user;
     if (existing) {
-      const [updated] = await db
-        .update(usersTable)
-        .set({
-          email: email ?? existing.email,
-          name: name ?? existing.name,
-          updatedAt: new Date(),
-        })
-        .where(eq(usersTable.id, clerkUserId))
-        .returning();
-      user = updated;
+      user = existing;
     } else {
+      const { email, name } = req.body as { email?: string; name?: string };
       const [created] = await db
         .insert(usersTable)
         .values({
-          id: clerkUserId,
-          email: email ?? `${clerkUserId}@unknown.com`,
+          id: userId,
+          email: email ?? `${userId}@unknown.com`,
           name: name ?? null,
         })
         .returning();
@@ -72,48 +71,13 @@ router.post("/auth/seed", requireAuth, async (req: Request, res: Response): Prom
   }
 });
 
-// Sync Clerk user into our DB
-router.post("/auth/sync", requireAuth, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const clerkUserId = req.clerkUserId;
-    const { email, name } = req.body as { email?: string; name?: string };
-
-    const [existing] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, clerkUserId));
-
-    if (existing) {
-      const [updated] = await db
-        .update(usersTable)
-        .set({ email: email ?? existing.email, name: name ?? existing.name, updatedAt: new Date() })
-        .where(eq(usersTable.id, clerkUserId))
-        .returning();
-      res.json(updated);
-      return;
-    }
-
-    const [user] = await db
-      .insert(usersTable)
-      .values({
-        id: clerkUserId,
-        email: email ?? `${clerkUserId}@unknown.com`,
-        name: name ?? null,
-      })
-      .returning();
-    res.status(201).json(user);
-  } catch {
-    res.status(500).json({ error: "Failed to sync user" });
-  }
-});
-
 // Get current user info
-router.get("/auth/me", requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.get("/user/me", requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const [user] = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.id, req.clerkUserId));
+      .where(eq(usersTable.id, req.userId));
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
