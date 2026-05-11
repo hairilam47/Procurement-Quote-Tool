@@ -63,13 +63,13 @@ interface SubscriptionData {
 }
 
 async function fetchUserMe(): Promise<UserMe> {
-  const res = await fetch(`${basePath}/api/user/me`, { credentials: "include" });
+  const res = await fetch("/api/user/me", { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch user");
   return res.json();
 }
 
 async function fetchSubscription(): Promise<SubscriptionData> {
-  const res = await fetch(`${basePath}/api/stripe/subscription`, { credentials: "include" });
+  const res = await fetch("/api/stripe/subscription", { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch subscription");
   return res.json();
 }
@@ -97,7 +97,7 @@ function SyncUser() {
     async function seed(retries = 3) {
       for (let i = 0; i < retries; i++) {
         try {
-          const res = await fetch(`${basePath}/api/user/seed`, { method: "POST", credentials: "include" });
+          const res = await fetch("/api/user/seed", { method: "POST", credentials: "include" });
           if (res.ok || cancelled) return;
         } catch {
           // network error — wait briefly before retrying

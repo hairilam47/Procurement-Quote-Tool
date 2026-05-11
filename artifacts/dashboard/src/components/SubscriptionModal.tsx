@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X, Check, Loader2, Zap } from "lucide-react";
 
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-
 interface Price {
   price_id: string;
   unit_amount: number;
@@ -17,7 +15,7 @@ interface SubscriptionModalProps {
 }
 
 async function fetchPrices(): Promise<{ data: Price[] }> {
-  const res = await fetch(`${basePath}/api/stripe/prices`);
+  const res = await fetch("/api/stripe/prices");
   if (!res.ok) throw new Error("Failed to fetch prices");
   return res.json();
 }
@@ -86,7 +84,7 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
   async function handleSkip() {
     setDismissLoading(true);
     try {
-      const res = await fetch(`${basePath}/api/user/dismiss-trial`, {
+      const res = await fetch("/api/user/dismiss-trial", {
         method: "POST",
         credentials: "include",
       });
@@ -122,7 +120,7 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
     setCheckoutLoading(true);
     setError("");
     try {
-      const res = await fetch(`${basePath}/api/stripe/create-checkout-session`, {
+      const res = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
