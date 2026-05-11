@@ -87,6 +87,40 @@ function CheckoutSuccessBanner() {
   return null;
 }
 
+/**
+ * Handles the Google OAuth post-login case where a ?plan= param is carried
+ * through the callbackURL (e.g. /app/?plan=monthly). Runs once after mount,
+ * kicks off a Stripe checkout session, and cleans up the URL param.
+ */
+function PostLoginPlanCheckout() {
+  const didRun = React.useRef(false);
+
+  useEffect(() => {
+    if (didRun.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const plan = params.get("plan");
+    if (!plan) return;
+
+    didRun.current = true;
+    // Remove the param from the URL so it doesn't re-trigger on re-renders
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete("plan");
+    window.history.replaceState({}, "", clean.toString());
+
+    fetch("/api/stripe/create-checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ plan }),
+    })
+      .then((res) => res.json())
+      .then((data) => { if (data.url) window.location.href = data.url; })
+      .catch(console.error);
+  }, []);
+
+  return null;
+}
+
 function SyncUser() {
   const { data: session } = authClient.useSession();
   const userId = session?.user?.id;
@@ -226,6 +260,7 @@ function AuthenticatedApp() {
     <>
       <SyncUser />
       <CheckoutSuccessBanner />
+      <PostLoginPlanCheckout />
       <ProtectedRoutes topBanner={banner} />
       {modalOpen && <SubscriptionModal onClose={handleModalClose} />}
     </>

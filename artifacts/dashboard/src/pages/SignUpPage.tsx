@@ -22,6 +22,9 @@ export default function SignUpPage() {
       .catch(() => setGoogleEnabled(false));
   }, []);
 
+  // Preserve the ?plan= param across the entire auth flow
+  const planParam = new URLSearchParams(window.location.search).get("plan") ?? "";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -46,9 +49,14 @@ export default function SignUpPage() {
   const handleGoogle = async () => {
     setGoogleLoading(true);
     setError("");
+    // Carry the plan through the OAuth redirect so AuthenticatedApp can pick it up
+    const callbackBase = `${window.location.origin}${basePath}/`;
+    const callbackURL = planParam
+      ? `${callbackBase}?plan=${encodeURIComponent(planParam)}`
+      : callbackBase;
     await authClient.signIn.social({
       provider: "google",
-      callbackURL: `${window.location.origin}${basePath}/`,
+      callbackURL,
       fetchOptions: {
         onError: (ctx) => {
           setError(ctx.error.message ?? "Google sign-in failed");
@@ -77,7 +85,10 @@ export default function SignUpPage() {
               Click the link in your inbox to verify your account, then sign in below.
             </p>
             <button
-              onClick={() => setLocation(`/sign-in?email=${encodeURIComponent(email)}`)}
+              onClick={() => {
+                const dest = `/sign-in?email=${encodeURIComponent(email)}${planParam ? `&plan=${encodeURIComponent(planParam)}` : ""}`;
+                setLocation(dest);
+              }}
               className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition"
             >
               Go to Sign In

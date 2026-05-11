@@ -23,10 +23,33 @@ export default function SignInPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const prefill = params.get("email");
-    if (prefill) {
-      setEmail(prefill);
-    }
+    if (prefill) setEmail(prefill);
   }, []);
+
+  // Read plan param — carried from marketing Subscribe button
+  const planParam = new URLSearchParams(window.location.search).get("plan") ?? "";
+
+  /** After a successful login, kick off a Stripe checkout if a plan was pre-selected. */
+  async function redirectAfterLogin() {
+    if (planParam) {
+      try {
+        const res = await fetch("/api/stripe/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ plan: planParam }),
+        });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+          return;
+        }
+      } catch {
+        // fall through to normal dashboard redirect
+      }
+    }
+    setLocation("/");
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +61,7 @@ export default function SignInPage() {
       password,
       fetchOptions: {
         onError: (ctx) => setError(ctx.error.message ?? "Sign in failed"),
-        onSuccess: () => setLocation("/"),
+        onSuccess: () => { redirectAfterLogin(); },
       },
     });
 
@@ -51,9 +74,14 @@ export default function SignInPage() {
   const handleGoogle = async () => {
     setGoogleLoading(true);
     setError("");
+    // Carry the plan through the OAuth redirect so AuthenticatedApp can pick it up
+    const callbackBase = `${window.location.origin}${basePath}/`;
+    const callbackURL = planParam
+      ? `${callbackBase}?plan=${encodeURIComponent(planParam)}`
+      : callbackBase;
     await authClient.signIn.social({
       provider: "google",
-      callbackURL: `${window.location.origin}${basePath}/`,
+      callbackURL,
       fetchOptions: {
         onError: (ctx) => {
           setError(ctx.error.message ?? "Google sign-in failed");

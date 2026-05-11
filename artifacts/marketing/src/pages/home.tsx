@@ -772,9 +772,31 @@ function PricingSection() {
     if (typeof window === "undefined") return;
     setLoadingPlan(plan);
     try {
+      // Step 1: check if user is already logged in
+      const sessionRes = await fetch("/api/auth/get-session", { credentials: "include" });
+      const sessionData = await sessionRes.json();
+
+      if (!sessionData?.user) {
+        // Not logged in → send to sign-up with plan pre-selected
+        window.location.href = `/app/sign-up?plan=${encodeURIComponent(plan)}`;
+        return;
+      }
+
+      // Step 2: check for an active subscription
+      const subRes = await fetch("/api/stripe/subscription", { credentials: "include" });
+      const subData = await subRes.json();
+      const subStatus = subData?.subscription?.status;
+      if (subStatus === "active" || subStatus === "trialing") {
+        // Already subscribed → send to billing settings
+        window.location.href = "/app/settings#billing";
+        return;
+      }
+
+      // Step 3: logged in but not subscribed → create Stripe checkout session
       const response = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ plan }),
       });
       const data = await response.json();
