@@ -24,7 +24,7 @@ export default function SignInPage() {
     const params = new URLSearchParams(window.location.search);
     const prefill = params.get("email");
     if (prefill) {
-      setEmail(decodeURIComponent(prefill));
+      setEmail(prefill);
     }
   }, []);
 
