@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
 const inputCls =
@@ -158,6 +158,8 @@ const LineItemRow = memo(function LineItemRow({
   li,
   idx,
   currency,
+  secondaryCurrency,
+  exchangeRate,
   isOnly,
   onUpdate,
   onFormulaChange,
@@ -166,15 +168,22 @@ const LineItemRow = memo(function LineItemRow({
   li: LineItemInput;
   idx: number;
   currency: string;
+  secondaryCurrency?: string;
+  exchangeRate?: number | null;
   isOnly: boolean;
   onUpdate: (index: number, key: keyof LineItemInput, value: unknown) => void;
   onFormulaChange: (index: number, formula: string) => void;
   onRemove: (index: number) => void;
 }) {
   const rowTotal = (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0);
+  const secondaryTotal = secondaryCurrency && exchangeRate ? rowTotal * exchangeRate : null;
   const isDeferred = li.paymentRequired === false;
+  const gridCols = secondaryCurrency && exchangeRate
+    ? "grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_1.1fr_auto]"
+    : "grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto]";
+
   return (
-    <div className={`grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2.5 border-b border-border/30 last:border-0 items-center transition-opacity ${isDeferred ? "opacity-60" : ""}`}>
+    <div className={`grid ${gridCols} gap-3 px-5 py-2.5 border-b border-border/30 last:border-0 items-center transition-opacity ${isDeferred ? "opacity-60" : ""}`}>
       <div className="flex flex-col gap-1">
         <Input
           value={li.description}
@@ -249,6 +258,11 @@ const LineItemRow = memo(function LineItemRow({
       <span className="text-foreground/90 text-sm font-medium tabular-nums">
         {formatCurrency(rowTotal, currency)}
       </span>
+      {secondaryCurrency && exchangeRate && (
+        <span className="text-muted-foreground text-xs tabular-nums">
+          {secondaryTotal !== null ? formatCurrency(secondaryTotal, secondaryCurrency) : "—"}
+        </span>
+      )}
       <button
         type="button"
         onClick={() => onRemove(idx)}
@@ -312,6 +326,50 @@ export default function QuotationFormPage() {
   const [template, setTemplate] = useState<"MODERN" | "CLASSIC">("MODERN");
   const [lineItems, setLineItems] = useState<LineItemInput[]>([emptyLineItem()]);
 
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [rateLoading, setRateLoading] = useState(false);
+  const [rateError, setRateError] = useState<string | null>(null);
+
+  // Fetch live exchange rate whenever currency pair changes
+  useEffect(() => {
+    if (!secondaryCurrency) {
+      setExchangeRate(null);
+      setRateError(null);
+      setRateLoading(false);
+      return;
+    }
+    setRateLoading(true);
+    setRateError(null);
+    setExchangeRate(null);
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(
+        `https://api.frankfurter.app/latest?from=${encodeURIComponent(currency)}&to=${encodeURIComponent(secondaryCurrency)}`,
+        { signal: controller.signal }
+      )
+        .then(async (res) => {
+          if (!res.ok) throw new Error("Rate fetch failed");
+          const json = await res.json() as { rates?: Record<string, number> };
+          const rate = json.rates?.[secondaryCurrency.toUpperCase()];
+          if (!rate) throw new Error("Rate not found");
+          return rate;
+        })
+        .then((rate) => {
+          setExchangeRate(rate);
+          setRateLoading(false);
+        })
+        .catch((err) => {
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          setRateError(`Could not fetch rate for ${currency} → ${secondaryCurrency}`);
+          setRateLoading(false);
+        });
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [currency, secondaryCurrency]);
+
   // Populate defaults from settings
   useEffect(() => {
     if (!settings || isEdit) return;
@@ -338,8 +396,6 @@ export default function QuotationFormPage() {
     setTerms(existing.terms ?? "");
     setPaymentUrl(existing.paymentUrl ?? "");
     setShowQrCode(existing.showQrCode ?? false);
-    // Legacy compatibility: if the quotation was created before paymentMethod
-    // existed, infer "stripe" from the presence of a paymentUrl.
     const resolvedMethod = (existing.paymentMethod as "stripe" | "bank_transfer" | "both" | "none") ?? "none";
     const inferredMethod =
       resolvedMethod === "none" && existing.paymentUrl ? "stripe" : resolvedMethod;
@@ -389,7 +445,6 @@ export default function QuotationFormPage() {
     setLineItems((prev) => prev.filter((_, i) => i !== index).map((li, i) => ({ ...li, position: i })));
   }, []);
 
-  // Computed totals — memoised so they only recalculate when inputs change
   const { subtotal, discountAmount, taxAmount, total, hasDeferred, requiredTotal } = useMemo(() => {
     const subtotal = lineItems.reduce(
       (sum, li) => sum + (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0),
@@ -418,6 +473,8 @@ export default function QuotationFormPage() {
     const requiredTotal = requiredTaxableAmount + requiredTaxableAmount * (taxRate / 100);
     return { subtotal, discountAmount, taxAmount, total, hasDeferred, requiredTotal };
   }, [lineItems, discountType, discountValue, taxRate]);
+
+  const hasSecondary = !!(secondaryCurrency && exchangeRate);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -464,6 +521,10 @@ export default function QuotationFormPage() {
   }
 
   const isPending = createQuotation.isPending || updateQuotation.isPending;
+
+  const headerGridCols = hasSecondary
+    ? "grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_1.1fr_auto]"
+    : "grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto]";
 
   return (
     <motion.div
@@ -551,6 +612,21 @@ export default function QuotationFormPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {secondaryCurrency && rateLoading && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                  <Loader2 size={11} className="animate-spin" /> Fetching rate…
+                </p>
+              )}
+              {secondaryCurrency && !rateLoading && rateError && (
+                <p className="text-xs text-red-400 flex items-center gap-1 mt-1">
+                  <AlertCircle size={11} /> {rateError}
+                </p>
+              )}
+              {secondaryCurrency && !rateLoading && !rateError && exchangeRate && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  1 {currency} = {exchangeRate.toFixed(6)} {secondaryCurrency}
+                </p>
+              )}
             </Field>
             <Field label="Template">
               <Select value={template} onValueChange={(v) => setTemplate(v as "MODERN" | "CLASSIC")}>
@@ -580,12 +656,18 @@ export default function QuotationFormPage() {
           </div>
 
           {/* Column headers */}
-          <div className="grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2 border-b border-border/60">
-            {["Description", "Qty", "Unit", "Unit Price", "Total", ""].map((h) => (
-              <span key={h} className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
-                {h}
+          <div className={`grid ${headerGridCols} gap-3 px-5 py-2 border-b border-border/60`}>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Description</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Qty</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Unit</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Unit Price</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Total</span>
+            {hasSecondary && (
+              <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                Total ({secondaryCurrency})
               </span>
-            ))}
+            )}
+            <span />
           </div>
 
           {lineItems.map((li, idx) => (
@@ -594,6 +676,8 @@ export default function QuotationFormPage() {
               li={li}
               idx={idx}
               currency={currency}
+              secondaryCurrency={hasSecondary ? secondaryCurrency : undefined}
+              exchangeRate={hasSecondary ? exchangeRate : undefined}
               isOnly={lineItems.length === 1}
               onUpdate={updateLineItem}
               onFormulaChange={handleFormulaChange}
@@ -603,36 +687,71 @@ export default function QuotationFormPage() {
 
           {/* Totals */}
           <div className="px-5 py-4 border-t border-border bg-muted/30">
-            <div className="max-w-xs ml-auto space-y-1.5">
+            <div className="max-w-sm ml-auto space-y-1.5">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="text-foreground">{formatCurrency(subtotal, currency)}</span>
+                <div className="text-right">
+                  <span className="text-foreground">{formatCurrency(subtotal, currency)}</span>
+                  {hasSecondary && exchangeRate && (
+                    <div className="text-xs text-muted-foreground">
+                      ≈ {formatCurrency(subtotal * exchangeRate, secondaryCurrency)}
+                    </div>
+                  )}
+                </div>
               </div>
               {discountType && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Discount</span>
-                  <span className="text-amber-400">- {formatCurrency(discountAmount, currency)}</span>
+                  <div className="text-right">
+                    <span className="text-amber-400">- {formatCurrency(discountAmount, currency)}</span>
+                    {hasSecondary && exchangeRate && (
+                      <div className="text-xs text-amber-400/70">
+                        ≈ - {formatCurrency(discountAmount * exchangeRate, secondaryCurrency)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               {taxRate > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tax ({taxRate}%)</span>
-                  <span className="text-foreground/80">{formatCurrency(taxAmount, currency)}</span>
+                  <div className="text-right">
+                    <span className="text-foreground/80">{formatCurrency(taxAmount, currency)}</span>
+                    {hasSecondary && exchangeRate && (
+                      <div className="text-xs text-muted-foreground">
+                        ≈ {formatCurrency(taxAmount * exchangeRate, secondaryCurrency)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               {hasDeferred && (
                 <div className="flex justify-between text-sm border-t border-border pt-1.5 mt-1">
                   <span className="text-blue-400 font-semibold">Amount due now</span>
-                  <span className="text-blue-400 font-semibold">{formatCurrency(requiredTotal, currency)}</span>
+                  <div className="text-right">
+                    <span className="text-blue-400 font-semibold">{formatCurrency(requiredTotal, currency)}</span>
+                    {hasSecondary && exchangeRate && (
+                      <div className="text-xs text-blue-400/70">
+                        ≈ {formatCurrency(requiredTotal * exchangeRate, secondaryCurrency)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               <div className={`flex justify-between text-sm pt-1.5 mt-1 ${hasDeferred ? "" : "border-t border-border"}`}>
                 <span className={hasDeferred ? "text-muted-foreground" : "text-foreground font-bold"}>
                   {hasDeferred ? "Full total" : "Total"}
                 </span>
-                <span className={hasDeferred ? "text-muted-foreground" : "text-foreground font-bold text-base"}>
-                  {formatCurrency(total, currency)}
-                </span>
+                <div className="text-right">
+                  <span className={hasDeferred ? "text-muted-foreground" : "text-foreground font-bold text-base"}>
+                    {formatCurrency(total, currency)}
+                  </span>
+                  {hasSecondary && exchangeRate && (
+                    <div className="text-xs text-muted-foreground">
+                      ≈ {formatCurrency(total * exchangeRate, secondaryCurrency)}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

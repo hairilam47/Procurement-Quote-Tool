@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
 const inputCls =
@@ -120,16 +120,23 @@ const emptyLineItem = (): LineItemInput => ({
 });
 
 const LineItemRow = memo(function LineItemRow({
-  li, idx, currency, isOnly, onUpdate, onFormulaChange, onRemove,
+  li, idx, currency, secondaryCurrency, exchangeRate, isOnly, onUpdate, onFormulaChange, onRemove,
 }: {
-  li: LineItemInput; idx: number; currency: string; isOnly: boolean;
+  li: LineItemInput; idx: number; currency: string;
+  secondaryCurrency?: string; exchangeRate?: number | null;
+  isOnly: boolean;
   onUpdate: (index: number, key: keyof LineItemInput, value: unknown) => void;
   onFormulaChange: (index: number, formula: string) => void;
   onRemove: (index: number) => void;
 }) {
   const rowTotal = (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0);
+  const secondaryTotal = secondaryCurrency && exchangeRate ? rowTotal * exchangeRate : null;
+  const gridCols = secondaryCurrency && exchangeRate
+    ? "grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_1.1fr_auto]"
+    : "grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto]";
+
   return (
-    <div className="grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2.5 border-b border-border/30 last:border-0 items-center">
+    <div className={`grid ${gridCols} gap-3 px-5 py-2.5 border-b border-border/30 last:border-0 items-center`}>
       <div className="flex flex-col gap-1">
         <Input value={li.description} onChange={(e) => onUpdate(idx, "description", e.target.value)}
           placeholder="Description..." className={`${inputCls} h-8 text-sm`} data-testid={`line-item-description-${idx}`} />
@@ -161,6 +168,11 @@ const LineItemRow = memo(function LineItemRow({
       <span className="text-foreground/90 text-sm font-medium tabular-nums">
         {formatCurrency(rowTotal, currency)}
       </span>
+      {secondaryCurrency && exchangeRate && (
+        <span className="text-muted-foreground text-xs tabular-nums">
+          {secondaryTotal !== null ? formatCurrency(secondaryTotal, secondaryCurrency) : "—"}
+        </span>
+      )}
       <button type="button" onClick={() => onRemove(idx)}
         className="text-muted-foreground/40 hover:text-red-400 transition-colors p-1" disabled={isOnly}>
         <Trash2 size={13} />
@@ -216,6 +228,50 @@ export default function InvoiceFormPage() {
   const [paymentMethod, setPaymentMethod] = useState<"stripe" | "bank_transfer" | "both" | "none">("none");
   const [template, setTemplate] = useState<"MODERN" | "CLASSIC">("MODERN");
   const [lineItems, setLineItems] = useState<LineItemInput[]>([emptyLineItem()]);
+
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [rateLoading, setRateLoading] = useState(false);
+  const [rateError, setRateError] = useState<string | null>(null);
+
+  // Fetch live exchange rate whenever currency pair changes
+  useEffect(() => {
+    if (!secondaryCurrency) {
+      setExchangeRate(null);
+      setRateError(null);
+      setRateLoading(false);
+      return;
+    }
+    setRateLoading(true);
+    setRateError(null);
+    setExchangeRate(null);
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(
+        `https://api.frankfurter.app/latest?from=${encodeURIComponent(currency)}&to=${encodeURIComponent(secondaryCurrency)}`,
+        { signal: controller.signal }
+      )
+        .then(async (res) => {
+          if (!res.ok) throw new Error("Rate fetch failed");
+          const json = await res.json() as { rates?: Record<string, number> };
+          const rate = json.rates?.[secondaryCurrency.toUpperCase()];
+          if (!rate) throw new Error("Rate not found");
+          return rate;
+        })
+        .then((rate) => {
+          setExchangeRate(rate);
+          setRateLoading(false);
+        })
+        .catch((err) => {
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          setRateError(`Could not fetch rate for ${currency} → ${secondaryCurrency}`);
+          setRateLoading(false);
+        });
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [currency, secondaryCurrency]);
 
   useEffect(() => {
     if (!settings || isEdit) return;
@@ -285,6 +341,8 @@ export default function InvoiceFormPage() {
     return { subtotal, discountAmount, taxAmount, total };
   }, [lineItems, discountType, discountValue, taxRate]);
 
+  const hasSecondary = !!(secondaryCurrency && exchangeRate);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!clientId) { toast({ title: "Please select a client", variant: "destructive" }); return; }
@@ -318,6 +376,10 @@ export default function InvoiceFormPage() {
 
   const isPending = createInvoice.isPending || updateInvoice.isPending;
   const showStripe = connectStatus?.connected === true;
+
+  const headerGridCols = hasSecondary
+    ? "grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_1.1fr_auto]"
+    : "grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto]";
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-5">
@@ -375,6 +437,21 @@ export default function InvoiceFormPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {secondaryCurrency && rateLoading && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                  <Loader2 size={11} className="animate-spin" /> Fetching rate…
+                </p>
+              )}
+              {secondaryCurrency && !rateLoading && rateError && (
+                <p className="text-xs text-red-400 flex items-center gap-1 mt-1">
+                  <AlertCircle size={11} /> {rateError}
+                </p>
+              )}
+              {secondaryCurrency && !rateLoading && !rateError && exchangeRate && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  1 {currency} = {exchangeRate.toFixed(6)} {secondaryCurrency}
+                </p>
+              )}
             </Field>
             <Field label="Template">
               <Select value={template} onValueChange={(v) => setTemplate(v as "MODERN" | "CLASSIC")}>
@@ -396,37 +473,75 @@ export default function InvoiceFormPage() {
               <Plus size={12} /> Add Item
             </button>
           </div>
-          <div className="grid grid-cols-[3fr_0.9fr_1fr_1.3fr_1.1fr_auto] gap-3 px-5 py-2 border-b border-border/60">
-            {["Description", "Qty", "Unit", "Unit Price", "Total", ""].map((h) => (
-              <span key={h} className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{h}</span>
-            ))}
+          <div className={`grid ${headerGridCols} gap-3 px-5 py-2 border-b border-border/60`}>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Description</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Qty</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Unit</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Unit Price</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Total</span>
+            {hasSecondary && (
+              <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                Total ({secondaryCurrency})
+              </span>
+            )}
+            <span />
           </div>
           {lineItems.map((li, idx) => (
             <LineItemRow key={idx} li={li} idx={idx} currency={currency}
+              secondaryCurrency={hasSecondary ? secondaryCurrency : undefined}
+              exchangeRate={hasSecondary ? exchangeRate : undefined}
               isOnly={lineItems.length === 1} onUpdate={updateLineItem}
               onFormulaChange={handleFormulaChange} onRemove={removeLineItem} />
           ))}
           <div className="px-5 py-4 border-t border-border bg-muted/30">
-            <div className="max-w-xs ml-auto space-y-1.5">
+            <div className="max-w-sm ml-auto space-y-1.5">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="text-foreground">{formatCurrency(subtotal, currency)}</span>
+                <div className="text-right">
+                  <span className="text-foreground">{formatCurrency(subtotal, currency)}</span>
+                  {hasSecondary && exchangeRate && (
+                    <div className="text-xs text-muted-foreground">
+                      ≈ {formatCurrency(subtotal * exchangeRate, secondaryCurrency)}
+                    </div>
+                  )}
+                </div>
               </div>
               {discountType && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Discount</span>
-                  <span className="text-amber-400">- {formatCurrency(discountAmount, currency)}</span>
+                  <div className="text-right">
+                    <span className="text-amber-400">- {formatCurrency(discountAmount, currency)}</span>
+                    {hasSecondary && exchangeRate && (
+                      <div className="text-xs text-amber-400/70">
+                        ≈ - {formatCurrency(discountAmount * exchangeRate, secondaryCurrency)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               {taxRate > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tax ({taxRate}%)</span>
-                  <span className="text-foreground">{formatCurrency(taxAmount, currency)}</span>
+                  <div className="text-right">
+                    <span className="text-foreground">{formatCurrency(taxAmount, currency)}</span>
+                    {hasSecondary && exchangeRate && (
+                      <div className="text-xs text-muted-foreground">
+                        ≈ {formatCurrency(taxAmount * exchangeRate, secondaryCurrency)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               <div className="flex justify-between text-sm font-semibold border-t border-border pt-1.5">
                 <span className="text-foreground">Total</span>
-                <span className="text-foreground">{formatCurrency(total, currency)}</span>
+                <div className="text-right">
+                  <span className="text-foreground">{formatCurrency(total, currency)}</span>
+                  {hasSecondary && exchangeRate && (
+                    <div className="text-xs text-muted-foreground font-normal">
+                      ≈ {formatCurrency(total * exchangeRate, secondaryCurrency)}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -479,10 +594,15 @@ export default function InvoiceFormPage() {
                 <Field label="Show QR code on PDF" className="col-span-2">
                   <div className="flex items-center gap-2">
                     <Switch checked={showQrCode} onCheckedChange={setShowQrCode} />
-                    <span className="text-sm text-muted-foreground">{showQrCode ? "Yes" : "No"}</span>
+                    <Label className="text-slate-300 text-sm cursor-pointer">Show QR code</Label>
                   </div>
                 </Field>
               </>
+            )}
+            {(paymentMethod === "bank_transfer" || paymentMethod === "both") && (
+              <p className="text-muted-foreground text-xs col-span-2">
+                Bank details will be pulled from your company settings and shown on the PDF.
+              </p>
             )}
           </div>
         </Section>
@@ -490,13 +610,11 @@ export default function InvoiceFormPage() {
         <Section title="Notes & Terms">
           <Field label="Notes">
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes for the client..." rows={3}
-              className={`${inputCls} resize-none`} />
+              className={`${inputCls} min-h-[70px]`} placeholder="Additional notes for the client..." />
           </Field>
           <Field label="Terms & Conditions">
             <Textarea value={terms} onChange={(e) => setTerms(e.target.value)}
-              placeholder="Payment terms, conditions..." rows={3}
-              className={`${inputCls} resize-none`} />
+              className={`${inputCls} min-h-[70px]`} placeholder="Payment terms, conditions..." />
           </Field>
         </Section>
 
