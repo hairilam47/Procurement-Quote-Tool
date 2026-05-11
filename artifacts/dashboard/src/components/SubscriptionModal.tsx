@@ -77,11 +77,11 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") handleClose();
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  }, []);
 
   async function handleSkip() {
     setDismissLoading(true);
@@ -96,6 +96,10 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
       setDismissLoading(false);
       onClose();
     }
+  }
+
+  function handleClose() {
+    handleSkip();
   }
 
   async function handleSubscribe() {
@@ -143,7 +147,7 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
       >
         {/* Close button */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
           aria-label="Close"
         >

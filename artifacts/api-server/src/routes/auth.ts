@@ -78,7 +78,7 @@ export async function requireSubscription(req: Request, res: Response, next: Nex
       const quotations = quotationCount?.n ?? 0;
       const invoices = invoiceCount?.n ?? 0;
 
-      if (clients > FREE_TRIAL_LIMIT || quotations > FREE_TRIAL_LIMIT || invoices > FREE_TRIAL_LIMIT) {
+      if (clients >= FREE_TRIAL_LIMIT || quotations >= FREE_TRIAL_LIMIT || invoices >= FREE_TRIAL_LIMIT) {
         res.status(402).json({
           error: "trial_limit_reached",
           message: "Free trial limit reached. Subscribe to continue.",
