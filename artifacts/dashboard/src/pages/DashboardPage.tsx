@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useGetDashboard } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { formatCurrency, formatDate, statusBadge, STATUS_LABELS } from "@/lib/format";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { BeamCard } from "@/components/ui/beam-card";
 import {
   DollarSign,
@@ -15,6 +17,8 @@ import {
   BadgeDollarSign,
   CalendarCheck,
   FilePen,
+  CreditCard,
+  X,
 } from "lucide-react";
 import {
   BarChart,
@@ -35,6 +39,64 @@ const STATUS_CHART_COLORS: Record<string, string> = {
   EXPIRED: "#f59e0b",
 };
 
+const PAYWALL_DISMISSED_KEY = "paywall_banner_dismissed";
+
+async function fetchSubscription(): Promise<{ subscription: { id: string } | null }> {
+  const res = await fetch("/api/stripe/subscription", { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch subscription");
+  return res.json();
+}
+
+function PaywallBanner() {
+  const [dismissed, setDismissed] = useState(
+    () => sessionStorage.getItem(PAYWALL_DISMISSED_KEY) === "1"
+  );
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["stripe-subscription"],
+    queryFn: fetchSubscription,
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  const handleDismiss = () => {
+    sessionStorage.setItem(PAYWALL_DISMISSED_KEY, "1");
+    setDismissed(true);
+  };
+
+  if (isLoading || isError || dismissed || data?.subscription != null) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="paywall-banner"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.25 }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300">
+          <CreditCard size={16} className="flex-shrink-0 text-amber-400" />
+          <p className="flex-1 text-sm font-medium">
+            No active subscription.{" "}
+            <Link href="/settings#billing">
+              <span className="underline underline-offset-2 cursor-pointer hover:text-amber-200 transition-colors">
+                Subscribe to get started
+              </span>
+            </Link>
+          </p>
+          <button
+            onClick={handleDismiss}
+            aria-label="Dismiss"
+            className="text-amber-400 hover:text-amber-200 transition-colors flex-shrink-0"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
 
 export default function DashboardPage() {
   const { data, isLoading } = useGetDashboard();
@@ -63,6 +125,9 @@ export default function DashboardPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      {/* Paywall banner */}
+      <PaywallBanner />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
