@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
+import Stripe from "stripe";
 import { getUncachableStripeClient, getStripePublishableKey } from "../stripeClient";
 import { requireAuth } from "./auth";
 
@@ -105,24 +106,24 @@ router.post("/stripe/create-checkout-session", requireAuth, async (req, res): Pr
       return;
     }
 
-    // 1. Try explicit env var (fastest, no DB round-trip)
-    let priceId: string | undefined = PLAN_PRICE_IDS[plan];
-
-    // 2. Fall back to DB (stripe-replit-sync may have synced the price)
-    if (!priceId) {
-      const interval = PLAN_INTERVALS[plan];
-      try {
-        const result = await db.execute(sql`
-          SELECT id FROM stripe.prices
-          WHERE active = true
-            AND (recurring->>'interval') = ${interval}
-          ORDER BY unit_amount ASC
-          LIMIT 1
-        `);
-        priceId = (result.rows[0] as { id: string } | undefined)?.id;
-      } catch {
-        // stripe schema may not be ready yet
-      }
+    // Resolve price from the synced DB — always correct for the current Stripe environment
+    // (test prices in dev, live prices in production). Never use the STRIPE_PRICE_* env
+    // vars here because they are shared across environments and contain test-mode IDs that
+    // Stripe rejects when the live API key is active in production.
+    const interval = PLAN_INTERVALS[plan];
+    let priceId: string | undefined;
+    try {
+      const result = await db.execute(sql`
+        SELECT id FROM stripe.prices
+        WHERE active = true
+          AND (recurring->>'interval') = ${interval}
+          AND (recurring->>'interval_count')::int = 1
+        ORDER BY unit_amount ASC
+        LIMIT 1
+      `);
+      priceId = (result.rows[0] as { id: string } | undefined)?.id;
+    } catch {
+      // stripe schema may not be ready yet
     }
 
     if (!priceId) {
@@ -132,7 +133,7 @@ router.post("/stripe/create-checkout-session", requireAuth, async (req, res): Pr
       return;
     }
 
-    let stripe;
+    let stripe: Stripe;
     try {
       stripe = await getUncachableStripeClient();
     } catch (err) {
@@ -148,37 +149,81 @@ router.post("/stripe/create-checkout-session", requireAuth, async (req, res): Pr
       .from(usersTable)
       .where(eq(usersTable.id, req.userId));
 
-    let customerId = user?.stripeCustomerId ?? undefined;
+    // Narrow priceId to string (guard above already ensures it's defined)
+    const resolvedPriceId = priceId as string;
 
-    if (!customerId) {
+    /** Create (or recover) a valid Stripe customer ID for this user. */
+    async function resolveCustomerId(): Promise<string> {
+      const existing = user?.stripeCustomerId;
+      if (existing) return existing;
       const customer = await stripe.customers.create({
         email: user?.email,
         name: user?.name ?? undefined,
         metadata: { userId: req.userId },
       });
-      customerId = customer.id;
       await db
         .update(usersTable)
-        .set({ stripeCustomerId: customerId, updatedAt: new Date() })
+        .set({ stripeCustomerId: customer.id, updatedAt: new Date() })
         .where(eq(usersTable.id, req.userId));
+      return customer.id;
     }
 
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      payment_method_types: ["card"],
-      line_items: [{ price: priceId, quantity: 1 }],
-      mode: "subscription",
-      success_url: `${baseUrl}/app?checkout=success`,
-      cancel_url: `${baseUrl}/app/settings`,
-      allow_promotion_codes: true,
-      subscription_data: {
-        metadata: { userId: req.userId },
-      },
-    });
+    let customerId = await resolveCustomerId();
 
+    /** Build the session params (DRY helper). */
+    function sessionParams(cid: string): Stripe.Checkout.SessionCreateParams {
+      return {
+        customer: cid,
+        payment_method_types: ["card"],
+        line_items: [{ price: resolvedPriceId, quantity: 1 }],
+        mode: "subscription",
+        success_url: `${baseUrl}/app?checkout=success`,
+        cancel_url: `${baseUrl}/app/settings`,
+        allow_promotion_codes: true,
+        subscription_data: { metadata: { userId: req.userId } },
+      };
+    }
+
+    /** Create checkout session, recovering once from a stale customer ID. */
+    async function createSession(): Promise<Stripe.Checkout.Session> {
+      try {
+        return await stripe.checkout.sessions.create(sessionParams(customerId));
+      } catch (err) {
+        // If the stored customer ID belongs to a different Stripe environment
+        // (e.g. a test-mode cus_XXX used with a live API key), clear it and
+        // create a fresh customer, then retry once.
+        const stripeErr = err as { type?: string; param?: string; code?: string };
+        if (
+          stripeErr?.type === "StripeInvalidRequestError" &&
+          (stripeErr?.param === "customer" || stripeErr?.code === "resource_missing")
+        ) {
+          console.warn("[checkout-session] Stale customer ID, resetting:", customerId);
+          await db
+            .update(usersTable)
+            .set({ stripeCustomerId: null, updatedAt: new Date() })
+            .where(eq(usersTable.id, req.userId));
+          const freshCustomer = await stripe.customers.create({
+            email: user?.email,
+            name: user?.name ?? undefined,
+            metadata: { userId: req.userId },
+          });
+          customerId = freshCustomer.id;
+          await db
+            .update(usersTable)
+            .set({ stripeCustomerId: customerId, updatedAt: new Date() })
+            .where(eq(usersTable.id, req.userId));
+          return stripe.checkout.sessions.create(sessionParams(customerId));
+        }
+        throw err;
+      }
+    }
+
+    const session = await createSession();
     res.json({ url: session.url });
-  } catch {
-    res.status(500).json({ error: "Failed to create checkout session" });
+  } catch (err) {
+    console.error("[checkout-session] Error:", err);
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: `Failed to create checkout session: ${msg}` });
   }
 });
 
@@ -216,7 +261,7 @@ router.get("/stripe/subscription", requireAuth, async (req, res): Promise<void> 
         status: subscription.status,
         planName: product?.name ?? price?.nickname ?? "Subscription",
         interval: price?.recurring?.interval ?? null,
-        currentPeriodEnd: subscription.current_period_end,
+        currentPeriodEnd: (subscription as unknown as { current_period_end: number }).current_period_end,
         cancelAtPeriodEnd: subscription.cancel_at_period_end,
       },
     });
