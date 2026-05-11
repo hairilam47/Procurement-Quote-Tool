@@ -67,18 +67,32 @@ export async function requireSubscription(req: Request, res: Response, next: Nex
         return;
       }
 
-      // User is in free-trial mode — check record counts
-      const [[clientCount], [quotationCount], [invoiceCount]] = await Promise.all([
-        db.select({ n: count() }).from(clientsTable).where(eq(clientsTable.userId, req.userId)),
-        db.select({ n: count() }).from(quotationsTable).where(eq(quotationsTable.userId, req.userId)),
-        db.select({ n: count() }).from(invoicesTable).where(eq(invoicesTable.userId, req.userId)),
-      ]);
+      // User is in free-trial mode — enforce per-entity limits on create requests only.
+      // Read/update/delete requests on existing records are always permitted.
+      // Only POST to create endpoints can be blocked by trial limits.
+      const isPost = req.method === "POST";
+      const path = req.path;
 
-      const clients = clientCount?.n ?? 0;
-      const quotations = quotationCount?.n ?? 0;
-      const invoices = invoiceCount?.n ?? 0;
+      let entityCount: number | null = null;
+      let entityTable: typeof clientsTable | typeof quotationsTable | typeof invoicesTable | null = null;
 
-      if (clients >= FREE_TRIAL_LIMIT || quotations >= FREE_TRIAL_LIMIT || invoices >= FREE_TRIAL_LIMIT) {
+      if (isPost && path.startsWith("/clients")) {
+        entityTable = clientsTable;
+      } else if (isPost && path.startsWith("/quotations")) {
+        entityTable = quotationsTable;
+      } else if (isPost && path.startsWith("/invoices")) {
+        entityTable = invoicesTable;
+      }
+
+      if (entityTable !== null) {
+        const [row] = await db
+          .select({ n: count() })
+          .from(entityTable)
+          .where(eq((entityTable as typeof clientsTable).userId, req.userId));
+        entityCount = row?.n ?? 0;
+      }
+
+      if (entityCount !== null && entityCount >= FREE_TRIAL_LIMIT) {
         res.status(402).json({
           error: "trial_limit_reached",
           message: "Free trial limit reached. Subscribe to continue.",
@@ -86,7 +100,7 @@ export async function requireSubscription(req: Request, res: Response, next: Nex
         return;
       }
 
-      // Within free-trial limits — allow the request
+      // Within free-trial limits (or not a create request) — allow
       next();
       return;
     }
