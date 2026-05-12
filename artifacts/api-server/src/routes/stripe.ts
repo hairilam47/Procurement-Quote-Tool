@@ -124,22 +124,40 @@ router.post("/stripe/create-checkout-session", requireAuth, async (req, res): Pr
       return;
     }
 
-    // Resolve price from the synced DB — always correct for the current Stripe environment
-    // (test prices in dev, live prices in production). Never use the STRIPE_PRICE_* env
-    // vars here because they are shared across environments and contain test-mode IDs that
-    // Stripe rejects when the live API key is active in production.
+    // Resolve the correct price from the synced stripe.prices table.
+    // Filter by STRIPE_SUBSCRIPTION_PRODUCT_ID so that rogue prices belonging
+    // to other Stripe products (e.g. test prices accidentally synced into prod)
+    // cannot shadow the real KuotFlow subscription price for a given interval.
+    // ORDER BY created ASC picks the oldest (original) price for that interval,
+    // which is the most stable choice when multiple prices exist for a product.
     const interval = PLAN_INTERVALS[plan];
+    const subscriptionProductId = process.env.STRIPE_SUBSCRIPTION_PRODUCT_ID;
     let priceId: string | undefined;
     try {
-      const result = await db.execute(sql`
-        SELECT id FROM stripe.prices
-        WHERE active = true
-          AND (recurring->>'interval') = ${interval}
-          AND (recurring->>'interval_count')::int = 1
-        ORDER BY unit_amount ASC
-        LIMIT 1
-      `);
-      priceId = (result.rows[0] as { id: string } | undefined)?.id;
+      if (subscriptionProductId) {
+        const result = await db.execute(sql`
+          SELECT id FROM stripe.prices
+          WHERE active = true
+            AND product = ${subscriptionProductId}
+            AND (recurring->>'interval') = ${interval}
+            AND (recurring->>'interval_count')::int = 1
+          ORDER BY created ASC
+          LIMIT 1
+        `);
+        priceId = (result.rows[0] as { id: string } | undefined)?.id;
+      }
+      // Fallback: no product ID configured — query by interval only (less safe)
+      if (!priceId) {
+        const result = await db.execute(sql`
+          SELECT id FROM stripe.prices
+          WHERE active = true
+            AND (recurring->>'interval') = ${interval}
+            AND (recurring->>'interval_count')::int = 1
+          ORDER BY created ASC
+          LIMIT 1
+        `);
+        priceId = (result.rows[0] as { id: string } | undefined)?.id;
+      }
     } catch {
       // stripe schema may not be ready yet
     }
