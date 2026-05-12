@@ -14,7 +14,10 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { useQueryClient } from "@tanstack/react-query";
+import { useFocusEffect } from "expo-router";
 import { useColors } from "@/hooks/useColors";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 
 type QuotationStatus =
   | "DRAFT"
@@ -98,6 +101,7 @@ export default function QuotationsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
 
   const { data, isLoading, isError, refetch, isFetching } = useListQuotations(
@@ -105,6 +109,19 @@ export default function QuotationsScreen() {
   );
 
   const styles = makeStyles(colors, insets);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status-mobile"] });
+    }, [queryClient])
+  );
+
+  const handleRefresh = async () => {
+    await Promise.all([
+      refetch(),
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status-mobile"] }),
+    ]);
+  };
 
   const handlePress = async (id: string) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -173,12 +190,12 @@ export default function QuotationsScreen() {
         data={data ?? []}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
-        scrollEnabled={!!(data && data.length > 0)}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={<OnboardingChecklist />}
         refreshControl={
           <RefreshControl
             refreshing={isFetching && !isLoading}
-            onRefresh={refetch}
+            onRefresh={handleRefresh}
             tintColor={colors.primary}
           />
         }
