@@ -26,6 +26,7 @@ import {
   Users,
   Send,
   Circle,
+  AlertCircle,
 } from "lucide-react";
 import {
   BarChart,
@@ -124,7 +125,7 @@ function OnboardingChecklist() {
     () => localStorage.getItem(ONBOARDING_DISMISSED_KEY) === "1"
   );
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["onboarding-status"],
     queryFn: fetchOnboardingStatus,
     retry: false,
@@ -136,7 +137,24 @@ function OnboardingChecklist() {
     setDismissed(true);
   };
 
-  if (dismissed || isLoading || isError) return null;
+  if (dismissed) return null;
+  if (isLoading) return null;
+
+  if (isError) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/50 border border-border text-muted-foreground text-sm">
+        <AlertCircle size={15} className="flex-shrink-0" />
+        <span>Could not load setup checklist.</span>
+        <button
+          onClick={() => refetch()}
+          className="underline underline-offset-2 hover:text-foreground transition-colors text-sm"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   if (!data) return null;
 
   const allDone =
@@ -161,7 +179,7 @@ function OnboardingChecklist() {
       icon: Building2,
       label: "Set up your company details",
       description: "Add your company name and address so they appear on quotations.",
-      href: "/settings",
+      href: "/settings#company-info",
       cta: "Go to Settings",
     },
     {
@@ -169,7 +187,7 @@ function OnboardingChecklist() {
       icon: Link2,
       label: "Connect your Stripe account",
       description: "Link Stripe to generate payment links directly on quotations.",
-      href: "/settings",
+      href: "/settings#stripe-account",
       cta: "Connect Stripe",
       highlight: true,
     },

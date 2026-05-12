@@ -390,7 +390,7 @@ export default function SettingsPage() {
         </Section>
 
         {/* Company Info */}
-        <Section title="Company Information">
+        <Section title="Company Information" id="company-info">
           <div className="grid grid-cols-2 gap-4">
             <Field label="Company Name" required className="col-span-2">
               <Input
@@ -646,7 +646,7 @@ export default function SettingsPage() {
       </form>
 
       {/* Stripe Account */}
-      <Section title="Stripe Account">
+      <Section title="Stripe Account" id="stripe-account">
         {connectLoading ? (
           <div className="h-10 bg-muted rounded-lg animate-pulse" />
         ) : connectConfig?.configured === false ? (
@@ -888,9 +888,9 @@ function BillingInfo({
 
 const inputCls = "bg-input border-border text-foreground placeholder:text-muted-foreground focus:border-blue-500";
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
-    <BeamCard className="p-5 space-y-4">
+    <BeamCard className="p-5 space-y-4" id={id}>
       <h2 className="text-sm font-semibold text-muted-foreground border-b border-border pb-3">{title}</h2>
       {children}
     </BeamCard>
