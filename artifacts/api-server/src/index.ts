@@ -1,7 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { runMigrations } from "stripe-replit-sync";
-import { getStripeSync } from "./stripeClient";
+import { getStripePublishableKey, getStripeSync } from "./stripeClient";
 import { db, quotationsTable } from "@workspace/db";
 import { sql, and, isNotNull, eq } from "drizzle-orm";
 
@@ -27,6 +27,15 @@ async function initStripe() {
   }
 
   try {
+    // Log which Stripe mode is active so future mismatches are immediately visible.
+    try {
+      const pk = await getStripePublishableKey();
+      const mode = pk.startsWith("pk_live_") ? "LIVE" : pk.startsWith("pk_test_") ? "TEST" : "UNKNOWN";
+      logger.info(`Stripe mode: ${mode}`);
+    } catch {
+      logger.warn("Could not determine Stripe mode — credentials may not be ready yet");
+    }
+
     logger.info("Initializing Stripe schema...");
     await runMigrations({ databaseUrl });
     logger.info("Stripe schema ready");

@@ -143,42 +143,49 @@ router.post("/stripe/create-checkout-session", requireAuth, async (req, res): Pr
       return;
     }
 
-    // Resolve the correct price from the synced stripe.prices table.
-    // STRIPE_SUBSCRIPTION_PRODUCT_ID is required: it scopes the query to only
-    // KuotFlow subscription prices, preventing rogue prices in the synced table
-    // from ever being selected for checkout. If the env var is missing or the
-    // product-scoped query returns no row, we fail closed (503) rather than
-    // falling back to an unscoped interval query that could pick a wrong price.
-    const subscriptionProductId = process.env.STRIPE_SUBSCRIPTION_PRODUCT_ID;
-    if (!subscriptionProductId) {
-      console.error("[checkout-session] STRIPE_SUBSCRIPTION_PRODUCT_ID is not configured");
-      res.status(503).json({ error: "Payment configuration incomplete. Please contact support." });
-      return;
-    }
+    // Resolve the price ID for this plan.
+    // Priority 1: explicit STRIPE_PRICE_* env var — always correct, bypasses DB entirely.
+    //   These must be live-mode price IDs from the same Stripe account as the API key.
+    // Priority 2: product-scoped DB query (STRIPE_SUBSCRIPTION_PRODUCT_ID required).
+    //   Falls back to this when env vars are absent, but the DB may contain test-mode
+    //   prices that won't work in a live-mode production deployment.
+    let priceId: string | undefined = PLAN_PRICE_IDS[plan];
 
-    const interval = PLAN_INTERVALS[plan];
-    let priceId: string | undefined;
-    try {
-      const result = await db.execute(sql`
-        SELECT id FROM stripe.prices
-        WHERE active = true
-          AND product = ${subscriptionProductId}
-          AND (recurring->>'interval') = ${interval}
-          AND (recurring->>'interval_count')::int = 1
-        ORDER BY created ASC
-        LIMIT 1
-      `);
-      priceId = (result.rows[0] as { id: string } | undefined)?.id;
-    } catch {
-      // stripe schema may not be ready yet
-    }
+    if (priceId) {
+      console.info(`[checkout-session] Using env var price for plan=${plan}: ${priceId}`);
+    } else {
+      const subscriptionProductId = process.env.STRIPE_SUBSCRIPTION_PRODUCT_ID;
+      if (!subscriptionProductId) {
+        console.error("[checkout-session] No STRIPE_PRICE_* env var set and STRIPE_SUBSCRIPTION_PRODUCT_ID is not configured");
+        res.status(503).json({ error: "Payment configuration incomplete. Please contact support." });
+        return;
+      }
 
-    if (!priceId) {
-      console.error(`[checkout-session] No active price found for product=${subscriptionProductId} interval=${interval}`);
-      res.status(503).json({
-        error: "Pricing not configured yet. Please contact support.",
-      });
-      return;
+      const interval = PLAN_INTERVALS[plan];
+      try {
+        const result = await db.execute(sql`
+          SELECT id FROM stripe.prices
+          WHERE active = true
+            AND product = ${subscriptionProductId}
+            AND (recurring->>'interval') = ${interval}
+            AND (recurring->>'interval_count')::int = 1
+          ORDER BY created ASC
+          LIMIT 1
+        `);
+        priceId = (result.rows[0] as { id: string } | undefined)?.id;
+      } catch {
+        // stripe schema may not be ready yet
+      }
+
+      if (!priceId) {
+        console.error(`[checkout-session] No active price found for product=${subscriptionProductId} interval=${interval}`);
+        res.status(503).json({
+          error: "Pricing not configured yet. Please contact support.",
+        });
+        return;
+      }
+
+      console.info(`[checkout-session] Using DB price for plan=${plan}: ${priceId}`);
     }
 
     let stripe: Stripe;
