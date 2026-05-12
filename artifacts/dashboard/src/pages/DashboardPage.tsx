@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useGetDashboard } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency, formatDate, statusBadge, STATUS_LABELS } from "@/lib/format";
@@ -121,9 +121,11 @@ function PaywallBanner() {
 }
 
 function OnboardingChecklist() {
-  const [dismissed, setDismissed] = useState(
-    () => localStorage.getItem(ONBOARDING_DISMISSED_KEY) === "1"
-  );
+  const alreadyDismissed = localStorage.getItem(ONBOARDING_DISMISSED_KEY) === "1";
+  const [fullyHidden, setFullyHidden] = useState(alreadyDismissed);
+  const [visible, setVisible] = useState(!alreadyDismissed);
+  const [showAllDoneBanner, setShowAllDoneBanner] = useState(false);
+  const allDoneHandled = useRef(false);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["onboarding-status"],
@@ -132,12 +134,30 @@ function OnboardingChecklist() {
     staleTime: 30_000,
   });
 
+  const allDone =
+    !!data &&
+    data.hasCompanyDetails &&
+    data.hasStripeConnect &&
+    data.hasClient &&
+    data.hasSentQuotation;
+
+  useEffect(() => {
+    if (!allDone || allDoneHandled.current || fullyHidden) return;
+    allDoneHandled.current = true;
+    setShowAllDoneBanner(true);
+    const timer = setTimeout(() => {
+      setVisible(false);
+      localStorage.setItem(ONBOARDING_DISMISSED_KEY, "1");
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [allDone, fullyHidden]);
+
   const handleDismiss = () => {
     localStorage.setItem(ONBOARDING_DISMISSED_KEY, "1");
-    setDismissed(true);
+    setVisible(false);
   };
 
-  if (dismissed) return null;
+  if (fullyHidden) return null;
   if (isLoading) return null;
 
   if (isError) {
@@ -156,14 +176,6 @@ function OnboardingChecklist() {
   }
 
   if (!data) return null;
-
-  const allDone =
-    data.hasCompanyDetails &&
-    data.hasStripeConnect &&
-    data.hasClient &&
-    data.hasSentQuotation;
-
-  if (allDone) return null;
 
   const steps: {
     key: keyof OnboardingStatus;
@@ -212,107 +224,125 @@ function OnboardingChecklist() {
   const completedCount = steps.filter((s) => data[s.key]).length;
 
   return (
-    <AnimatePresence>
-      <motion.div
-        key="onboarding-checklist"
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, height: 0 }}
-        transition={{ duration: 0.25 }}
-      >
-        <BeamCard className="p-5">
-          <div className="flex items-start justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center flex-shrink-0">
-                <Rocket size={15} className="text-blue-400" />
+    <AnimatePresence onExitComplete={() => setFullyHidden(true)}>
+      {visible && (
+        <motion.div
+          key="onboarding-checklist"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8, height: 0, marginBottom: 0 }}
+          transition={{ duration: 0.35, ease: "easeInOut" }}
+        >
+          {showAllDoneBanner ? (
+            <BeamCard className="p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 size={16} className="text-emerald-400" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground">You're all set!</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    All setup steps complete. Happy quoting!
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">Get started</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {completedCount} of {steps.length} steps complete
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleDismiss}
-              aria-label="Dismiss"
-              className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 mt-0.5"
-            >
-              <X size={15} />
-            </button>
-          </div>
-
-          {/* Progress bar */}
-          <div className="w-full h-1.5 bg-muted rounded-full mb-4 overflow-hidden">
-            <motion.div
-              className="h-full bg-blue-500 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${(completedCount / steps.length) * 100}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            />
-          </div>
-
-          <div className="space-y-2">
-            {steps.map((step) => {
-              const done = data[step.key];
-              const Icon = step.icon;
-              return (
-                <div
-                  key={step.key}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                    done
-                      ? "border-transparent bg-transparent opacity-50"
-                      : step.highlight
-                      ? "border-violet-700/50 bg-violet-500/5"
-                      : "border-border bg-muted/30"
-                  }`}
-                >
-                  <div className="flex-shrink-0">
-                    {done ? (
-                      <CheckCircle2 size={18} className="text-emerald-400" />
-                    ) : (
-                      <Circle size={18} className="text-muted-foreground" />
-                    )}
+            </BeamCard>
+          ) : (
+            <BeamCard className="p-5">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+                    <Rocket size={15} className="text-blue-400" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={`text-sm font-medium leading-tight ${
-                        done ? "line-through text-muted-foreground" : "text-foreground"
+                  <div>
+                    <h2 className="text-sm font-semibold text-foreground">Get started</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {completedCount} of {steps.length} steps complete
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleDismiss}
+                  aria-label="Dismiss"
+                  className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 mt-0.5"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-full h-1.5 bg-muted rounded-full mb-4 overflow-hidden">
+                <motion.div
+                  className="h-full bg-blue-500 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(completedCount / steps.length) * 100}%` }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                {steps.map((step) => {
+                  const done = data[step.key];
+                  const Icon = step.icon;
+                  return (
+                    <div
+                      key={step.key}
+                      className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                        done
+                          ? "border-transparent bg-transparent opacity-50"
+                          : step.highlight
+                          ? "border-violet-700/50 bg-violet-500/5"
+                          : "border-border bg-muted/30"
                       }`}
                     >
-                      {step.label}
-                    </p>
-                    {!done && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {step.description}
-                      </p>
-                    )}
-                  </div>
-                  {!done && (
-                    <Link href={step.href}>
-                      <span
-                        className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md whitespace-nowrap cursor-pointer transition-colors flex-shrink-0 ${
-                          step.highlight
-                            ? "bg-violet-600 hover:bg-violet-500 text-white"
-                            : "bg-blue-600 hover:bg-blue-500 text-white"
-                        }`}
-                      >
-                        <Icon size={11} />
-                        {step.cta}
-                      </span>
-                    </Link>
-                  )}
-                  {done && (
-                    <div className="flex-shrink-0">
-                      <Icon size={14} className="text-muted-foreground/50" />
+                      <div className="flex-shrink-0">
+                        {done ? (
+                          <CheckCircle2 size={18} className="text-emerald-400" />
+                        ) : (
+                          <Circle size={18} className="text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-sm font-medium leading-tight ${
+                            done ? "line-through text-muted-foreground" : "text-foreground"
+                          }`}
+                        >
+                          {step.label}
+                        </p>
+                        {!done && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {step.description}
+                          </p>
+                        )}
+                      </div>
+                      {!done && (
+                        <Link href={step.href}>
+                          <span
+                            className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md whitespace-nowrap cursor-pointer transition-colors flex-shrink-0 ${
+                              step.highlight
+                                ? "bg-violet-600 hover:bg-violet-500 text-white"
+                                : "bg-blue-600 hover:bg-blue-500 text-white"
+                            }`}
+                          >
+                            <Icon size={11} />
+                            {step.cta}
+                          </span>
+                        </Link>
+                      )}
+                      {done && (
+                        <div className="flex-shrink-0">
+                          <Icon size={14} className="text-muted-foreground/50" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </BeamCard>
-      </motion.div>
+                  );
+                })}
+              </div>
+            </BeamCard>
+          )}
+        </motion.div>
+      )}
     </AnimatePresence>
   );
 }
