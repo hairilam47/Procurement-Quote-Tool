@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface StripeConnectStatus {
   connected: boolean;
@@ -66,6 +66,7 @@ export default function QuotationDetailPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
+  const queryClient = useQueryClient();
   const { data: quotation, isLoading, refetch } = useGetQuotation(id, {
     query: { queryKey: getGetQuotationQueryKey(id) },
   });
@@ -100,6 +101,9 @@ export default function QuotationDetailPage() {
       await changeStatus.mutateAsync({ id, data: { status } });
       toast({ title: `Status changed to ${STATUS_LABELS[status]}` });
       refetch();
+      if (status === "SENT") {
+        queryClient.invalidateQueries({ queryKey: ["onboarding-status"] });
+      }
     } catch {
       toast({ title: "Failed to change status", variant: "destructive" });
     }

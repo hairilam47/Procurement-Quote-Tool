@@ -9,6 +9,7 @@ import { BeamCard } from "@/components/ui/beam-card";
 import type { ClientInput } from "@workspace/api-client-react";
 import { useLocation, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,6 +64,7 @@ export default function ClientFormPage() {
 
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<ClientInput>(empty);
 
   const { data: existing } = useGetClient(id ?? "", {
@@ -102,6 +104,7 @@ export default function ClientFormPage() {
       } else {
         const created = await createClient.mutateAsync({ data: form });
         toast({ title: "Client created" });
+        queryClient.invalidateQueries({ queryKey: ["onboarding-status"] });
         navigate(`/clients/${created.id}`);
       }
     } catch {

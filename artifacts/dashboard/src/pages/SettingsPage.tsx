@@ -137,6 +137,7 @@ export default function SettingsPage() {
     if (stripeConnect === "success") {
       toast({ title: "Stripe account connected successfully" });
       queryClient.invalidateQueries({ queryKey: ["stripe-connect-status"] });
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status"] });
       window.history.replaceState({}, "", window.location.pathname);
     } else if (stripeConnect === "error") {
       const reason = params.get("reason") ?? "Unknown error";
@@ -307,6 +308,7 @@ export default function SettingsPage() {
       }));
       toast({ title: "Settings saved" });
       refetch();
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status"] });
     } catch (err) {
       if (err instanceof ApiError && err.status === 400 && err.data) {
         const data = err.data as { error?: Array<{ path: (string | number)[]; message: string }> };
