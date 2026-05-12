@@ -125,44 +125,37 @@ router.post("/stripe/create-checkout-session", requireAuth, async (req, res): Pr
     }
 
     // Resolve the correct price from the synced stripe.prices table.
-    // Filter by STRIPE_SUBSCRIPTION_PRODUCT_ID so that rogue prices belonging
-    // to other Stripe products (e.g. test prices accidentally synced into prod)
-    // cannot shadow the real KuotFlow subscription price for a given interval.
-    // ORDER BY created ASC picks the oldest (original) price for that interval,
-    // which is the most stable choice when multiple prices exist for a product.
-    const interval = PLAN_INTERVALS[plan];
+    // STRIPE_SUBSCRIPTION_PRODUCT_ID is required: it scopes the query to only
+    // KuotFlow subscription prices, preventing rogue prices in the synced table
+    // from ever being selected for checkout. If the env var is missing or the
+    // product-scoped query returns no row, we fail closed (503) rather than
+    // falling back to an unscoped interval query that could pick a wrong price.
     const subscriptionProductId = process.env.STRIPE_SUBSCRIPTION_PRODUCT_ID;
+    if (!subscriptionProductId) {
+      console.error("[checkout-session] STRIPE_SUBSCRIPTION_PRODUCT_ID is not configured");
+      res.status(503).json({ error: "Payment configuration incomplete. Please contact support." });
+      return;
+    }
+
+    const interval = PLAN_INTERVALS[plan];
     let priceId: string | undefined;
     try {
-      if (subscriptionProductId) {
-        const result = await db.execute(sql`
-          SELECT id FROM stripe.prices
-          WHERE active = true
-            AND product = ${subscriptionProductId}
-            AND (recurring->>'interval') = ${interval}
-            AND (recurring->>'interval_count')::int = 1
-          ORDER BY created ASC
-          LIMIT 1
-        `);
-        priceId = (result.rows[0] as { id: string } | undefined)?.id;
-      }
-      // Fallback: no product ID configured — query by interval only (less safe)
-      if (!priceId) {
-        const result = await db.execute(sql`
-          SELECT id FROM stripe.prices
-          WHERE active = true
-            AND (recurring->>'interval') = ${interval}
-            AND (recurring->>'interval_count')::int = 1
-          ORDER BY created ASC
-          LIMIT 1
-        `);
-        priceId = (result.rows[0] as { id: string } | undefined)?.id;
-      }
+      const result = await db.execute(sql`
+        SELECT id FROM stripe.prices
+        WHERE active = true
+          AND product = ${subscriptionProductId}
+          AND (recurring->>'interval') = ${interval}
+          AND (recurring->>'interval_count')::int = 1
+        ORDER BY created ASC
+        LIMIT 1
+      `);
+      priceId = (result.rows[0] as { id: string } | undefined)?.id;
     } catch {
       // stripe schema may not be ready yet
     }
 
     if (!priceId) {
+      console.error(`[checkout-session] No active price found for product=${subscriptionProductId} interval=${interval}`);
       res.status(503).json({
         error: "Pricing not configured yet. Please contact support.",
       });
