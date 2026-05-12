@@ -10,6 +10,7 @@ import {
   FileText,
   TrendingUp,
   CheckCircle,
+  CheckCircle2,
   Clock,
   Plus,
   ArrowRight,
@@ -19,6 +20,12 @@ import {
   FilePen,
   CreditCard,
   X,
+  Rocket,
+  Building2,
+  Link2,
+  Users,
+  Send,
+  Circle,
 } from "lucide-react";
 import {
   BarChart,
@@ -40,10 +47,24 @@ const STATUS_CHART_COLORS: Record<string, string> = {
 };
 
 const PAYWALL_DISMISSED_KEY = "paywall_banner_dismissed";
+const ONBOARDING_DISMISSED_KEY = "onboarding_checklist_dismissed";
 
 async function fetchSubscription(): Promise<{ subscription: { id: string } | null }> {
   const res = await fetch("/api/stripe/subscription", { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch subscription");
+  return res.json();
+}
+
+interface OnboardingStatus {
+  hasCompanyDetails: boolean;
+  hasStripeConnect: boolean;
+  hasClient: boolean;
+  hasSentQuotation: boolean;
+}
+
+async function fetchOnboardingStatus(): Promise<OnboardingStatus> {
+  const res = await fetch("/api/onboarding/status", { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch onboarding status");
   return res.json();
 }
 
@@ -98,6 +119,186 @@ function PaywallBanner() {
   );
 }
 
+function OnboardingChecklist() {
+  const [dismissed, setDismissed] = useState(
+    () => localStorage.getItem(ONBOARDING_DISMISSED_KEY) === "1"
+  );
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["onboarding-status"],
+    queryFn: fetchOnboardingStatus,
+    retry: false,
+    staleTime: 30_000,
+  });
+
+  const handleDismiss = () => {
+    localStorage.setItem(ONBOARDING_DISMISSED_KEY, "1");
+    setDismissed(true);
+  };
+
+  if (dismissed || isLoading || isError) return null;
+  if (!data) return null;
+
+  const allDone =
+    data.hasCompanyDetails &&
+    data.hasStripeConnect &&
+    data.hasClient &&
+    data.hasSentQuotation;
+
+  if (allDone) return null;
+
+  const steps: {
+    key: keyof OnboardingStatus;
+    icon: React.ElementType;
+    label: string;
+    description: string;
+    href: string;
+    cta: string;
+    highlight?: boolean;
+  }[] = [
+    {
+      key: "hasCompanyDetails",
+      icon: Building2,
+      label: "Set up your company details",
+      description: "Add your company name and address so they appear on quotations.",
+      href: "/settings",
+      cta: "Go to Settings",
+    },
+    {
+      key: "hasStripeConnect",
+      icon: Link2,
+      label: "Connect your Stripe account",
+      description: "Link Stripe to generate payment links directly on quotations.",
+      href: "/settings",
+      cta: "Connect Stripe",
+      highlight: true,
+    },
+    {
+      key: "hasClient",
+      icon: Users,
+      label: "Add your first client",
+      description: "Create a client record before creating your first quotation.",
+      href: "/clients/new",
+      cta: "Add Client",
+    },
+    {
+      key: "hasSentQuotation",
+      icon: Send,
+      label: "Send your first quotation",
+      description: "Create a quotation and mark it as Sent to share with a client.",
+      href: "/quotations/new",
+      cta: "New Quotation",
+    },
+  ];
+
+  const completedCount = steps.filter((s) => data[s.key]).length;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="onboarding-checklist"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, height: 0 }}
+        transition={{ duration: 0.25 }}
+      >
+        <BeamCard className="p-5">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+                <Rocket size={15} className="text-blue-400" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Get started</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {completedCount} of {steps.length} steps complete
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleDismiss}
+              aria-label="Dismiss"
+              className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 mt-0.5"
+            >
+              <X size={15} />
+            </button>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full h-1.5 bg-muted rounded-full mb-4 overflow-hidden">
+            <motion.div
+              className="h-full bg-blue-500 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${(completedCount / steps.length) * 100}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            />
+          </div>
+
+          <div className="space-y-2">
+            {steps.map((step) => {
+              const done = data[step.key];
+              const Icon = step.icon;
+              return (
+                <div
+                  key={step.key}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                    done
+                      ? "border-transparent bg-transparent opacity-50"
+                      : step.highlight
+                      ? "border-violet-700/50 bg-violet-500/5"
+                      : "border-border bg-muted/30"
+                  }`}
+                >
+                  <div className="flex-shrink-0">
+                    {done ? (
+                      <CheckCircle2 size={18} className="text-emerald-400" />
+                    ) : (
+                      <Circle size={18} className="text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className={`text-sm font-medium leading-tight ${
+                        done ? "line-through text-muted-foreground" : "text-foreground"
+                      }`}
+                    >
+                      {step.label}
+                    </p>
+                    {!done && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {step.description}
+                      </p>
+                    )}
+                  </div>
+                  {!done && (
+                    <Link href={step.href}>
+                      <span
+                        className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md whitespace-nowrap cursor-pointer transition-colors flex-shrink-0 ${
+                          step.highlight
+                            ? "bg-violet-600 hover:bg-violet-500 text-white"
+                            : "bg-blue-600 hover:bg-blue-500 text-white"
+                        }`}
+                      >
+                        <Icon size={11} />
+                        {step.cta}
+                      </span>
+                    </Link>
+                  )}
+                  {done && (
+                    <div className="flex-shrink-0">
+                      <Icon size={14} className="text-muted-foreground/50" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </BeamCard>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 export default function DashboardPage() {
   const { data, isLoading } = useGetDashboard();
 
@@ -127,6 +328,9 @@ export default function DashboardPage() {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Paywall banner */}
       <PaywallBanner />
+
+      {/* Onboarding checklist */}
+      <OnboardingChecklist />
 
       {/* Header */}
       <div className="flex items-center justify-between">
