@@ -90,21 +90,40 @@ router.get("/stripe/prices", async (_req, res) => {
         const found = fetchedRows.find((r) => r.price_id === explicitId);
         if (found) { rows.push(found); continue; }
       }
-      // Fallback: cheapest active price for this interval (covers missing env var or missing DB row)
-      const result = await db.execute(sql`
-        SELECT
-          p.id as price_id,
-          p.unit_amount,
-          p.currency,
-          p.recurring,
-          p.active
-        FROM stripe.prices p
-        WHERE p.active = true
-          AND (p.recurring->>'interval') = ${interval}
-          AND (p.recurring->>'interval_count')::int = 1
-        ORDER BY p.unit_amount ASC
-        LIMIT 1
-      `);
+      // Fallback: query by interval, scoped to the subscription product to avoid
+      // rogue prices. Falls back to unscoped only when product ID is not configured.
+      const productId = process.env.STRIPE_SUBSCRIPTION_PRODUCT_ID;
+      const result = await db.execute(productId
+        ? sql`
+          SELECT
+            p.id as price_id,
+            p.unit_amount,
+            p.currency,
+            p.recurring,
+            p.active
+          FROM stripe.prices p
+          WHERE p.active = true
+            AND p.product = ${productId}
+            AND (p.recurring->>'interval') = ${interval}
+            AND (p.recurring->>'interval_count')::int = 1
+          ORDER BY p.created ASC
+          LIMIT 1
+        `
+        : sql`
+          SELECT
+            p.id as price_id,
+            p.unit_amount,
+            p.currency,
+            p.recurring,
+            p.active
+          FROM stripe.prices p
+          WHERE p.active = true
+            AND (p.recurring->>'interval') = ${interval}
+            AND (p.recurring->>'interval_count')::int = 1
+          ORDER BY p.created ASC
+          LIMIT 1
+        `
+      );
       if (result.rows.length) rows.push(result.rows[0] as unknown as PriceRow);
     }
 
