@@ -194,13 +194,13 @@ export default function InvoiceDetailPage() {
             <Download size={13} className="mr-1.5" /> PDF
           </Button>
           {showStripeConnectPrompt && (
-            <a href="/settings">
+            <Link href="/settings">
               <Button variant="outline" size="sm"
                 className="border-amber-700 text-amber-400 hover:text-amber-200 hover:bg-amber-900/30">
                 <Link2 size={13} className="mr-1.5" />
                 Connect Stripe to Add Payment Link
               </Button>
-            </a>
+            </Link>
           )}
           {showGenerateLink && (
             <Button variant="outline" size="sm" onClick={handleGeneratePaymentLink} disabled={isGeneratingLink}

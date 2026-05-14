@@ -326,7 +326,7 @@ export default function QuotationDetailPage() {
             <Download size={13} className="mr-1.5" /> PDF
           </Button>
           {showStripeConnectPrompt && (
-            <a href="/settings">
+            <Link href="/settings">
               <Button
                 variant="outline"
                 size="sm"
@@ -336,7 +336,7 @@ export default function QuotationDetailPage() {
                 <Link2 size={13} className="mr-1.5" />
                 Connect Stripe to Add Payment Link
               </Button>
-            </a>
+            </Link>
           )}
           {showGenerateLink && (
             <Button
