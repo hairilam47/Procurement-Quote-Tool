@@ -143,7 +143,7 @@ export default function InvoicesPage() {
             }
           />
         ) : (
-          <div>
+          <div className="p-3 space-y-1.5">
             {sorted.map((inv, idx) => (
               <div
                 key={inv.id}
@@ -151,7 +151,7 @@ export default function InvoicesPage() {
                 style={{ animationDelay: `${Math.min(idx * 30, 350)}ms` }}
               >
                 <Link href={`/invoices/${inv.id}`}>
-                  <div className="grid grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] items-center px-4 py-3.5 border-b border-border/50 hover:bg-muted/40 transition-colors cursor-pointer group">
+                  <div className="grid grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] items-center px-4 py-3 rounded-xl bg-muted/20 dark:bg-white/[0.04] hover:bg-muted/30 dark:hover:bg-white/[0.07] transition-colors cursor-pointer group">
                     <span className="text-foreground text-sm font-mono">{inv.number}</span>
                     <div className="min-w-0 pr-4">
                       <p className="text-foreground text-sm truncate">{inv.clientName ?? "-"}</p>

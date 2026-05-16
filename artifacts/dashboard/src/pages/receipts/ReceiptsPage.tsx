@@ -127,7 +127,7 @@ export default function ReceiptsPage() {
             action={{ label: "View Invoices", href: "/invoices", icon: ExternalLink }}
           />
         ) : (
-          <div>
+          <div className="p-3 space-y-1.5">
             {receipts.map((receipt, idx) => {
               const clientName = receipt.clientSnapshot?.name ?? "—";
               const clientCompany = receipt.clientSnapshot?.company;
@@ -137,7 +137,7 @@ export default function ReceiptsPage() {
                   className="animate-fade-slide-in"
                   style={{ animationDelay: `${Math.min(idx * 30, 350)}ms` }}
                 >
-                  <div className="grid grid-cols-[1fr_1fr_1.5fr_1fr_1fr_1fr_auto] items-center px-4 py-3.5 border-b border-border/50 hover:bg-muted/40 transition-colors group">
+                  <div className="grid grid-cols-[1fr_1fr_1.5fr_1fr_1fr_1fr_auto] items-center px-4 py-3 rounded-xl bg-muted/20 dark:bg-white/[0.04] hover:bg-muted/30 dark:hover:bg-white/[0.07] transition-colors group">
                     <Link href={`/receipts/${receipt.id}`}>
                       <span className="font-mono text-sm text-foreground hover:text-blue-400 transition-colors cursor-pointer">
                         {receipt.number}

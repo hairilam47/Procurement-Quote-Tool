@@ -694,8 +694,7 @@ export default function InvoiceFormPage() {
               Cancel
             </Button>
           </Link>
-          <Button type="submit" disabled={isPending}
-            className="bg-violet-600 hover:bg-violet-500 text-white">
+          <Button type="submit" disabled={isPending} variant="gradient">
             {isPending && <Loader2 size={13} className="mr-1.5 animate-spin" />}
             {isEdit ? "Update Invoice" : "Create Invoice"}
           </Button>

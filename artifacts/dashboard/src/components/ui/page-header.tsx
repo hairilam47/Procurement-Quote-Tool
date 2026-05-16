@@ -18,8 +18,8 @@ interface PageHeaderProps {
 }
 
 const VARIANT_CLASSES = {
-  primary: "bg-blue-600 hover:bg-blue-500 text-white",
-  secondary: "bg-violet-600 hover:bg-violet-500 text-white",
+  primary: "bg-gradient-to-r from-blue-500 to-amber-500 text-white hover:opacity-90 shadow-sm",
+  secondary: "border border-border bg-secondary text-secondary-foreground hover:bg-muted",
 };
 
 export function PageHeader({ title, subtitle, actions, children }: PageHeaderProps) {

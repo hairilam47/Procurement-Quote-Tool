@@ -960,7 +960,7 @@ export default function QuotationFormPage() {
           <Button
             type="submit"
             disabled={isPending}
-            className="bg-blue-600 hover:bg-blue-500 text-white"
+            variant="gradient"
             data-testid="submit-quotation-btn"
           >
             {isPending ? (
