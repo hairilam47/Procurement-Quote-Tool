@@ -11,6 +11,8 @@ import QuotationDetailPage from "@/pages/quotations/QuotationDetailPage";
 import InvoicesPage from "@/pages/invoices/InvoicesPage";
 import InvoiceFormPage from "@/pages/invoices/InvoiceFormPage";
 import InvoiceDetailPage from "@/pages/invoices/InvoiceDetailPage";
+import ReceiptsPage from "@/pages/receipts/ReceiptsPage";
+import ReceiptDetailPage from "@/pages/receipts/ReceiptDetailPage";
 import ClientsPage from "@/pages/clients/ClientsPage";
 import ClientFormPage from "@/pages/clients/ClientFormPage";
 import ClientDetailPage from "@/pages/clients/ClientDetailPage";
@@ -175,6 +177,8 @@ function ProtectedRoutes({ topBanner }: { topBanner?: React.ReactNode }) {
         <Route path="/invoices/new" component={InvoiceFormPage} />
         <Route path="/invoices/:id/edit" component={InvoiceFormPage} />
         <Route path="/invoices/:id" component={InvoiceDetailPage} />
+        <Route path="/receipts" component={ReceiptsPage} />
+        <Route path="/receipts/:id" component={ReceiptDetailPage} />
         <Route path="/clients" component={ClientsPage} />
         <Route path="/clients/new" component={ClientFormPage} />
         <Route path="/clients/:id/edit" component={ClientFormPage} />

@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db, quotationsTable, invoicesTable, usersTable } from '@workspace/db';
 import { getStripeSync } from './stripeClient';
 import { sendReceiptForQuotation } from './lib/email/resend';
+import { createReceiptForInvoice } from './lib/receipt';
 
 type StripeEvent = {
   type: string;
@@ -50,6 +51,12 @@ async function handleInvoicePaid(invoiceId: string, source: string): Promise<voi
       .set({ status: 'PAID', paidAt: new Date(), updatedAt: new Date() })
       .where(eq(invoicesTable.id, invoiceId));
     console.log(`[webhook:${source}] Invoice ${invoiceId} auto-transitioned to PAID`);
+    // Auto-generate receipt (idempotent — safe to call even if one already exists)
+    try {
+      await createReceiptForInvoice(invoiceId, 'stripe');
+    } catch (e) {
+      console.error(`[webhook:${source}] Failed to create receipt for invoice ${invoiceId}:`, e);
+    }
   }
 }
 

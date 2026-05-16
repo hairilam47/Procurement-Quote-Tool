@@ -263,6 +263,8 @@ export async function renderReceiptPdf(args: {
   quote: QuoteData;
   client: ClientData;
   company: CompanyData;
+  /** Override the auto-generated receipt number (e.g. RCP-2024-0001 from the receipts table). */
+  receiptNumber?: string;
 }): Promise<Buffer> {
   const { quote, client, company } = args;
 
@@ -312,11 +314,11 @@ export async function renderReceiptPdf(args: {
     .div(100)
     .toDecimalPlaces(2);
 
-  const receiptNumber = `REC-${quote.number}`;
+  const finalReceiptNumber = args.receiptNumber ?? `REC-${quote.number}`;
 
   const receiptQuote = {
     ...quote,
-    number: receiptNumber,
+    number: finalReceiptNumber,
     lineItems: receiptItems.map((li) => ({
       ...li,
       paymentRequired: true,

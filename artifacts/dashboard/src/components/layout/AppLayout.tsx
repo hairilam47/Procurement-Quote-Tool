@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   FileText,
   Receipt,
+  FileCheck,
   Users,
   Settings,
   ChevronRight,
@@ -47,6 +48,7 @@ const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/quotations", icon: FileText, label: "Quotations" },
   { href: "/invoices", icon: Receipt, label: "Invoices" },
+  { href: "/receipts", icon: FileCheck, label: "Receipts" },
   { href: "/clients", icon: Users, label: "Clients" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];

@@ -19,6 +19,7 @@ import {
   ClipboardCheck,
   Loader2,
   Copy,
+  FileCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -143,6 +144,18 @@ export default function InvoiceDetailPage() {
     }
   }
 
+  const { data: receiptData } = useQuery({
+    queryKey: ["receipt-by-invoice", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/receipts/by-invoice/${id}`, { credentials: "include" });
+      if (res.status === 404) return null;
+      if (!res.ok) return null;
+      return res.json() as Promise<{ id: string; number: string }>;
+    },
+    enabled: invoice?.status === "PAID",
+    staleTime: 30_000,
+  });
+
   const needsPaymentLink = invoice?.status === "SENT" && !invoice?.paymentUrl;
   const showStripeConnectPrompt = needsPaymentLink && connectStatus?.connected === false;
   const showGenerateLink = needsPaymentLink && connectStatus?.connected === true;
@@ -226,6 +239,15 @@ export default function InvoiceDetailPage() {
                 </Button>
               </a>
             </div>
+          )}
+          {invoice.status === "PAID" && receiptData && (
+            <Link href={`/receipts/${receiptData.id}`}>
+              <Button variant="outline" size="sm"
+                className="border-green-700 text-green-400 hover:text-green-300 hover:bg-green-900/20"
+                data-testid="view-receipt-btn">
+                <FileCheck size={13} className="mr-1.5" /> View Receipt
+              </Button>
+            </Link>
           )}
           {invoice.status === "DRAFT" && (
             <Link href={`/invoices/${id}/edit`}>

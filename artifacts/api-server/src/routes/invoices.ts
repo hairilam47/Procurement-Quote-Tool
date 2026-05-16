@@ -7,6 +7,7 @@ import { evaluateFormula } from "../lib/formula";
 import { generateId } from "../lib/id";
 import { renderInvoicePdf } from "../lib/pdf/render";
 import { requireAuth, requireSubscription } from "./auth";
+import { createReceiptForInvoice } from "../lib/receipt";
 import { getZodErrors } from "../lib/zodError";
 import { getUncachableStripeClient } from "../stripeClient";
 
@@ -440,6 +441,13 @@ router.patch("/invoices/:id/status", requireAuth, async (req, res): Promise<void
       .set(updates)
       .where(eq(invoicesTable.id, String(req.params.id)))
       .returning();
+
+    // Auto-generate receipt when manually marking as paid
+    if (status === "PAID") {
+      createReceiptForInvoice(updated.id, "manual").catch((e) =>
+        console.error("[invoice-status] receipt creation failed:", e),
+      );
+    }
 
     res.json(updated);
   } catch (err: unknown) {
