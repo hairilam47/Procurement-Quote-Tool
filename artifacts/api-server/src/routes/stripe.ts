@@ -40,7 +40,26 @@ router.get("/stripe/mode", async (_req, res): Promise<void> => {
   }
 });
 
+// In-memory cache for /stripe/prices — prices change rarely (only when you
+// update your Stripe products). 5-minute TTL keeps the UI current while
+// eliminating repeated DB round-trips from every marketing page load.
+interface PriceRow {
+  price_id: string;
+  unit_amount: number;
+  currency: string;
+  recurring: { interval: string; interval_count: number } | null;
+  active: boolean;
+}
+let _priceCache: { data: PriceRow[]; expiresAt: number } | null = null;
+const PRICE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 router.get("/stripe/prices", async (_req, res) => {
+  // Serve from cache when still fresh
+  if (_priceCache && Date.now() < _priceCache.expiresAt) {
+    res.json({ data: _priceCache.data });
+    return;
+  }
+
   try {
     // Canonical plan order for display
     const plans = [
@@ -54,14 +73,6 @@ router.get("/stripe/prices", async (_req, res) => {
     const explicitIds = plans
       .map(({ plan }) => PLAN_PRICE_IDS[plan])
       .filter((id): id is string => Boolean(id));
-
-    interface PriceRow {
-      price_id: string;
-      unit_amount: number;
-      currency: string;
-      recurring: { interval: string; interval_count: number } | null;
-      active: boolean;
-    }
 
     let fetchedRows: PriceRow[] = [];
 
@@ -127,6 +138,8 @@ router.get("/stripe/prices", async (_req, res) => {
       if (result.rows.length) rows.push(result.rows[0] as unknown as PriceRow);
     }
 
+    // Populate cache before responding
+    _priceCache = { data: rows, expiresAt: Date.now() + PRICE_CACHE_TTL_MS };
     res.json({ data: rows });
   } catch {
     res.status(503).json({ error: "Stripe data unavailable" });
