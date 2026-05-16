@@ -16,7 +16,7 @@ export default function SignUpPage() {
   const [googleEnabled, setGoogleEnabled] = useState(false);
 
   useEffect(() => {
-    fetch(`${basePath}/api/capabilities`)
+    fetch(`/api/capabilities`)
       .then((r) => r.json())
       .then((d) => setGoogleEnabled(!!(d?.google)))
       .catch(() => setGoogleEnabled(false));
