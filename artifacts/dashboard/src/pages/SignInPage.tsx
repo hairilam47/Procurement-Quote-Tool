@@ -24,6 +24,9 @@ export default function SignInPage() {
     const params = new URLSearchParams(window.location.search);
     const prefill = params.get("email");
     if (prefill) setEmail(prefill);
+    if (params.get("error") === "auth") {
+      setError("Google sign-in failed. If you don't have an account yet, please sign up below.");
+    }
   }, []);
 
   // Read plan param — carried from marketing Subscribe button

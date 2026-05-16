@@ -51,6 +51,13 @@ app.post(
   },
 );
 
+// Intercept Better Auth's error redirect before it reaches the Better Auth handler.
+// By default Better Auth redirects /api/auth/error to baseURL ("/") which is the
+// marketing page. We send users to the dashboard sign-in page instead.
+app.get("/api/auth/error", (_req, res) => {
+  res.redirect("/app/sign-in?error=auth");
+});
+
 // Better-auth handler — MUST be before body parsers so it can read the raw body
 const authHandler = toNodeHandler(auth);
 app.use(async (req, res, next) => {
