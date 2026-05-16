@@ -52,9 +52,21 @@ export async function requireSubscription(req: Request, res: Response, next: Nex
       .select({
         stripeSubscriptionId: usersTable.stripeSubscriptionId,
         trialDismissedAt: usersTable.trialDismissedAt,
+        email: usersTable.email,
       })
       .from(usersTable)
       .where(eq(usersTable.id, req.userId));
+
+    // Dev-only bypass: never active in production (REPLIT_DEPLOYMENT === "1")
+    if (process.env.REPLIT_DEPLOYMENT !== "1") {
+      const bypass = process.env.DEV_BYPASS_SUBSCRIPTION ?? "";
+      const bypassEmails = bypass.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+      if (user?.email && bypassEmails.includes(user.email.toLowerCase())) {
+        req.subscriptionActive = true;
+        next();
+        return;
+      }
+    }
 
     if (!user?.stripeSubscriptionId) {
       // No subscription — check free-trial mode
