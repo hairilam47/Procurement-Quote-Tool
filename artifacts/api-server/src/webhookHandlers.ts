@@ -45,15 +45,20 @@ async function handleInvoicePaid(invoiceId: string, source: string): Promise<voi
     .select({ id: invoicesTable.id, status: invoicesTable.status })
     .from(invoicesTable)
     .where(eq(invoicesTable.id, invoiceId));
-  if (invoice && invoice.status !== 'PAID') {
+  if (!invoice) return;
+
+  if (invoice.status !== 'PAID') {
     await db
       .update(invoicesTable)
       .set({ status: 'PAID', paidAt: new Date(), updatedAt: new Date() })
       .where(eq(invoicesTable.id, invoiceId));
     console.log(`[webhook:${source}] Invoice ${invoiceId} auto-transitioned to PAID`);
-    // Auto-generate receipt — errors propagate so Stripe retries the webhook
-    await createReceiptForInvoice(invoiceId, 'stripe');
   }
+
+  // Always attempt receipt creation regardless of prior status — idempotent (no-op if
+  // receipt already exists). This ensures webhook retries can recover a receipt that was
+  // missed if the previous attempt failed after the invoice status was updated.
+  await createReceiptForInvoice(invoiceId, 'stripe');
 }
 
 async function handleInvoiceRefunded(invoiceId: string, source: string): Promise<void> {
