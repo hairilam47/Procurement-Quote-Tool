@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Download, FileCheck } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { BeamCard } from "@/components/ui/beam-card";
 
 interface LineItem {
   id: string;
@@ -53,10 +54,10 @@ const METHOD_LABELS: Record<string, string> = {
 
 function MetaCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-border bg-card px-4 py-3">
+    <BeamCard className="px-4 py-3">
       <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
       <p className="text-sm font-medium text-foreground">{value}</p>
-    </div>
+    </BeamCard>
   );
 }
 
@@ -164,7 +165,7 @@ export default function ReceiptDetailPage() {
       {/* Parties */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {client && (
-          <div className="rounded-xl border border-border bg-card p-4">
+          <BeamCard className="p-4">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Bill To</p>
             <p className="text-sm font-semibold text-foreground">{client.name}</p>
             {client.company && <p className="text-sm text-muted-foreground">{client.company}</p>}
@@ -175,10 +176,10 @@ export default function ReceiptDetailPage() {
                 {[client.city, client.postalCode, client.country].filter(Boolean).join(", ")}
               </p>
             )}
-          </div>
+          </BeamCard>
         )}
         {company && (
-          <div className="rounded-xl border border-border bg-card p-4">
+          <BeamCard className="p-4">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">From</p>
             <p className="text-sm font-semibold text-foreground">{company.name}</p>
             {company.email && <p className="text-sm text-muted-foreground">{company.email}</p>}
@@ -189,13 +190,13 @@ export default function ReceiptDetailPage() {
                 {[company.city, company.country].filter(Boolean).join(", ")}
               </p>
             )}
-          </div>
+          </BeamCard>
         )}
       </div>
 
       {/* Line items */}
       {lineItems.length > 0 && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <BeamCard>
           <div className="px-4 py-3 border-b border-border">
             <p className="text-sm font-medium text-foreground">Line Items</p>
           </div>
@@ -239,7 +240,7 @@ export default function ReceiptDetailPage() {
               </p>
             </div>
           </div>
-        </div>
+        </BeamCard>
       )}
 
       {/* System note */}

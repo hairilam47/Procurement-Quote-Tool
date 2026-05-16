@@ -702,7 +702,7 @@ export default function SettingsPage() {
               <Button
                 type="button"
                 size="sm"
-                className="bg-violet-600 hover:bg-violet-500 text-white"
+                className="bg-blue-600 hover:bg-blue-500 text-white"
                 data-testid="connect-stripe-btn"
               >
                 <Link2 size={13} className="mr-1.5" />

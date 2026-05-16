@@ -30,7 +30,7 @@ import { ArrowLeft, Plus, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
 const inputCls =
-  "bg-input border-border text-foreground placeholder:text-muted-foreground focus:border-violet-500";
+  "bg-input border-border text-foreground placeholder:text-muted-foreground focus:border-blue-500";
 
 function evaluateFormulaClient(formula: string): number | null {
   const trimmed = formula.trim();
@@ -94,7 +94,7 @@ function Field({ label, children, required, className }: {
   return (
     <div className={`space-y-1.5 ${className ?? ""}`}>
       <Label className="text-muted-foreground text-xs">
-        {label}{required && <span className="text-violet-400 ml-0.5">*</span>}
+        {label}{required && <span className="text-blue-400 ml-0.5">*</span>}
       </Label>
       {children}
     </div>
@@ -528,7 +528,7 @@ export default function InvoiceFormPage() {
           <div className="px-5 py-3 border-b border-border flex items-center justify-between">
             <h2 className="text-sm font-semibold text-muted-foreground">Line Items</h2>
             <button type="button" onClick={addLineItem}
-              className="inline-flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 transition-colors">
+              className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors">
               <Plus size={12} /> Add Item
             </button>
           </div>

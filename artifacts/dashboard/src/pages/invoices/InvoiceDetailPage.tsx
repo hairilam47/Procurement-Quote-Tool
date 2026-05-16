@@ -260,7 +260,7 @@ export default function InvoiceDetailPage() {
           {transitions.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" className="bg-violet-600 hover:bg-violet-500 text-white">
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-500 text-white">
                   Change Status <ChevronDown size={13} className="ml-1" />
                 </Button>
               </DropdownMenuTrigger>
@@ -303,7 +303,7 @@ export default function InvoiceDetailPage() {
         <BeamCard className="p-5">
           <h2 className="text-sm font-semibold text-muted-foreground mb-3 border-b border-border pb-3">Client</h2>
           <Link href={`/clients/${client.id}`}>
-            <div className="cursor-pointer hover:text-violet-400 transition-colors">
+            <div className="cursor-pointer hover:text-blue-400 transition-colors">
               <p className="text-foreground font-medium">{client.name}</p>
               {client.company && <p className="text-muted-foreground text-sm">{client.company}</p>}
               <p className="text-muted-foreground text-sm">{client.email}</p>
