@@ -16,22 +16,6 @@ import {
 } from "@/components/ui/accordion";
 
 export default function Home() {
-  const [heroReady] = useState(() => {
-    if (typeof window === "undefined") return true;
-    const seen = sessionStorage.getItem("hero-animated") === "1";
-    if (!seen) sessionStorage.setItem("hero-animated", "1");
-    return seen;
-  });
-
-  const prefersReducedMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  const heroFadeStyle: React.CSSProperties =
-    heroReady || prefersReducedMotion
-      ? {}
-      : { animation: "hero-fade 1s ease-out forwards", opacity: 0 };
-
   return (
     <MarketingLayout>
 
