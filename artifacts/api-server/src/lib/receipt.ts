@@ -55,20 +55,28 @@ export async function createReceiptForInvoice(
     const n = last ? parseInt(last.number.slice(prefix.length), 10) + 1 : 1;
     const number = `${prefix}${String(n).padStart(4, "0")}`;
 
-    await tx.insert(receiptsTable).values({
-      id: generateId(),
-      number,
-      invoiceId,
-      userId: invoice.userId,
-      invoiceNumber: invoice.number,
-      issuedAt: new Date(),
-      paidAt: invoice.paidAt ?? new Date(),
-      paymentMethod,
-      amountPaid: invoice.requiredTotal ?? invoice.total ?? "0",
-      currency: invoice.currency,
-      clientSnapshot: invoice.clientSnapshot,
-      companySnapshot: invoice.companySnapshot,
-      lineItemsSnapshot: lineItems,
-    });
+    try {
+      await tx.insert(receiptsTable).values({
+        id: generateId(),
+        number,
+        invoiceId,
+        userId: invoice.userId,
+        invoiceNumber: invoice.number,
+        issuedAt: new Date(),
+        paidAt: invoice.paidAt ?? new Date(),
+        paymentMethod,
+        amountPaid: invoice.requiredTotal ?? invoice.total ?? "0",
+        currency: invoice.currency,
+        clientSnapshot: invoice.clientSnapshot,
+        companySnapshot: invoice.companySnapshot,
+        lineItemsSnapshot: lineItems,
+      });
+    } catch (e: unknown) {
+      // Unique constraint violation means a concurrent caller already inserted the receipt
+      // — treat as success so this call is idempotent under concurrency.
+      const code = (e as Record<string, unknown>).code;
+      if (code === "23505") return;
+      throw e;
+    }
   });
 }

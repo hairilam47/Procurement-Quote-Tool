@@ -77,8 +77,10 @@ router.get("/receipts/:id/pdf", requireAuth, async (req, res): Promise<void> => 
       .from(companySettingsTable)
       .where(eq(companySettingsTable.userId, req.userId));
 
-    if (!settings) {
-      res.status(400).json({ error: "Configure company settings first" });
+    // Prefer live settings; fall back to the immutable snapshot stored on the receipt
+    const effectiveCompany = settings ?? receipt.companySnapshot;
+    if (!effectiveCompany) {
+      res.status(400).json({ error: "Company settings not available for PDF rendering" });
       return;
     }
 
@@ -144,8 +146,8 @@ router.get("/receipts/:id/pdf", requireAuth, async (req, res): Promise<void> => 
 
     const buffer = await renderReceiptPdf({
       quote: quoteData as Parameters<typeof renderReceiptPdf>[0]["quote"],
-      client: settings as Parameters<typeof renderReceiptPdf>[0]["client"],
-      company: settings as Parameters<typeof renderReceiptPdf>[0]["company"],
+      client: effectiveCompany as Parameters<typeof renderReceiptPdf>[0]["client"],
+      company: effectiveCompany as Parameters<typeof renderReceiptPdf>[0]["company"],
       receiptNumber: receipt.number,
     });
 
