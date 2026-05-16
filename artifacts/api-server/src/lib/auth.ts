@@ -6,7 +6,10 @@ import { db, pool, usersTable } from "@workspace/db";
 function getBaseURL(): string {
   if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL;
   if (process.env.REPLIT_DOMAINS) {
-    return `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`;
+    const domains = process.env.REPLIT_DOMAINS.split(",").map((d) => d.trim());
+    // Prefer custom domains (non-replit.app) so OAuth shows the branded domain
+    const custom = domains.find((d) => !d.endsWith(".replit.app"));
+    return `https://${custom ?? domains[0]}`;
   }
   return "http://localhost:8080";
 }
