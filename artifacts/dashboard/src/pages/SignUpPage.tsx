@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { authClient } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -70,7 +71,9 @@ export default function SignUpPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4">
         <div className="w-full max-w-sm">
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-8 shadow-xl backdrop-blur-sm text-center">
+          <div className="bg-slate-900/80 border border-slate-800 rounded-xl shadow-xl backdrop-blur-sm overflow-hidden text-center">
+            <div className="h-0.5 w-full bg-gradient-to-r from-blue-500 to-amber-500" />
+            <div className="p-8">
             <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-600/10 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
@@ -84,15 +87,17 @@ export default function SignUpPage() {
             <p className="text-xs text-slate-500 mb-6">
               Click the link in your inbox to verify your account, then sign in below.
             </p>
-            <button
+            <Button
+              variant="gradient"
+              className="w-full rounded-lg py-2.5"
               onClick={() => {
                 const dest = `/sign-in?email=${encodeURIComponent(email)}${planParam ? `&plan=${encodeURIComponent(planParam)}` : ""}`;
                 setLocation(dest);
               }}
-              className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition"
             >
               Go to Sign In
-            </button>
+            </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -112,7 +117,9 @@ export default function SignUpPage() {
           <p className="text-sm text-slate-400 mt-1">Start managing quotes and invoices</p>
         </div>
 
-        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-6 shadow-xl backdrop-blur-sm">
+        <div className="bg-slate-900/80 border border-slate-800 rounded-xl shadow-xl backdrop-blur-sm overflow-hidden">
+          <div className="h-0.5 w-full bg-gradient-to-r from-blue-500 to-amber-500" />
+          <div className="p-6">
           {error && (
             <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
               {error}
@@ -169,13 +176,14 @@ export default function SignUpPage() {
               />
             </div>
 
-            <button
+            <Button
               type="submit"
+              variant="gradient"
               disabled={loading || !email || !password || !name}
-              className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="w-full rounded-lg py-2.5"
             >
               {loading ? "Creating account…" : "Create account"}
-            </button>
+            </Button>
           </form>
 
           {googleEnabled && (
@@ -204,6 +212,7 @@ export default function SignUpPage() {
               </button>
             </>
           )}
+          </div>
         </div>
 
         <p className="mt-6 text-center text-sm text-slate-500">
