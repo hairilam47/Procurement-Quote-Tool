@@ -3,6 +3,10 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Download, FileCheck, ExternalLink } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { BeamCard } from "@/components/ui/beam-card";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 interface Receipt {
   id: string;
@@ -37,10 +41,29 @@ async function downloadReceiptPdf(id: string, number: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+const METHOD_BADGE_STATUS: Record<string, string> = {
+  stripe: "PAID",
+  manual: "ACCEPTED",
+};
+
 const METHOD_LABELS: Record<string, string> = {
   stripe: "Stripe",
   manual: "Manual",
 };
+
+function SkeletonRow() {
+  return (
+    <div className="grid grid-cols-[1fr_1fr_1.5fr_1fr_1fr_1fr_auto] items-center px-4 py-3.5 border-b border-border/50">
+      <div className="h-3.5 bg-muted rounded animate-pulse w-24" />
+      <div className="h-3.5 bg-muted rounded animate-pulse w-20" />
+      <div className="h-3.5 bg-muted rounded animate-pulse w-28" />
+      <div className="h-3.5 bg-muted rounded animate-pulse w-20" />
+      <div className="h-5 bg-muted rounded animate-pulse w-16" />
+      <div className="h-3.5 bg-muted rounded animate-pulse w-20 ml-auto" />
+      <div className="w-4" />
+    </div>
+  );
+}
 
 export default function ReceiptsPage() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -66,24 +89,12 @@ export default function ReceiptsPage() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="space-y-3">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Receipts</h1>
-        <p className="text-muted-foreground text-sm mt-0.5">
-          Auto-generated when an invoice is marked as paid
-        </p>
-      </div>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+      <PageHeader
+        title="Receipts"
+        subtitle="Auto-generated when an invoice is marked as paid"
+      />
 
       {error && (
         <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
@@ -91,93 +102,84 @@ export default function ReceiptsPage() {
         </div>
       )}
 
-      {receipts.length === 0 && !error ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
-            <FileCheck size={24} className="text-muted-foreground" />
-          </div>
-          <h2 className="text-base font-semibold text-foreground mb-1">No receipts yet</h2>
-          <p className="text-sm text-muted-foreground max-w-xs">
-            Receipts are generated automatically once an invoice is paid. Mark an invoice as paid to
-            see a receipt here.
-          </p>
-          <Link href="/invoices">
-            <span className="mt-5 inline-flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 transition-colors cursor-pointer">
-              View Invoices <ExternalLink size={13} />
+      <BeamCard>
+        {/* Header */}
+        <div className="grid grid-cols-[1fr_1fr_1.5fr_1fr_1fr_1fr_auto] items-center px-4 py-2.5 border-b border-border bg-muted/30">
+          {["Receipt #", "Invoice", "Client", "Paid Date", "Method", "Amount", ""].map((h) => (
+            <span
+              key={h}
+              className={`text-xs font-medium text-muted-foreground/80 uppercase tracking-wider ${h === "Amount" ? "text-right" : ""}`}
+            >
+              {h}
             </span>
-          </Link>
+          ))}
         </div>
-      ) : (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Receipt #</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Invoice</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Client</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Paid Date</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Method</th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Amount</th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground sr-only">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {receipts.map((receipt) => {
-                  const clientName = receipt.clientSnapshot?.name ?? "—";
-                  const clientCompany = receipt.clientSnapshot?.company;
-                  return (
-                    <tr key={receipt.id} className="hover:bg-muted/30 transition-colors group">
-                      <td className="px-4 py-3">
-                        <Link href={`/receipts/${receipt.id}`}>
-                          <span className="font-mono text-foreground hover:text-blue-400 transition-colors cursor-pointer">
-                            {receipt.number}
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link href={`/invoices/${receipt.invoiceId}`}>
-                          <span className="font-mono text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-                            {receipt.invoiceNumber}
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-foreground">{clientName}</span>
-                        {clientCompany && (
-                          <span className="text-muted-foreground text-xs block">{clientCompany}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {formatDate(receipt.paidAt)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 font-medium">
-                          {METHOD_LABELS[receipt.paymentMethod] ?? receipt.paymentMethod}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-foreground">
-                        {formatCurrency(parseFloat(receipt.amountPaid), receipt.currency)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleDownload(receipt)}
-                          disabled={downloading === receipt.id}
-                          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-                          title="Download receipt PDF"
-                        >
-                          <Download size={13} />
-                          {downloading === receipt.id ? "…" : "PDF"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+
+        {isLoading ? (
+          <>
+            {[...Array(4)].map((_, i) => <SkeletonRow key={i} />)}
+          </>
+        ) : receipts.length === 0 && !error ? (
+          <EmptyState
+            icon={FileCheck}
+            title="No receipts yet"
+            description="Receipts are generated automatically once an invoice is paid. Mark an invoice as paid to see receipts here."
+            action={{ label: "View Invoices", href: "/invoices", icon: ExternalLink }}
+          />
+        ) : (
+          <div>
+            {receipts.map((receipt, idx) => {
+              const clientName = receipt.clientSnapshot?.name ?? "—";
+              const clientCompany = receipt.clientSnapshot?.company;
+              return (
+                <div
+                  key={receipt.id}
+                  className="animate-fade-slide-in"
+                  style={{ animationDelay: `${Math.min(idx * 30, 350)}ms` }}
+                >
+                  <div className="grid grid-cols-[1fr_1fr_1.5fr_1fr_1fr_1fr_auto] items-center px-4 py-3.5 border-b border-border/50 hover:bg-muted/40 transition-colors group">
+                    <Link href={`/receipts/${receipt.id}`}>
+                      <span className="font-mono text-sm text-foreground hover:text-blue-400 transition-colors cursor-pointer">
+                        {receipt.number}
+                      </span>
+                    </Link>
+                    <Link href={`/invoices/${receipt.invoiceId}`}>
+                      <span className="font-mono text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+                        {receipt.invoiceNumber}
+                      </span>
+                    </Link>
+                    <div className="min-w-0 pr-2">
+                      <p className="text-foreground text-sm truncate">{clientName}</p>
+                      {clientCompany && (
+                        <p className="text-muted-foreground text-xs truncate">{clientCompany}</p>
+                      )}
+                    </div>
+                    <span className="text-muted-foreground text-sm">{formatDate(receipt.paidAt)}</span>
+                    <span>
+                      <StatusBadge
+                        status={METHOD_BADGE_STATUS[receipt.paymentMethod] ?? "PAID"}
+                        label={METHOD_LABELS[receipt.paymentMethod] ?? receipt.paymentMethod}
+                      />
+                    </span>
+                    <span className="text-right font-mono text-sm font-medium text-foreground tabular-nums">
+                      {formatCurrency(parseFloat(receipt.amountPaid), receipt.currency)}
+                    </span>
+                    <button
+                      onClick={() => handleDownload(receipt)}
+                      disabled={downloading === receipt.id}
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 ml-1"
+                      title="Download receipt PDF"
+                    >
+                      <Download size={13} />
+                      <span className="hidden sm:inline">{downloading === receipt.id ? "…" : "PDF"}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
-      )}
+        )}
+      </BeamCard>
     </motion.div>
   );
 }

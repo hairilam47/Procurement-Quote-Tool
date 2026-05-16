@@ -44,18 +44,59 @@ function useNoIndex() {
   }, []);
 }
 
-const navItems = [
+const PRIMARY_NAV = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/quotations", icon: FileText, label: "Quotations" },
   { href: "/invoices", icon: Receipt, label: "Invoices" },
   { href: "/receipts", icon: FileCheck, label: "Receipts" },
   { href: "/clients", icon: Users, label: "Clients" },
+];
+
+const SECONDARY_NAV = [
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 interface AppLayoutProps {
   children: ReactNode;
   topBanner?: ReactNode;
+}
+
+function NavItem({
+  href,
+  icon: Icon,
+  label,
+  collapsed,
+  active,
+  onNavigate,
+}: {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  collapsed: boolean;
+  active: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <Link href={href} onClick={onNavigate}>
+      <span
+        data-testid={`nav-${label.toLowerCase()}`}
+        title={collapsed ? label : undefined}
+        className={cn(
+          "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all cursor-pointer",
+          collapsed ? "justify-center" : "",
+          active
+            ? "bg-blue-500/12 text-blue-400 font-medium"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted/60 font-normal",
+        )}
+      >
+        <Icon
+          size={16}
+          className={cn("flex-shrink-0", active ? "text-blue-400" : "text-current")}
+        />
+        {!collapsed && <span className="truncate">{label}</span>}
+      </span>
+    </Link>
+  );
 }
 
 function NavLinks({
@@ -67,31 +108,44 @@ function NavLinks({
 }) {
   const [location] = useLocation();
   return (
-    <nav className="flex-1 px-2 py-3 space-y-0.5">
-      {navItems.map(({ href, icon: Icon, label }) => {
-        const isActive =
-          href === "/" ? location === "/" : location.startsWith(href);
-        return (
-          <Link key={href} href={href} onClick={onNavigate}>
-            <span
-              data-testid={`nav-${label.toLowerCase()}`}
-              title={collapsed ? label : undefined}
-              className={cn(
-                "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-all cursor-pointer",
-                collapsed ? "justify-center px-2" : "",
-                isActive
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              )}
-            >
-              <Icon size={15} className="flex-shrink-0" />
-              {!collapsed && (
-                <span className="truncate">{label}</span>
-              )}
-            </span>
-          </Link>
-        );
-      })}
+    <nav className="flex-1 px-2 py-3 flex flex-col gap-4">
+      <div className="space-y-0.5">
+        {PRIMARY_NAV.map(({ href, icon, label }) => {
+          const active = href === "/" ? location === "/" : location.startsWith(href);
+          return (
+            <NavItem
+              key={href}
+              href={href}
+              icon={icon}
+              label={label}
+              collapsed={collapsed}
+              active={active}
+              onNavigate={onNavigate}
+            />
+          );
+        })}
+      </div>
+
+      {!collapsed && (
+        <div className="h-px bg-border/60 mx-1" />
+      )}
+
+      <div className="space-y-0.5">
+        {SECONDARY_NAV.map(({ href, icon, label }) => {
+          const active = location.startsWith(href);
+          return (
+            <NavItem
+              key={href}
+              href={href}
+              icon={icon}
+              label={label}
+              collapsed={collapsed}
+              active={active}
+              onNavigate={onNavigate}
+            />
+          );
+        })}
+      </div>
     </nav>
   );
 }
@@ -110,6 +164,8 @@ function UserAvatar() {
         .toUpperCase()
     : (user?.email?.[0] ?? "?").toUpperCase();
 
+  const displayName = user?.name || user?.email?.split("@")[0] || "Account";
+
   const handleSignOut = async () => {
     await authClient.signOut();
     setLocation("/sign-in");
@@ -119,7 +175,7 @@ function UserAvatar() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-semibold flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+          className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-semibold flex items-center justify-center hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 flex-shrink-0"
           title={user?.email ?? "Account"}
           aria-label="Account menu"
         >
@@ -154,6 +210,7 @@ function UserAvatar() {
 
 export default function AppLayout({ children, topBanner }: AppLayoutProps) {
   useNoIndex();
+  const { data: session } = authClient.useSession();
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
@@ -165,6 +222,9 @@ export default function AppLayout({ children, topBanner }: AppLayoutProps) {
   });
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme !== "light";
+
+  const user = session?.user;
+  const displayName = user?.name || user?.email?.split("@")[0] || "Account";
 
   useEffect(() => {
     try {
@@ -184,23 +244,23 @@ export default function AppLayout({ children, topBanner }: AppLayoutProps) {
         />
       )}
 
-      {/* Sidebar — desktop always visible, mobile slides in */}
+      {/* Sidebar */}
       <aside
         className={cn(
           "fixed md:static inset-y-0 left-0 z-30 flex-shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200",
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-          collapsed ? "w-14" : "w-56"
+          collapsed ? "w-[52px]" : "w-[220px]",
         )}
       >
         {/* Logo */}
         <div
           className={cn(
             "h-14 flex items-center border-b border-sidebar-border flex-shrink-0",
-            collapsed ? "px-0 justify-center" : "gap-2.5 px-4"
+            collapsed ? "px-0 justify-center" : "gap-2.5 px-4",
           )}
         >
           {collapsed ? (
-            <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
+            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-black text-sm leading-none select-none">K</span>
             </div>
           ) : (
@@ -208,9 +268,8 @@ export default function AppLayout({ children, topBanner }: AppLayoutProps) {
               <img
                 src={`${import.meta.env.BASE_URL}kuotflow-logo-dark.svg`}
                 alt="KuotFlow"
-                className="h-8 w-auto flex-1 min-w-0 object-left object-contain"
+                className="h-7 w-auto flex-1 min-w-0 object-left object-contain"
               />
-              {/* Mobile close button */}
               <button
                 className="ml-auto text-muted-foreground hover:text-foreground md:hidden flex-shrink-0"
                 onClick={() => setMobileOpen(false)}
@@ -227,48 +286,46 @@ export default function AppLayout({ children, topBanner }: AppLayoutProps) {
           onNavigate={() => setMobileOpen(false)}
         />
 
-        {/* User + collapse toggle */}
+        {/* Footer: user + controls */}
         <div
           className={cn(
-            "p-3 border-t border-sidebar-border flex items-center",
-            collapsed ? "flex-col gap-3 justify-center" : "gap-2.5"
+            "p-2.5 border-t border-sidebar-border flex items-center gap-2",
+            collapsed ? "flex-col justify-center" : "flex-row",
           )}
         >
           <UserAvatar />
+
           {!collapsed && (
-            <span className="text-muted-foreground text-xs flex-1 truncate">
-              Account
+            <span className="text-foreground text-xs font-medium flex-1 truncate">
+              {displayName}
             </span>
           )}
-          {/* Theme toggle */}
-          <button
-            className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted p-1"
-            onClick={() => setTheme(isDark ? "light" : "dark")}
-            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-            title={isDark ? "Light mode" : "Dark mode"}
-          >
-            {isDark ? <Sun size={15} /> : <Moon size={15} />}
-          </button>
-          {/* Desktop collapse toggle */}
-          <button
-            className="hidden md:flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted p-1"
-            onClick={() => setCollapsed((c) => !c)}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? (
-              <PanelLeftOpen size={15} />
-            ) : (
-              <PanelLeftClose size={15} />
-            )}
-          </button>
+
+          <div className={cn("flex items-center", collapsed ? "flex-col gap-1.5" : "gap-1 ml-auto")}>
+            <button
+              className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted p-1.5"
+              onClick={() => setTheme(isDark ? "light" : "dark")}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              title={isDark ? "Light mode" : "Dark mode"}
+            >
+              {isDark ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+
+            <button
+              className="hidden md:flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted p-1.5"
+              onClick={() => setCollapsed((c) => !c)}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden bg-background min-w-0">
         {topBanner}
-        {/* Top bar */}
         <header className="h-14 flex items-center px-4 md:px-6 border-b border-border flex-shrink-0 gap-3">
           <button
             className="md:hidden text-muted-foreground hover:text-foreground transition-colors"
@@ -281,7 +338,7 @@ export default function AppLayout({ children, topBanner }: AppLayoutProps) {
           <Breadcrumb location={location} />
         </header>
         <main className="flex-1 overflow-auto">
-          <div className="p-4 md:p-6">{children}</div>
+          <div className="p-5 md:p-7">{children}</div>
         </main>
       </div>
     </div>
@@ -301,13 +358,13 @@ function Breadcrumb({ location }: { location: string }) {
           <ChevronRight size={12} className="text-muted-foreground/60 flex-shrink-0 hidden sm:inline" />
           <span
             className={cn(
-              "truncate",
+              "truncate capitalize",
               i === parts.length - 1
                 ? "text-foreground font-medium"
-                : "text-muted-foreground"
+                : "text-muted-foreground",
             )}
           >
-            {part.charAt(0).toUpperCase() + part.slice(1)}
+            {part}
           </span>
         </span>
       ))}

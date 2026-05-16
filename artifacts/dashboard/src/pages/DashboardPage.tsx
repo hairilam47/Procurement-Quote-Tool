@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useGetDashboard } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
-import { formatCurrency, formatDate, statusBadge, STATUS_LABELS } from "@/lib/format";
+import { formatCurrency, formatDate, STATUS_LABELS } from "@/lib/format";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { BeamCard } from "@/components/ui/beam-card";
@@ -38,13 +39,14 @@ import {
   Cell,
 } from "recharts";
 
+// Chart colours match the unified status palette in status-badge.tsx
 const STATUS_CHART_COLORS: Record<string, string> = {
-  DRAFT: "#475569",
-  SENT: "#3b82f6",
-  ACCEPTED: "#10b981",
+  DRAFT:    "#64748b",
+  SENT:     "#3b82f6",
+  ACCEPTED: "#14b8a6",
   REJECTED: "#ef4444",
-  PAID: "#8b5cf6",
-  EXPIRED: "#f59e0b",
+  PAID:     "#10b981",
+  EXPIRED:  "#f59e0b",
 };
 
 const PAYWALL_DISMISSED_KEY = "paywall_banner_dismissed";
@@ -536,11 +538,7 @@ export default function DashboardPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-foreground text-sm font-medium">{q.number}</span>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge(q.status)}`}
-                        >
-                          {STATUS_LABELS[q.status] ?? q.status}
-                        </span>
+                        <StatusBadge status={q.status} />
                       </div>
                       <p className="text-muted-foreground text-xs mt-0.5 truncate">
                         {q.clientName ?? "Unknown client"}

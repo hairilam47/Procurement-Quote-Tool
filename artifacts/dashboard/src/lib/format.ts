@@ -37,40 +37,43 @@ export function formatRelativeDate(date: string): string {
   return formatDate(date);
 }
 
+// Unified status colours — consistent across all entity types.
+// PAID = emerald (money/success), ACCEPTED = teal, SENT = blue, DRAFT = slate.
 export const STATUS_COLORS: Record<string, string> = {
-  DRAFT: "bg-slate-700 text-slate-200",
-  SENT: "bg-blue-600/20 text-blue-400 border border-blue-600/30",
-  ACCEPTED: "bg-emerald-600/20 text-emerald-400 border border-emerald-600/30",
-  REJECTED: "bg-red-600/20 text-red-400 border border-red-600/30",
-  PAID: "bg-violet-600/20 text-violet-400 border border-violet-600/30",
-  EXPIRED: "bg-amber-600/20 text-amber-400 border border-amber-600/30",
+  DRAFT:    "bg-slate-500/10 text-slate-400 border border-slate-500/20",
+  SENT:     "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+  ACCEPTED: "bg-teal-500/10 text-teal-400 border border-teal-500/20",
+  REJECTED: "bg-red-500/10 text-red-400 border border-red-500/20",
+  PAID:     "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  EXPIRED:  "bg-amber-500/10 text-amber-400 border border-amber-500/20",
 };
 
 export const STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Draft",
-  SENT: "Sent",
+  DRAFT:    "Draft",
+  SENT:     "Sent",
   ACCEPTED: "Accepted",
   REJECTED: "Rejected",
-  PAID: "Paid",
-  EXPIRED: "Expired",
+  PAID:     "Paid",
+  EXPIRED:  "Expired",
 };
 
 export function statusBadge(status: string) {
-  return STATUS_COLORS[status] ?? "bg-slate-700 text-slate-300";
+  return STATUS_COLORS[status] ?? "bg-slate-500/10 text-slate-400 border border-slate-500/20";
 }
 
+// Invoice statuses share the same unified palette.
 export const INVOICE_STATUS_COLORS: Record<string, string> = {
-  DRAFT: "bg-slate-700 text-slate-200",
-  SENT: "bg-blue-600/20 text-blue-400 border border-blue-600/30",
-  PAID: "bg-emerald-600/20 text-emerald-400 border border-emerald-600/30",
+  DRAFT: "bg-slate-500/10 text-slate-400 border border-slate-500/20",
+  SENT:  "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+  PAID:  "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
 };
 
 export const INVOICE_STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft",
-  SENT: "Sent",
-  PAID: "Paid",
+  SENT:  "Sent",
+  PAID:  "Paid",
 };
 
 export function invoiceStatusBadge(status: string) {
-  return INVOICE_STATUS_COLORS[status] ?? "bg-slate-700 text-slate-300";
+  return INVOICE_STATUS_COLORS[status] ?? "bg-slate-500/10 text-slate-400 border border-slate-500/20";
 }
