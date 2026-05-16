@@ -390,7 +390,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link href="/invoices/new">
-            <span className="inline-flex items-center gap-1.5 bg-secondary hover:bg-muted text-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer border border-border">
+            <span className="inline-flex items-center gap-1.5 border border-border bg-secondary text-secondary-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-muted cursor-pointer">
               <Plus size={15} />
               New Invoice
             </span>
