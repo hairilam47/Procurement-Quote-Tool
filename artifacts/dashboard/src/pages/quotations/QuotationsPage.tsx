@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useListQuotations } from "@workspace/api-client-react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { formatCurrency, formatDate, STATUS_LABELS } from "@/lib/format";
 import { FileText, Search, Filter, ArrowUpDown, Plus } from "lucide-react";
@@ -36,9 +36,22 @@ function SkeletonRow() {
 }
 
 export default function QuotationsPage() {
-  const [status, setStatus] = useState("ALL");
+  const search_ = useSearch();
+  const initialStatus = (() => {
+    const p = new URLSearchParams(search_).get("status");
+    if (p && [...STATUSES, DEFERRED_FILTER].includes(p)) return p;
+    return "ALL";
+  })();
+
+  const [status, setStatus] = useState(initialStatus);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("DEFAULT");
+
+  useEffect(() => {
+    const p = new URLSearchParams(search_).get("status");
+    const next = p && [...STATUSES, DEFERRED_FILTER].includes(p) ? p : "ALL";
+    setStatus(next);
+  }, [search_]);
 
   const isDeferred = status === DEFERRED_FILTER;
   const apiStatus = status === "ALL" || isDeferred ? undefined : status;

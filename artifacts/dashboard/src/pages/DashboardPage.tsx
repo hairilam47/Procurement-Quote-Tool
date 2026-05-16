@@ -407,13 +407,13 @@ export default function DashboardPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {([
-          { icon: DollarSign, label: "Outstanding", value: formatCurrency(outstanding), color: "text-blue-400", bg: "bg-blue-500/10", amberAccent: true },
-          { icon: FileText, label: "Total Quotes", value: String(total), color: "text-muted-foreground", bg: "bg-muted" },
-          { icon: CheckCircle, label: "Accepted", value: String(counts["ACCEPTED"] ?? 0), color: "text-emerald-400", bg: "bg-emerald-500/10" },
-          { icon: Clock, label: "Pending (Sent)", value: String(counts["SENT"] ?? 0), color: "text-amber-400", bg: "bg-amber-500/10" },
-        ] as { icon: React.ElementType; label: string; value: string; color: string; bg: string; amberAccent?: boolean }[]).map((card, i) => (
+          { icon: DollarSign, label: "Outstanding", value: formatCurrency(outstanding), color: "text-blue-400", bg: "bg-blue-500/10", amberAccent: true, href: "/quotations?status=SENT" },
+          { icon: FileText, label: "Total Quotes", value: String(total), color: "text-muted-foreground", bg: "bg-muted", href: "/quotations" },
+          { icon: CheckCircle, label: "Accepted", value: String(counts["ACCEPTED"] ?? 0), color: "text-emerald-400", bg: "bg-emerald-500/10", href: "/quotations?status=ACCEPTED" },
+          { icon: Clock, label: "Pending (Sent)", value: String(counts["SENT"] ?? 0), color: "text-amber-400", bg: "bg-amber-500/10", href: "/quotations?status=SENT" },
+        ] as { icon: React.ElementType; label: string; value: string; color: string; bg: string; amberAccent?: boolean; href?: string }[]).map((card, i) => (
           <div key={card.label} className="animate-fade-slide-in" style={{ animationDelay: `${i * 55}ms` }}>
-            <StatCard icon={card.icon} label={card.label} value={card.value} color={card.color} bg={card.bg} amberAccent={card.amberAccent} />
+            <StatCard icon={card.icon} label={card.label} value={card.value} color={card.color} bg={card.bg} amberAccent={card.amberAccent} href={card.href} />
           </div>
         ))}
       </div>
@@ -437,6 +437,7 @@ export default function DashboardPage() {
               value: formatCurrency(invoiceStats?.outstanding ?? "0"),
               color: "text-blue-400",
               bg: "bg-blue-500/10",
+              href: "/invoices?status=SENT",
             },
             {
               icon: CalendarCheck,
@@ -444,6 +445,7 @@ export default function DashboardPage() {
               value: formatCurrency(invoiceStats?.paidThisMonth ?? "0"),
               color: "text-emerald-400",
               bg: "bg-emerald-500/10",
+              href: "/invoices?status=PAID",
             },
             {
               icon: BadgeDollarSign,
@@ -451,6 +453,7 @@ export default function DashboardPage() {
               value: formatCurrency(invoiceStats?.totalInvoiced ?? "0"),
               color: "text-violet-400",
               bg: "bg-violet-500/10",
+              href: "/invoices",
             },
             {
               icon: FilePen,
@@ -458,10 +461,11 @@ export default function DashboardPage() {
               value: String(invoiceStats?.draftCount ?? 0),
               color: "text-muted-foreground",
               bg: "bg-muted",
+              href: "/invoices?status=DRAFT",
             },
-          ] as const).map((card, i) => (
+          ] as { icon: React.ElementType; label: string; value: string; color: string; bg: string; href?: string }[]).map((card, i) => (
             <div key={card.label} className="animate-fade-slide-in" style={{ animationDelay: `${i * 55}ms` }}>
-              <StatCard icon={card.icon} label={card.label} value={card.value} color={card.color} bg={card.bg} />
+              <StatCard icon={card.icon} label={card.label} value={card.value} color={card.color} bg={card.bg} href={card.href} />
             </div>
           ))}
         </div>
@@ -570,6 +574,7 @@ function StatCard({
   color,
   bg,
   amberAccent,
+  href,
 }: {
   icon: React.ElementType;
   label: string;
@@ -577,13 +582,16 @@ function StatCard({
   color: string;
   bg: string;
   amberAccent?: boolean;
+  href?: string;
 }) {
-  return (
-    <BeamCard className="p-4 flex items-center gap-3">
+  const inner = (
+    <BeamCard
+      className={`p-4 flex items-center gap-3 ${href ? "cursor-pointer transition-all hover:ring-1 hover:ring-border/80 hover:brightness-110 group" : ""}`}
+    >
       <div className={`w-10 h-10 rounded-lg ${bg} flex items-center justify-center flex-shrink-0`}>
         <Icon size={18} className={color} />
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-muted-foreground text-xs">{label}</p>
         <p className={`font-black text-lg leading-tight truncate tabular-nums ${amberAccent ? "text-amber-400" : "text-foreground"}`}>
           {value}
@@ -592,6 +600,14 @@ function StatCard({
           <div className="h-0.5 w-8 bg-gradient-to-r from-blue-500 to-amber-500 rounded-full mt-1 opacity-70" />
         )}
       </div>
+      {href && (
+        <ArrowRight size={14} className="text-muted-foreground/30 group-hover:text-muted-foreground/70 transition-colors flex-shrink-0" />
+      )}
     </BeamCard>
   );
+
+  if (href) {
+    return <Link href={href}>{inner}</Link>;
+  }
+  return inner;
 }

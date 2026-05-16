@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useListInvoices } from "@workspace/api-client-react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { formatCurrency, formatDate, INVOICE_STATUS_LABELS } from "@/lib/format";
 import { Receipt, Search, Filter, ArrowUpDown, Plus } from "lucide-react";
@@ -35,9 +35,22 @@ function SkeletonRow() {
 }
 
 export default function InvoicesPage() {
-  const [status, setStatus] = useState("ALL");
+  const search_ = useSearch();
+  const initialStatus = (() => {
+    const p = new URLSearchParams(search_).get("status");
+    if (p && STATUSES.includes(p)) return p;
+    return "ALL";
+  })();
+
+  const [status, setStatus] = useState(initialStatus);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("DEFAULT");
+
+  useEffect(() => {
+    const p = new URLSearchParams(search_).get("status");
+    const next = p && STATUSES.includes(p) ? p : "ALL";
+    setStatus(next);
+  }, [search_]);
 
   const apiStatus = status === "ALL" ? undefined : status;
   const { data: invoices = [], isLoading } = useListInvoices(
