@@ -59,6 +59,7 @@ const SECONDARY_NAV = [
 interface AppLayoutProps {
   children: ReactNode;
   topBanner?: ReactNode;
+  planLabel?: string;
 }
 
 function NavItem({
@@ -208,7 +209,13 @@ function UserAvatar() {
   );
 }
 
-export default function AppLayout({ children, topBanner }: AppLayoutProps) {
+const PLAN_BADGE: Record<string, string> = {
+  "Pro":        "bg-blue-500/15 text-blue-400 border-blue-500/25",
+  "Trial":      "bg-amber-500/15 text-amber-400 border-amber-500/25",
+  "Free Trial": "bg-amber-500/15 text-amber-400 border-amber-500/25",
+};
+
+export default function AppLayout({ children, topBanner, planLabel }: AppLayoutProps) {
   useNoIndex();
   const { data: session } = authClient.useSession();
   const [location] = useLocation();
@@ -296,9 +303,21 @@ export default function AppLayout({ children, topBanner }: AppLayoutProps) {
           <UserAvatar />
 
           {!collapsed && (
-            <span className="text-foreground text-xs font-medium flex-1 truncate">
-              {displayName}
-            </span>
+            <div className="flex-1 min-w-0">
+              <span className="text-foreground text-xs font-medium block truncate">
+                {displayName}
+              </span>
+              {planLabel && (
+                <span
+                  className={cn(
+                    "inline-block mt-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded border leading-none",
+                    PLAN_BADGE[planLabel] ?? "bg-slate-500/15 text-slate-400 border-slate-500/25",
+                  )}
+                >
+                  {planLabel}
+                </span>
+              )}
+            </div>
           )}
 
           <div className={cn("flex items-center", collapsed ? "flex-col gap-1.5" : "gap-1 ml-auto")}>

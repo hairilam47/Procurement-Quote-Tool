@@ -164,9 +164,9 @@ function CacheInvalidator() {
   return null;
 }
 
-function ProtectedRoutes({ topBanner }: { topBanner?: React.ReactNode }) {
+function ProtectedRoutes({ topBanner, planLabel }: { topBanner?: React.ReactNode; planLabel?: string }) {
   return (
-    <AppLayout topBanner={topBanner}>
+    <AppLayout topBanner={topBanner} planLabel={planLabel}>
       <Switch>
         <Route path="/" component={DashboardPage} />
         <Route path="/quotations" component={QuotationsPage} />
@@ -260,12 +260,23 @@ function AuthenticatedApp() {
     ? <TrialBanner onOpenModal={() => setModalOpen(true)} />
     : undefined;
 
+  // Plan badge shown in the sidebar footer
+  const planLabel = !userMe
+    ? undefined
+    : hasActiveSubscription && subscriptionData?.subscription?.status === "trialing"
+    ? "Trial"
+    : hasActiveSubscription
+    ? "Pro"
+    : isTrialMode
+    ? "Free Trial"
+    : undefined;
+
   return (
     <>
       <SyncUser />
       <CheckoutSuccessBanner />
       <PostLoginPlanCheckout />
-      <ProtectedRoutes topBanner={banner} />
+      <ProtectedRoutes topBanner={banner} planLabel={planLabel} />
       {modalOpen && <SubscriptionModal onClose={handleModalClose} />}
     </>
   );
