@@ -138,6 +138,8 @@ router.get("/receipts/:id/pdf", requireAuth, async (req, res): Promise<void> => 
       lineItems,
       clientSnapshot: receipt.clientSnapshot,
       companySnapshot: receipt.companySnapshot,
+      // Use the receipt's stored payment method (stripe/manual) so the PDF shows it correctly
+      paymentMethod: receipt.paymentMethod,
     };
 
     const buffer = await renderReceiptPdf({

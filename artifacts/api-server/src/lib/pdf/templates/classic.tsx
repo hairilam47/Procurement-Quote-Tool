@@ -350,6 +350,12 @@ export function ClassicTemplate({
               <>
                 <Text style={{ color: C.muted, fontSize: 9 }}>Payment date</Text>
                 <Text style={s.bold}>{fmtDate(invoiceMode.paidAt)}</Text>
+                {invoiceMode.paymentMethodLabel ? (
+                  <>
+                    <Text style={{ color: C.muted, fontSize: 9, marginTop: 4 }}>Payment method</Text>
+                    <Text style={s.bold}>{invoiceMode.paymentMethodLabel}</Text>
+                  </>
+                ) : null}
               </>
             ) : invoiceMode?.dueDate ? (
               <>

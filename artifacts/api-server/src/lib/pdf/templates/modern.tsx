@@ -374,6 +374,12 @@ export function ModernTemplate({
               <>
                 <Text style={s.colLabel}>Payment date</Text>
                 <Text style={s.bold}>{fmtDate(invoiceMode.paidAt)}</Text>
+                {invoiceMode.paymentMethodLabel ? (
+                  <>
+                    <Text style={[s.colLabel, { marginTop: 4 }]}>Payment method</Text>
+                    <Text style={s.bold}>{invoiceMode.paymentMethodLabel}</Text>
+                  </>
+                ) : null}
               </>
             ) : invoiceMode?.dueDate ? (
               <>

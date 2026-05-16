@@ -343,6 +343,13 @@ export async function renderReceiptPdf(args: {
       referenceNumber: quote.number,
       paidAt: quote.paidAt ?? quote.issueDate,
       receiptMode: true,
+      paymentMethodLabel: (() => {
+        const m = (quote.paymentMethod ?? "").toLowerCase();
+        if (m === "stripe") return "Stripe";
+        if (m === "manual") return "Manual";
+        if (m && m !== "none") return m.charAt(0).toUpperCase() + m.slice(1);
+        return null;
+      })(),
     },
   };
 

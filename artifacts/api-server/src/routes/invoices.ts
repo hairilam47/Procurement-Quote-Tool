@@ -442,11 +442,14 @@ router.patch("/invoices/:id/status", requireAuth, async (req, res): Promise<void
       .where(eq(invoicesTable.id, String(req.params.id)))
       .returning();
 
-    // Auto-generate receipt when manually marking as paid
+    // Auto-generate receipt when manually marking as paid (awaited so errors surface)
     if (status === "PAID") {
-      createReceiptForInvoice(updated.id, "manual").catch((e) =>
-        console.error("[invoice-status] receipt creation failed:", e),
-      );
+      try {
+        await createReceiptForInvoice(updated.id, "manual");
+      } catch (e) {
+        console.error("[invoice-status] receipt creation failed:", e);
+        // Invoice is already PAID — don't roll back, but log the failure
+      }
     }
 
     res.json(updated);

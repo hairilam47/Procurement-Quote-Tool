@@ -16,6 +16,8 @@ export type InvoiceMode = {
   dueDate?: Date | string | null;
   paidAt?: Date | string | null;
   receiptMode?: boolean;
+  /** Human-readable payment method label shown on receipt PDFs (e.g. "Stripe", "Manual"). */
+  paymentMethodLabel?: string | null;
   /** True for stand-alone invoices (INV-…). False/absent = follow-up invoice attached to a quotation. */
   standaloneInvoice?: boolean;
 };
