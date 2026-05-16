@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Download, Loader2, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BeamCard } from "@/components/ui/beam-card";
 
 type PublicSummary = {
   number: string;
@@ -176,7 +177,7 @@ export default function PaymentSuccessPage() {
         )}
 
         {state === "paid" && summary && (
-          <div className="rounded-2xl border border-border bg-card shadow-lg overflow-hidden">
+          <BeamCard>
             <div className="bg-emerald-900/30 border-b border-emerald-700/40 px-8 py-8 flex flex-col items-center gap-3">
               <CheckCircle2 size={48} className="text-emerald-400" />
               <h1 className="text-2xl font-bold text-foreground text-center">
@@ -218,7 +219,7 @@ export default function PaymentSuccessPage() {
                 <Button
                   onClick={handleDownloadReceipt}
                   disabled={isDownloading}
-                  className="w-full bg-emerald-700 hover:bg-emerald-600 text-white"
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white"
                 >
                   {isDownloading
                     ? <><Loader2 size={15} className="mr-2 animate-spin" /> Downloading…</>
@@ -229,11 +230,11 @@ export default function PaymentSuccessPage() {
                 )}
               </div>
             </div>
-          </div>
+          </BeamCard>
         )}
 
         {state === "processing" && (
-          <div className="rounded-2xl border border-amber-700/40 bg-card shadow-lg px-8 py-8 flex flex-col items-center gap-4 text-center">
+          <BeamCard className="px-8 py-8 flex flex-col items-center gap-4 text-center border-amber-700/40">
             <Clock size={40} className="text-amber-400" />
             <h1 className="text-xl font-bold text-foreground">Still Processing</h1>
             <p className="text-muted-foreground text-sm">
@@ -246,22 +247,22 @@ export default function PaymentSuccessPage() {
               </p>
             )}
             <ContactBlock email={summary?.companyEmail ?? null} phone={summary?.companyPhone ?? null} />
-          </div>
+          </BeamCard>
         )}
 
         {state === "not-found" && (
-          <div className="rounded-2xl border border-border bg-card shadow-lg px-8 py-8 flex flex-col items-center gap-4 text-center">
+          <BeamCard className="px-8 py-8 flex flex-col items-center gap-4 text-center">
             <AlertTriangle size={40} className="text-amber-400" />
             <h1 className="text-xl font-bold text-foreground">Payment Not Found</h1>
             <p className="text-muted-foreground text-sm">
               We couldn't find your payment record — please contact us and we'll look into it.
             </p>
             <ContactBlock email={summary?.companyEmail ?? null} phone={summary?.companyPhone ?? null} />
-          </div>
+          </BeamCard>
         )}
 
         {state === "error" && (
-          <div className="rounded-2xl border border-border bg-card shadow-lg px-8 py-8 flex flex-col items-center gap-4 text-center">
+          <BeamCard className="px-8 py-8 flex flex-col items-center gap-4 text-center">
             <AlertTriangle size={40} className="text-red-400" />
             <h1 className="text-xl font-bold text-foreground">Something went wrong</h1>
             <p className="text-muted-foreground text-sm">
@@ -271,7 +272,7 @@ export default function PaymentSuccessPage() {
             <Button variant="outline" onClick={() => window.location.reload()}>
               Try again
             </Button>
-          </div>
+          </BeamCard>
         )}
       </div>
     </div>
@@ -296,7 +297,7 @@ function SummaryRow({
         className={[
           "text-sm text-right",
           mono ? "font-mono" : "",
-          highlight ? "text-emerald-400 font-bold text-base" : "text-foreground font-medium",
+          highlight ? "text-blue-400 font-bold text-base" : "text-foreground font-medium",
         ].join(" ")}
       >
         {value}
