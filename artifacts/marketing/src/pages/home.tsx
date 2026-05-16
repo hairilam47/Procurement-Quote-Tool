@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/fade-in";
+import { HeroAnimation } from "@/components/hero-animation";
 import heroQuotationBuilder from "@/assets/hero/quotation-builder.png";
 import heroDashboardOverview from "@/assets/hero/dashboard-overview.png";
 import heroClientAccept from "@/assets/hero/quotation-detail.png";
@@ -42,126 +43,66 @@ export default function Home() {
       {/* ═══════════════════════════════════════
           HERO
       ═══════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-gray-950 pt-24 md:pt-36 pb-20 md:pb-32 w-full">
-        {/* Scrolling background cards */}
-        <div className="absolute inset-0 overflow-hidden motion-safe:[--running:running] motion-reduce:[--running:paused]" style={heroFadeStyle}>
-          <div
-            className="flex gap-6 py-12 w-max"
-            style={{ animation: "marquee 40s linear infinite", animationPlayState: "var(--running, running)" }}
-          >
-            {[0, 1].map((setIdx) => (
-              <React.Fragment key={setIdx}>
-                {/* Card 1: Quotation Builder */}
-                <div className="blur-sm opacity-30 pointer-events-none select-none w-[520px] shrink-0 bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
-                    <div className="flex gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-red-400/60" />
-                      <div className="w-3 h-3 rounded-full bg-yellow-400/60" />
-                      <div className="w-3 h-3 rounded-full bg-green-400/60" />
-                    </div>
-                    <div className="flex-1 mx-3 bg-white/5 border border-white/10 rounded-md px-3 py-1">
-                      <span className="text-xs text-white/40">app.kuotflow.io/quotations/new</span>
-                    </div>
-                  </div>
-                  <img src={heroQuotationBuilder} alt="Quotation Builder" className="w-full object-cover object-top" style={{ height: 380 }} />
-                </div>
+      <section className="relative overflow-hidden bg-gray-950 pt-24 md:pt-32 pb-16 md:pb-24 w-full">
+        {/* Subtle radial glows in background */}
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_15%_40%,rgba(49,130,206,0.18),transparent_40%),radial-gradient(circle_at_85%_20%,rgba(180,113,54,0.14),transparent_35%)]" />
 
-                {/* Card 2: Dashboard Overview */}
-                <div className="blur-sm opacity-30 pointer-events-none select-none w-[480px] shrink-0 bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
-                    <div className="flex gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-red-400/60" />
-                      <div className="w-3 h-3 rounded-full bg-yellow-400/60" />
-                      <div className="w-3 h-3 rounded-full bg-green-400/60" />
-                    </div>
-                    <div className="flex-1 mx-3 bg-white/5 border border-white/10 rounded-md px-3 py-1">
-                      <span className="text-xs text-white/40">app.kuotflow.io/dashboard</span>
-                    </div>
-                  </div>
-                  <img src={heroDashboardOverview} alt="Dashboard Overview" className="w-full object-cover object-top" style={{ height: 340 }} />
-                </div>
-
-                {/* Card 3: Quotation Detail */}
-                <div className="blur-sm opacity-30 pointer-events-none select-none w-[420px] shrink-0 bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
-                    <div className="flex gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-red-400/60" />
-                      <div className="w-3 h-3 rounded-full bg-yellow-400/60" />
-                      <div className="w-3 h-3 rounded-full bg-green-400/60" />
-                    </div>
-                    <div className="flex-1 mx-3 bg-white/5 border border-white/10 rounded-md px-3 py-1">
-                      <span className="text-xs text-white/40">app.kuotflow.io/quotations/Q-2026-0008</span>
-                    </div>
-                  </div>
-                  <img src={heroClientAccept} alt="Quotation Detail" className="w-full object-cover object-top" style={{ height: 360 }} />
-                </div>
-
-                {/* Card 4: Clients List */}
-                <div className="blur-sm opacity-30 pointer-events-none select-none w-[460px] shrink-0 bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
-                    <div className="flex gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-red-400/60" />
-                      <div className="w-3 h-3 rounded-full bg-yellow-400/60" />
-                      <div className="w-3 h-3 rounded-full bg-green-400/60" />
-                    </div>
-                    <div className="flex-1 mx-3 bg-white/5 border border-white/10 rounded-md px-3 py-1">
-                      <span className="text-xs text-white/40">app.kuotflow.io/clients</span>
-                    </div>
-                  </div>
-                  <img src={heroClientsList} alt="Clients List" className="w-full object-cover object-top" style={{ height: 360 }} />
-                </div>
-
-                {/* Card 5: PDF Preview */}
-                <div className="blur-sm opacity-30 pointer-events-none select-none w-[440px] shrink-0 bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/10">
-                    <div className="flex gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-red-400/60" />
-                      <div className="w-3 h-3 rounded-full bg-yellow-400/60" />
-                      <div className="w-3 h-3 rounded-full bg-green-400/60" />
-                    </div>
-                    <div className="flex-1 mx-3 bg-white/5 border border-white/10 rounded-md px-3 py-1">
-                      <span className="text-xs text-white/40">app.kuotflow.io/quotations/Q-2026-0008/pdf</span>
-                    </div>
-                  </div>
-                  <img src={heroPdfPreview} alt="PDF Preview" className="w-full object-cover object-top" style={{ height: 370 }} />
-                </div>
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-950/80 via-gray-950/50 to-gray-950/95 pointer-events-none" style={heroFadeStyle} />
-
-        {/* Hero content */}
+        {/* Hero content: two-column on lg+, stacked on mobile */}
         <div className="relative z-10 px-4 md:px-6 max-w-7xl mx-auto w-full">
-          <div className="text-center max-w-4xl mx-auto flex flex-col items-center">
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-8 leading-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700">
-              Quotes that <span className="text-primary">close.</span>
-            </h1>
-            <div className="flex flex-col sm:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 w-full sm:w-auto">
-              <a href="/app/sign-up" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-base rounded-full" data-testid="hero-cta">
-                  Start for free
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </a>
-              <a
-                href="#pricing"
-                className="w-full sm:w-auto"
-                data-testid="hero-see-pricing"
-                onClick={(e) => {
-                  if (typeof window !== "undefined") {
-                    e.preventDefault();
-                    document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
-                  }
-                }}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.05fr] items-center gap-12 lg:gap-8">
+
+            {/* Left: copy + CTAs */}
+            <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+              <div
+                className="inline-flex items-center gap-2 rounded-full border border-blue-300/20 bg-white/5 px-4 py-2 text-sm text-blue-100 backdrop-blur mb-6"
+                style={heroFadeStyle}
               >
-                <Button variant="outline" size="lg" className="w-full sm:w-auto h-14 px-8 text-base rounded-full border-white/30 text-white bg-white/5 hover:bg-white/10">
-                  See pricing
-                </Button>
-              </a>
+                <Zap className="h-4 w-4 text-amber-300 shrink-0" />
+                SaaS quoting, invoicing &amp; receipting
+              </div>
+
+              <h1
+                className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-6 leading-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700"
+              >
+                Quotes that <span className="text-primary">close.</span>
+              </h1>
+
+              <p
+                className="max-w-lg text-lg leading-relaxed text-slate-300 mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150"
+              >
+                Turn real quotation details into polished documents, invoices, and receipts instantly — with live multi-currency FX built in.
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 w-full sm:w-auto">
+                <a href="/app/sign-up" className="w-full sm:w-auto">
+                  <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-base rounded-full" data-testid="hero-cta">
+                    Start for free
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                </a>
+                <a
+                  href="#pricing"
+                  className="w-full sm:w-auto"
+                  data-testid="hero-see-pricing"
+                  onClick={(e) => {
+                    if (typeof window !== "undefined") {
+                      e.preventDefault();
+                      document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }}
+                >
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto h-14 px-8 text-base rounded-full border-white/30 text-white bg-white/5 hover:bg-white/10">
+                    See pricing
+                  </Button>
+                </a>
+              </div>
             </div>
+
+            {/* Right: brand animation — hidden on mobile */}
+            <div className="hidden lg:block">
+              <HeroAnimation />
+            </div>
+
           </div>
         </div>
       </section>
