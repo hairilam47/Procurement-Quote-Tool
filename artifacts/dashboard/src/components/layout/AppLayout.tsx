@@ -86,8 +86,8 @@ function NavItem({
           "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all cursor-pointer",
           collapsed ? "justify-center" : "",
           active
-            ? "bg-blue-500/12 text-blue-400 font-medium"
-            : "text-muted-foreground hover:text-foreground hover:bg-muted/60 font-normal",
+            ? "bg-blue-500/12 text-blue-400 font-medium border-l-2 border-blue-400 rounded-l-none pl-2"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted/60 font-normal border-l-2 border-transparent pl-2",
         )}
       >
         <Icon

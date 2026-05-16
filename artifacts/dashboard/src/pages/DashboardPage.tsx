@@ -390,13 +390,13 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link href="/invoices/new">
-            <span className="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
+            <span className="inline-flex items-center gap-1.5 bg-secondary hover:bg-muted text-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer border border-border">
               <Plus size={15} />
               New Invoice
             </span>
           </Link>
           <Link href="/quotations/new">
-            <span className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
+            <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-amber-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-opacity hover:opacity-90 cursor-pointer shadow-sm" data-testid="new-quotation-btn">
               <Plus size={15} />
               New Quotation
             </span>
@@ -583,7 +583,7 @@ function StatCard({
       </div>
       <div className="min-w-0">
         <p className="text-muted-foreground text-xs">{label}</p>
-        <p className="text-foreground font-bold text-lg leading-tight truncate">{value}</p>
+        <p className="text-foreground font-black text-lg leading-tight truncate tabular-nums">{value}</p>
       </div>
     </BeamCard>
   );
