@@ -1,13 +1,12 @@
 import { Router } from "express";
 import { eq, and, desc, sql } from "drizzle-orm";
-import { db, invoicesTable, invoiceLineItemsTable, clientsTable, companySettingsTable, usersTable } from "@workspace/db";
+import { db, invoicesTable, invoiceLineItemsTable, receiptsTable, clientsTable, companySettingsTable, usersTable } from "@workspace/db";
 import { invoiceSchema, changeInvoiceStatusSchema } from "../lib/validation";
 import { computeTotals } from "../lib/calculations";
 import { evaluateFormula } from "../lib/formula";
 import { generateId } from "../lib/id";
 import { renderInvoicePdf } from "../lib/pdf/render";
 import { requireAuth, requireSubscription } from "./auth";
-import { createReceiptForInvoice } from "../lib/receipt";
 import { getZodErrors } from "../lib/zodError";
 import { getUncachableStripeClient } from "../stripeClient";
 
@@ -436,20 +435,77 @@ router.patch("/invoices/:id/status", requireAuth, async (req, res): Promise<void
       updates.companySnapshot = settings ?? null;
     }
 
-    const [updated] = await db
-      .update(invoicesTable)
-      .set(updates)
-      .where(eq(invoicesTable.id, String(req.params.id)))
-      .returning();
+    // For PAID transitions: update invoice + create receipt atomically in one transaction.
+    // For other transitions: simple update.
+    const invoiceId = String(req.params.id);
+    let updated: typeof invoice;
 
-    // Auto-generate receipt when manually marking as paid (awaited so errors surface)
     if (status === "PAID") {
-      try {
-        await createReceiptForInvoice(updated.id, "manual");
-      } catch (e) {
-        console.error("[invoice-status] receipt creation failed:", e);
-        // Invoice is already PAID — don't roll back, but log the failure
-      }
+      updated = await db.transaction(async (tx) => {
+        const [inv] = await tx
+          .update(invoicesTable)
+          .set(updates)
+          .where(eq(invoicesTable.id, invoiceId))
+          .returning();
+
+        // Create receipt within same transaction — idempotent guard + advisory lock
+        const [existing] = await tx
+          .select({ id: receiptsTable.id })
+          .from(receiptsTable)
+          .where(eq(receiptsTable.invoiceId, inv.id));
+
+        if (!existing) {
+          await tx.execute(
+            sql`SELECT pg_advisory_xact_lock(hashtext(${"receipt_number_gen_" + inv.userId}))`,
+          );
+          const lineItems = await tx
+            .select()
+            .from(invoiceLineItemsTable)
+            .where(eq(invoiceLineItemsTable.invoiceId, inv.id))
+            .orderBy(invoiceLineItemsTable.position);
+
+          const year = new Date().getFullYear();
+          const prefix = `RCP-${year}-`;
+          const [last] = await tx
+            .select({ number: receiptsTable.number })
+            .from(receiptsTable)
+            .where(
+              and(
+                eq(receiptsTable.userId, inv.userId),
+                sql`${receiptsTable.number} LIKE ${prefix + "%"}`,
+              ),
+            )
+            .orderBy(desc(receiptsTable.number))
+            .limit(1);
+          const n = last ? parseInt(last.number.slice(prefix.length), 10) + 1 : 1;
+          const receiptNumber = `${prefix}${String(n).padStart(4, "0")}`;
+
+          await tx.insert(receiptsTable).values({
+            id: generateId(),
+            number: receiptNumber,
+            invoiceId: inv.id,
+            userId: inv.userId,
+            invoiceNumber: inv.number,
+            issuedAt: now,
+            paidAt: inv.paidAt ?? now,
+            paymentMethod: "manual",
+            amountPaid: inv.requiredTotal ?? inv.total ?? "0",
+            currency: inv.currency,
+            clientSnapshot: inv.clientSnapshot,
+            companySnapshot: inv.companySnapshot,
+            lineItemsSnapshot: lineItems,
+          });
+        }
+
+        return inv;
+      });
+    } else {
+      const [inv] = await db
+        .update(invoicesTable)
+        .set(updates)
+        .where(eq(invoicesTable.id, invoiceId))
+        .returning();
+      updated = inv;
     }
 
     res.json(updated);

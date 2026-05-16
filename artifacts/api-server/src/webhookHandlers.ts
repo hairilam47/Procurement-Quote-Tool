@@ -51,12 +51,8 @@ async function handleInvoicePaid(invoiceId: string, source: string): Promise<voi
       .set({ status: 'PAID', paidAt: new Date(), updatedAt: new Date() })
       .where(eq(invoicesTable.id, invoiceId));
     console.log(`[webhook:${source}] Invoice ${invoiceId} auto-transitioned to PAID`);
-    // Auto-generate receipt (idempotent — safe to call even if one already exists)
-    try {
-      await createReceiptForInvoice(invoiceId, 'stripe');
-    } catch (e) {
-      console.error(`[webhook:${source}] Failed to create receipt for invoice ${invoiceId}:`, e);
-    }
+    // Auto-generate receipt — errors propagate so Stripe retries the webhook
+    await createReceiptForInvoice(invoiceId, 'stripe');
   }
 }
 
