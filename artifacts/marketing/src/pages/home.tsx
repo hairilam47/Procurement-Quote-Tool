@@ -28,10 +28,10 @@ export default function Home() {
 
         {/* Hero content: two-column on lg+, stacked on mobile */}
         <div className="relative z-10 px-4 md:px-6 max-w-7xl mx-auto w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.05fr] items-center gap-12 lg:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1.05fr] items-center gap-12 md:gap-8">
 
             {/* Left: copy + CTAs */}
-            <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+            <div className="flex flex-col items-center text-center md:items-start md:text-left">
               <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-8 leading-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700">
                 Quotes that <span className="text-primary">close.</span>
               </h1>
@@ -61,7 +61,7 @@ export default function Home() {
             </div>
 
             {/* Right: brand animation — hidden on mobile */}
-            <div className="hidden lg:block">
+            <div className="hidden md:block">
               <HeroAnimation />
             </div>
 
