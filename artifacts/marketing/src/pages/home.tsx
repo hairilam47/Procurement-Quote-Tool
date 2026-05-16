@@ -3,11 +3,6 @@ import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/fade-in";
 import { HeroAnimation } from "@/components/hero-animation";
-import heroQuotationBuilder from "@/assets/hero/quotation-builder.png";
-import heroDashboardOverview from "@/assets/hero/dashboard-overview.png";
-import heroClientAccept from "@/assets/hero/quotation-detail.png";
-import heroClientsList from "@/assets/hero/clients-list.png";
-import heroPdfPreview from "@/assets/hero/pdf-preview.png";
 import {
   ArrowRight, CheckCircle2, FileText, Settings, CreditCard, Users, Zap,
   Shield, Loader2, BarChart, Clock, PenTool, Globe, Layers, Send,
@@ -53,26 +48,9 @@ export default function Home() {
 
             {/* Left: copy + CTAs */}
             <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
-              <div
-                className="inline-flex items-center gap-2 rounded-full border border-blue-300/20 bg-white/5 px-4 py-2 text-sm text-blue-100 backdrop-blur mb-6"
-                style={heroFadeStyle}
-              >
-                <Zap className="h-4 w-4 text-amber-300 shrink-0" />
-                SaaS quoting, invoicing &amp; receipting
-              </div>
-
-              <h1
-                className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-6 leading-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700"
-              >
+              <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-8 leading-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700">
                 Quotes that <span className="text-primary">close.</span>
               </h1>
-
-              <p
-                className="max-w-lg text-lg leading-relaxed text-slate-300 mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150"
-              >
-                Turn real quotation details into polished documents, invoices, and receipts instantly — with live multi-currency FX built in.
-              </p>
-
               <div className="flex flex-col sm:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 w-full sm:w-auto">
                 <a href="/app/sign-up" className="w-full sm:w-auto">
                   <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-base rounded-full" data-testid="hero-cta">
