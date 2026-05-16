@@ -69,9 +69,9 @@ export default function SignUpPage() {
 
   if (verifyPending) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4">
+      <div className="dark min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4">
         <div className="w-full max-w-sm">
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl shadow-xl backdrop-blur-sm overflow-hidden text-center">
+          <div className="bg-white/[0.025] border border-white/[0.07] rounded-xl shadow-2xl backdrop-blur-sm overflow-hidden text-center">
             <div className="h-0.5 w-full bg-gradient-to-r from-blue-500 to-amber-500" />
             <div className="p-8">
             <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-600/10 flex items-center justify-center">
@@ -105,7 +105,7 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4">
+    <div className="dark min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <img
@@ -117,7 +117,7 @@ export default function SignUpPage() {
           <p className="text-sm text-slate-400 mt-1">Start managing quotes and invoices</p>
         </div>
 
-        <div className="bg-slate-900/80 border border-slate-800 rounded-xl shadow-xl backdrop-blur-sm overflow-hidden">
+        <div className="bg-white/[0.025] border border-white/[0.07] rounded-xl shadow-2xl backdrop-blur-sm overflow-hidden">
           <div className="h-0.5 w-full bg-gradient-to-r from-blue-500 to-amber-500" />
           <div className="p-6">
           {error && (
@@ -139,7 +139,7 @@ export default function SignUpPage() {
                 required
                 autoComplete="name"
                 placeholder="Jane Smith"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
             </div>
 
@@ -155,7 +155,7 @@ export default function SignUpPage() {
                 required
                 autoComplete="email"
                 placeholder="you@company.com"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
             </div>
 
@@ -172,7 +172,7 @@ export default function SignUpPage() {
                 minLength={8}
                 autoComplete="new-password"
                 placeholder="Min. 8 characters"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
             </div>
 
@@ -190,17 +190,17 @@ export default function SignUpPage() {
             <>
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-700" />
+                  <div className="w-full border-t border-white/[0.08]" />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="bg-slate-900/80 px-2 text-slate-500">or</span>
+                  <span className="bg-slate-950/80 px-2 text-slate-500">or</span>
                 </div>
               </div>
 
               <button
                 onClick={handleGoogle}
                 disabled={googleLoading}
-                className="w-full flex items-center justify-center gap-2.5 rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="w-full flex items-center justify-center gap-2.5 rounded-lg border border-white/[0.08] bg-white/[0.05] px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-white/[0.08] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 <svg className="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
