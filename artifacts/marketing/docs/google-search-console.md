@@ -1,6 +1,6 @@
 # Google Search Console — Sitemap Submission Guide
 
-The sitemap at `https://procurement-quote-tool.replit.app/sitemap.xml` is already
+The sitemap at `https://kuotflow.com/sitemap.xml` is already
 declared in `public/robots.txt`, so Google will discover it during any crawl.
 Submitting it directly in Search Console gives you faster indexing and crawl
 visibility.
@@ -11,7 +11,7 @@ visibility.
 
 1. Go to [Google Search Console](https://search.google.com/search-console).
 2. Click **Add property**.
-3. Choose **URL prefix** and enter `https://procurement-quote-tool.replit.app`.
+3. Choose **URL prefix** and enter `https://kuotflow.com`.
 4. Pick a verification method. The two easiest for a Replit deployment are:
 
    | Method | How |
