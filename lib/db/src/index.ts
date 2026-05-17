@@ -12,13 +12,15 @@ if (!process.env.DATABASE_URL) {
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // min: 0 — let Neon reclaim idle connections naturally. Keeping min: 1
-  // caused the server to crash every ~2 min: Neon terminates the idle
-  // connection, pg-pool emits an unhandled 'error' event, Node.js crashes.
-  min: 0,
-  // Close idle connections after 30 s so the pool drains before Neon
-  // forcibly kills them (Neon's idle timeout is ~2 min in practice).
-  idleTimeoutMillis: 30_000,
+  // Keep 1 connection alive so the pool never fully drains between requests.
+  // Without this, every visit after >30 s idle pays a ~700-800 ms Neon
+  // cold-start penalty (TCP+TLS+auth handshake).
+  // The pool.on('error') handler below prevents the previous crash when Neon
+  // kills the idle connection — pg-pool catches it and reconnects automatically.
+  min: 1,
+  // Release connections above the minimum after 60 s idle. Neon's own idle
+  // timeout is ~2 min, so this proactively cleans up surplus connections first.
+  idleTimeoutMillis: 60_000,
   // Hard timeout for acquiring a connection so we fail fast rather than hang.
   connectionTimeoutMillis: 5_000,
 });
