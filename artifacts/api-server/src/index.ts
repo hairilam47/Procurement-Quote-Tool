@@ -42,7 +42,11 @@ async function initStripe() {
 
     const stripeSync = await getStripeSync();
 
-    const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+    // Prefer the custom domain (e.g. kuotflow.com) over the *.replit.app
+    // fallback so Stripe delivers webhooks to the right endpoint.
+    const allDomains = (process.env.REPLIT_DOMAINS ?? "").split(",").filter(Boolean);
+    const preferredDomain = allDomains.find((d) => !d.endsWith(".replit.app")) ?? allDomains[0];
+    const webhookBaseUrl = `https://${preferredDomain}`;
     logger.info({ url: `${webhookBaseUrl}/api/stripe/webhook` }, "Setting up managed webhook");
     await stripeSync.findOrCreateManagedWebhook(`${webhookBaseUrl}/api/stripe/webhook`);
     logger.info("Webhook configured");
