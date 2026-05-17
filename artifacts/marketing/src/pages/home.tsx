@@ -47,8 +47,8 @@ const CURRENCY_ROW_2 = [
 ];
 
 const MASK_STYLE: React.CSSProperties = {
-  maskImage:       "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
-  WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+  maskImage:       "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+  WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
 };
 
 function CurrencyCard({ symbol, code, name }: { symbol: string; code: string; name: string }) {
@@ -102,8 +102,8 @@ function CurrencyTicker() {
         </div>
       </div>
 
-      {/* Reduced-motion fallback */}
-      <div className="hidden motion-reduce:flex flex-wrap justify-center gap-3 px-4 mt-4">
+      {/* Reduced-motion fallback — two-column grid */}
+      <div className="hidden motion-reduce:grid grid-cols-2 gap-3 px-4 mt-4 max-w-lg mx-auto">
         {[...CURRENCY_ROW_1, ...CURRENCY_ROW_2].map((c) => (
           <div key={c.code} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border/40 bg-muted/30">
             <span className="text-base font-bold text-primary">{c.symbol}</span>

@@ -51,7 +51,7 @@
 
   --animate-marquee: marquee 22s linear infinite;
   --animate-marquee-bg: marquee 40s linear infinite;
-  --animate-marquee-reverse: marquee-reverse 28s linear infinite;
+  --animate-marquee-reverse: marquee-reverse 22s linear infinite;
 }
 
 @keyframes marquee {
@@ -60,8 +60,8 @@
 }
 
 @keyframes marquee-reverse {
-  from { transform: translateX(-50%); }
-  to   { transform: translateX(0); }
+  from { transform: translateX(0); }
+  to   { transform: translateX(50%); }
 }
 
 @keyframes hero-fade {
