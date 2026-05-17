@@ -15,6 +15,107 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+/* ─── Currency Ticker ─────────────────────────────────────────────────────── */
+const CURRENCY_ROW_1 = [
+  { symbol: "$",    code: "USD", name: "US Dollar"           },
+  { symbol: "€",    code: "EUR", name: "Euro"                },
+  { symbol: "£",    code: "GBP", name: "British Pound"       },
+  { symbol: "¥",    code: "JPY", name: "Japanese Yen"        },
+  { symbol: "A$",   code: "AUD", name: "Australian Dollar"   },
+  { symbol: "C$",   code: "CAD", name: "Canadian Dollar"     },
+  { symbol: "Fr",   code: "CHF", name: "Swiss Franc"         },
+  { symbol: "¥",    code: "CNY", name: "Chinese Yuan"        },
+  { symbol: "₹",    code: "INR", name: "Indian Rupee"        },
+  { symbol: "S$",   code: "SGD", name: "Singapore Dollar"    },
+  { symbol: "د.إ",  code: "AED", name: "UAE Dirham"          },
+  { symbol: "RM",   code: "MYR", name: "Malaysian Ringgit"   },
+];
+
+const CURRENCY_ROW_2 = [
+  { symbol: "NZ$",  code: "NZD", name: "New Zealand Dollar"  },
+  { symbol: "HK$",  code: "HKD", name: "Hong Kong Dollar"    },
+  { symbol: "₩",    code: "KRW", name: "South Korean Won"    },
+  { symbol: "R$",   code: "BRL", name: "Brazilian Real"      },
+  { symbol: "$",    code: "MXN", name: "Mexican Peso"        },
+  { symbol: "R",    code: "ZAR", name: "South African Rand"  },
+  { symbol: "kr",   code: "SEK", name: "Swedish Krona"       },
+  { symbol: "kr",   code: "NOK", name: "Norwegian Krone"     },
+  { symbol: "kr",   code: "DKK", name: "Danish Krone"        },
+  { symbol: "zł",   code: "PLN", name: "Polish Zloty"        },
+  { symbol: "฿",    code: "THB", name: "Thai Baht"           },
+  { symbol: "Rp",   code: "IDR", name: "Indonesian Rupiah"   },
+];
+
+const MASK_STYLE: React.CSSProperties = {
+  maskImage:       "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+  WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
+};
+
+function CurrencyCard({ symbol, code, name }: { symbol: string; code: string; name: string }) {
+  return (
+    <div className="flex items-center gap-3 mx-2.5 px-5 py-3 rounded-xl border border-border/50 bg-muted/30 backdrop-blur-sm shrink-0 select-none">
+      <span className="w-8 text-center text-xl font-bold text-primary leading-none">{symbol}</span>
+      <div>
+        <p className="text-sm font-bold text-foreground leading-none">{code}</p>
+        <p className="text-xs text-muted-foreground mt-0.5 whitespace-nowrap">{name}</p>
+      </div>
+    </div>
+  );
+}
+
+function CurrencyTicker() {
+  return (
+    <section className="py-14 border-b border-border/40 bg-background overflow-hidden">
+      {/* Heading */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6 text-center mb-10">
+        <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-2">Global-ready</p>
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Quote in any currency</h2>
+        <p className="text-muted-foreground mt-2 max-w-xl mx-auto text-sm md:text-base">
+          Create professional IT quotations in 24+ currencies. Your clients see totals in their local currency, instantly.
+        </p>
+      </div>
+
+      {/* Row 1 — scrolls left */}
+      <div className="group relative motion-reduce:hidden mb-3" style={MASK_STYLE}>
+        <div className="w-max flex group-hover:[animation-play-state:paused] animate-marquee">
+          <div className="flex shrink-0">
+            {CURRENCY_ROW_1.map((c) => <CurrencyCard key={c.code} {...c} />)}
+          </div>
+          <div className="flex shrink-0" aria-hidden="true">
+            {CURRENCY_ROW_1.map((c) => <CurrencyCard key={`${c.code}-2`} {...c} />)}
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2 — scrolls right */}
+      <div className="group relative motion-reduce:hidden" style={MASK_STYLE}>
+        <div
+          className="w-max flex group-hover:[animation-play-state:paused]"
+          style={{ animation: "var(--animate-marquee-reverse)" }}
+        >
+          <div className="flex shrink-0">
+            {CURRENCY_ROW_2.map((c) => <CurrencyCard key={c.code} {...c} />)}
+          </div>
+          <div className="flex shrink-0" aria-hidden="true">
+            {CURRENCY_ROW_2.map((c) => <CurrencyCard key={`${c.code}-2`} {...c} />)}
+          </div>
+        </div>
+      </div>
+
+      {/* Reduced-motion fallback */}
+      <div className="hidden motion-reduce:flex flex-wrap justify-center gap-3 px-4 mt-4">
+        {[...CURRENCY_ROW_1, ...CURRENCY_ROW_2].map((c) => (
+          <div key={c.code} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border/40 bg-muted/30">
+            <span className="text-base font-bold text-primary">{c.symbol}</span>
+            <span className="text-sm font-bold">{c.code}</span>
+            <span className="text-xs text-muted-foreground">{c.name}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   return (
     <MarketingLayout>
@@ -119,6 +220,8 @@ export default function Home() {
           <img src={`${import.meta.env.BASE_URL}logos/fortinet.svg`} alt="Fortinet" className="h-8 w-auto" />
         </div>
       </section>
+
+      <CurrencyTicker />
 
       {/* ═══════════════════════════════════════
           USER JOURNEY — 4 STEPS
