@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /app/
 
-Sitemap: https://procurement-quote-tool.replit.app/sitemap.xml
+Sitemap: https://kuotflow.com/sitemap.xml

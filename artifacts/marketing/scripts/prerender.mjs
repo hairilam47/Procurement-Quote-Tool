@@ -73,7 +73,7 @@ function buildSoftwareApplicationJsonLd() {
     applicationCategory: "BusinessApplication",
     applicationSubCategory: "QuotationSoftware",
     operatingSystem: "Web",
-    url: "https://procurement-quote-tool.replit.app/",
+    url: "https://kuotflow.com/",
     description:
       `All-in-one IT quotation software for managed service providers. ` +
       `Create, brand, and send professional PDF quotes in minutes. ` +
