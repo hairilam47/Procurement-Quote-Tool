@@ -17,6 +17,18 @@ import { readFileSync, writeFileSync, rmSync, existsSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
+function buildSitemapWithCurrentDate(sitemapPath) {
+  if (!existsSync(sitemapPath)) {
+    console.error("[prerender] sitemap.xml not found in dist/public — lastmod update failed");
+    process.exit(1);
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  let sitemap = readFileSync(sitemapPath, "utf-8");
+  sitemap = sitemap.replace(/<lastmod>[^<]*<\/lastmod>/g, `<lastmod>${today}</lastmod>`);
+  writeFileSync(sitemapPath, sitemap);
+  console.log(`[prerender] sitemap.xml lastmod dates updated to ${today} ✓`);
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 const indexPath = path.resolve(root, "dist/public/index.html");
@@ -197,3 +209,7 @@ try {
 }
 
 console.log("[prerender] SSR content injected into dist/public/index.html ✓");
+
+// Update all lastmod dates in the built sitemap to today's date
+const sitemapPath = path.resolve(root, "dist/public/sitemap.xml");
+buildSitemapWithCurrentDate(sitemapPath);
