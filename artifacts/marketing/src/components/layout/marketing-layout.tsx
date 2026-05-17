@@ -77,8 +77,8 @@ export function MarketingLayout({ children }: MarketingLayoutProps) {
               <h3 className="font-semibold mb-4 text-sm">Company</h3>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li><a href="#how-it-works" className="hover:text-foreground">How it works</a></li>
-                <li><a href="#faq" className="hover:text-foreground">Privacy</a></li>
-                <li><a href="#faq" className="hover:text-foreground">Terms</a></li>
+                <li><a href="/privacy" className="hover:text-foreground">Privacy</a></li>
+                <li><a href="/terms" className="hover:text-foreground">Terms</a></li>
               </ul>
             </div>
           </div>
