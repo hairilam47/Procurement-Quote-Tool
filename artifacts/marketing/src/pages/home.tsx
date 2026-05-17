@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/accordion";
 
 /* ─── Currency Ticker ─────────────────────────────────────────────────────── */
-const CURRENCY_ROW_1 = [
+const CURRENCIES = [
   { symbol: "$",    code: "USD", name: "US Dollar"           },
   { symbol: "€",    code: "EUR", name: "Euro"                },
   { symbol: "£",    code: "GBP", name: "British Pound"       },
@@ -29,9 +29,6 @@ const CURRENCY_ROW_1 = [
   { symbol: "S$",   code: "SGD", name: "Singapore Dollar"    },
   { symbol: "د.إ",  code: "AED", name: "UAE Dirham"          },
   { symbol: "RM",   code: "MYR", name: "Malaysian Ringgit"   },
-];
-
-const CURRENCY_ROW_2 = [
   { symbol: "NZ$",  code: "NZD", name: "New Zealand Dollar"  },
   { symbol: "HK$",  code: "HKD", name: "Hong Kong Dollar"    },
   { symbol: "₩",    code: "KRW", name: "South Korean Won"    },
@@ -75,36 +72,21 @@ function CurrencyTicker() {
         </p>
       </div>
 
-      {/* Row 1 — scrolls left */}
-      <div className="group relative motion-reduce:hidden mb-3" style={MASK_STYLE}>
+      {/* Single row — scrolls left */}
+      <div className="group relative motion-reduce:hidden" style={MASK_STYLE}>
         <div className="w-max flex group-hover:[animation-play-state:paused] animate-marquee">
           <div className="flex shrink-0">
-            {CURRENCY_ROW_1.map((c) => <CurrencyCard key={c.code} {...c} />)}
+            {CURRENCIES.map((c) => <CurrencyCard key={c.code} {...c} />)}
           </div>
           <div className="flex shrink-0" aria-hidden="true">
-            {CURRENCY_ROW_1.map((c) => <CurrencyCard key={`${c.code}-2`} {...c} />)}
-          </div>
-        </div>
-      </div>
-
-      {/* Row 2 — scrolls right */}
-      <div className="group relative motion-reduce:hidden" style={MASK_STYLE}>
-        <div
-          className="w-max flex group-hover:[animation-play-state:paused]"
-          style={{ animation: "var(--animate-marquee-reverse)" }}
-        >
-          <div className="flex shrink-0">
-            {CURRENCY_ROW_2.map((c) => <CurrencyCard key={c.code} {...c} />)}
-          </div>
-          <div className="flex shrink-0" aria-hidden="true">
-            {CURRENCY_ROW_2.map((c) => <CurrencyCard key={`${c.code}-2`} {...c} />)}
+            {CURRENCIES.map((c) => <CurrencyCard key={`${c.code}-2`} {...c} />)}
           </div>
         </div>
       </div>
 
       {/* Reduced-motion fallback — two-column grid */}
       <div className="hidden motion-reduce:grid grid-cols-2 gap-3 px-4 mt-4 max-w-lg mx-auto">
-        {[...CURRENCY_ROW_1, ...CURRENCY_ROW_2].map((c) => (
+        {CURRENCIES.map((c) => (
           <div key={c.code} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border/40 bg-muted/30">
             <span className="text-base font-bold text-primary">{c.symbol}</span>
             <span className="text-sm font-bold">{c.code}</span>
